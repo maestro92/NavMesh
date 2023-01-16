@@ -1,0 +1,68 @@
+
+
+- Visual Studio Setup 
+
+In the Solution Explorer
+
+right click on the project and choose "properties"
+
+
+Configuration Properties -> C/C++ -> General
+Additional Include Directories:
+./;glm;include/SDL2;include/SDL2_image
+
+Configuration Properties -> Linker -> General
+Additional Library Directories
+lib\SDL2;lib\SDL2_image\x86;%(AdditionalLibraryDirectories)
+
+Configuration Properties -> Linker -> Input
+Additional Dependencies:	
+opengl32.lib;glu32.lib;ws2_32.lib;SDL2.lib;SDL2_image.lib
+
+
+- if you see the following error 
+"
+error C4996: 'gets': This function or variable may be unsafe. Consider using gets_s instead. 
+To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.	
+d:\martin\programming\c_c++\visual studio projects\faceoff\fo\main.cpp	71	1	FaceOff
+"
+
+Visual Studio (VS) compiler gives this error. It's simple to get rid of this problem.
+
+1. Go to your VS context menu Project > Properties.
+2. Click Configuration > Properties > C/C++ > Preprocessor.
+3. Edit Preprocessor Definitions and add _CRT_SECURE_NO_WARNINGS last empty line.
+
+This compile warning will be gone.
+
+http://stackoverflow.com/questions/19321804/this-function-or-variable-may-be-unsafe-visual-studio
+
+
+
+- If you see the following error
+"
+error LNK2019 unresolved external symbol _imp___iob_func referenced in function _ShowError
+"
+
+http://stackoverflow.com/questions/4845410/error-lnk2019-unresolved-external-symbol-main-referenced-in-function-tmainc
+look for Anton Andreev's solution
+
+
+Solution in short: add the following line
+#undef main
+
+
+
+
+- If you see this other error
+"
+error C4996: 'inet_ntoa': Use inet_ntop() or InetNtop() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings	
+d:\martin\programming\c_c++\visual studio projects\faceoff\fo\libraries\raknet\socketlayer.cpp	210	1	FaceOff
+""
+
+Follow the steps above and add "_WINSOCK_DEPRECATED_NO_WARNINGS" in the Preprocessor Definitions
+
+
+
+
+
