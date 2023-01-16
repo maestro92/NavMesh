@@ -8,6 +8,7 @@
 #include "world.h"
 #include "../NavMesh/asset.h"
 #include "debug.h"
+#include "game_render.h"
 
 #include <iostream>
 
@@ -20,12 +21,6 @@ using namespace std;
 
 // typedef void(*PlatformLoadTexture)(GameAssets* gameAssets, BitmapId bitmapId);
 
-glm::vec4 COLOR_WHITE = glm::vec4(1, 1, 1, 1);
-glm::vec4 COLOR_RED = glm::vec4(1, 0, 0, 1);
-glm::vec4 COLOR_GREEN = glm::vec4(0, 1, 0, 1);
-glm::vec4 COLOR_BLUE = glm::vec4(0, 0, 1, 1);
-glm::vec4 COLOR_YELLOW = glm::vec4(1, 1, 0, 1);
-glm::vec4 COLOR_TEAL = glm::vec4(0, 1, 1, 1);
 
 
 static PlatformAPI platformAPI;
@@ -128,7 +123,7 @@ void* PushRenderElement_(GameRenderCommands* commands, RenderGroupEntryType type
 
 
 
-
+/*
 // p0 p1 p2 p3 in clock wise order
 void PushQuad_Core(GameRenderCommands* gameRenderCommands, RenderGroup* renderGroup, LoadedBitmap* bitmap,
 	glm::vec3 p0, glm::vec2 uv0, glm::vec4 color0,
@@ -177,6 +172,7 @@ void PushQuad_Core(GameRenderCommands* gameRenderCommands, RenderGroup* renderGr
 		gameRenderCommands->numVertex += 4;
 	}
 }
+*/
 
 // p0 p1 p2 p3 in clock wise order
 // p0 top left,		p3 top right
@@ -198,7 +194,7 @@ void PushQuad(GameRenderCommands* gameRenderCommands, RenderGroup* renderGroup, 
 		bottomColor.a = 1;
 	}
 
-	PushQuad_Core(gameRenderCommands, renderGroup, bitmap, p0, t0, topColor,
+	GameRender::PushQuad_Core(gameRenderCommands, renderGroup, bitmap, p0, t0, topColor,
 		p1, t1, bottomColor,
 		p2, t2, bottomColor,
 		p3, t3, topColor);
@@ -271,7 +267,7 @@ void PushBitmap(GameRenderCommands* gameRenderCommands,
 
 
 	// front
-	PushQuad_Core(gameRenderCommands, renderGroup, bitmap, p0, t0, c0,
+	GameRender::PushQuad_Core(gameRenderCommands, renderGroup, bitmap, p0, t0, c0,
 		p1, t1, c1,
 		p3, t3, c3,
 		p2, t2, c2);
@@ -304,253 +300,12 @@ void PushPlane(GameRenderCommands* gameRenderCommands, RenderGroup* renderGroup,
 		bottomColor.a = 1;
 	}
 
-	PushQuad_Core(gameRenderCommands, renderGroup, bitmap, p0, t0, topColor,
+	GameRender::PushQuad_Core(gameRenderCommands, renderGroup, bitmap, p0, t0, topColor,
 		p1, t1, topColor,
 		p2, t2, bottomColor,
 		p3, t3, bottomColor);
 }
 
-
-void PushCube(GameRenderCommands* gameRenderCommands, RenderGroup* renderGroup, LoadedBitmap* bitmap,
-	std::vector<glm::vec3>& vertices, glm::vec4 color, bool fakeLighting = false)
-{
-	// push the 6 sides
-
-	/*
-		y
-		^
-	  (-x,y,-z) p4 ------------ p5 (x,y,-z)
-		|		|\              |\
-		|		| \             | \
-		|		| (-x,y,z)      |  \
-		|		|	p0 ------------ p1 (x,y,z)
-		|	    p6 -|----------	p7	|
-	   (-x,-y,-z)\  |	(x,-y,-z)\	|
-		|		  \	|		      \ |
-		|		   \|			   \|
-		|			p2 ------------ p3 (x,-y,z)
-		|         (-x,-y,z)
-		|
-		------------------------------------------> x
-		\
-		 \
-		  \
-		   V z
-	*/
-
-	// 4 points on front face 
-	glm::vec3 p0 = vertices[0];
-	glm::vec3 p1 = vertices[1];
-	glm::vec3 p2 = vertices[2];
-	glm::vec3 p3 = vertices[3];
-
-	// 4 points on back face 
-	glm::vec3 p4 = vertices[4];
-	glm::vec3 p5 = vertices[5];
-	glm::vec3 p6 = vertices[6];
-	glm::vec3 p7 = vertices[7];
-
-	glm::vec2 t0 = glm::vec2(0, 0);
-	glm::vec2 t1 = glm::vec2(1, 0);
-	glm::vec2 t2 = glm::vec2(0, 1);
-	glm::vec2 t3 = glm::vec2(1, 1);
-
-	glm::vec4 topColor = color;
-	glm::vec4 bottomColor = color;
-
-	if (fakeLighting)
-	{
-		bottomColor *= 0.1;
-		bottomColor.a = 1;
-	}
-
-	// front
-	PushQuad_Core(gameRenderCommands, renderGroup, bitmap, p0, t0, topColor,
-		p1, t1, topColor,
-		p3, t3, bottomColor,
-		p2, t2, bottomColor);
-	// top
-	PushQuad_Core(gameRenderCommands, renderGroup, bitmap, p4, t0, topColor,
-		p5, t1, topColor,
-		p1, t3, topColor,
-		p0, t2, topColor);
-	// left 
-	PushQuad_Core(gameRenderCommands, renderGroup, bitmap, p4, t0, topColor,
-		p0, t1, topColor,
-		p2, t3, bottomColor,
-		p6, t2, bottomColor);
-	// bottom
-	PushQuad_Core(gameRenderCommands, renderGroup, bitmap, p2, t0, bottomColor,
-		p3, t1, bottomColor,
-		p7, t3, bottomColor,
-		p6, t2, bottomColor);
-	// right 
-	PushQuad_Core(gameRenderCommands, renderGroup, bitmap, p1, t0, topColor,
-		p5, t1, topColor,
-		p7, t3, bottomColor,
-		p3, t2, bottomColor);
-	// back
-	PushQuad_Core(gameRenderCommands, renderGroup, bitmap, p5, t0, topColor,
-		p4, t1, topColor,
-		p6, t3, bottomColor,
-		p7, t2, bottomColor);
-}
-
-
-void PushCube(GameRenderCommands* gameRenderCommands, RenderGroup* renderGroup, LoadedBitmap* bitmap, 
-					glm::vec4 color, 
-					glm::vec3 min, glm::vec3 max, bool fakeLighting = false)
-{
-	/*
-		y
-		^
-	  (-x,y,-z) p4 ------------ p5 (x,y,-z)
-		|		|\              |\
-		|		| \             | \
-		|		| (-x,y,z)      |  \
-		|		|	p0 ------------ p1 (x,y,z)
-		|	    p6 -|----------	p7	|
-	   (-x,-y,-z)\  |	(x,-y,-z)\	|
-		|		  \	|		      \ |
-		|		   \|			   \|
-		|			p2 ------------ p3 (x,-y,z)
-		|         (-x,-y,z)
-		|
-		------------------------------------------> x
-		\
-		 \
-		  \
-		   V z
-	*/
-
-	// 4 points on front face 
-	glm::vec3 p0 = glm::vec3(min.x, max.y, max.z);
-	glm::vec3 p1 = glm::vec3(max.x, max.y, max.z);
-	glm::vec3 p2 = glm::vec3(min.x, min.y, max.z);
-	glm::vec3 p3 = glm::vec3(max.x, min.y, max.z);
-
-	// 4 points on back face 
-	glm::vec3 p4 = glm::vec3(min.x, max.y, min.z);
-	glm::vec3 p5 = glm::vec3(max.x, max.y, min.z);
-	glm::vec3 p6 = glm::vec3(min.x, min.y, min.z);
-	glm::vec3 p7 = glm::vec3(max.x, min.y, min.z);
-
-	glm::vec2 t0 = glm::vec2(0, 0);
-	glm::vec2 t1 = glm::vec2(1, 0);
-	glm::vec2 t2 = glm::vec2(0, 1);
-	glm::vec2 t3 = glm::vec2(1, 1);
-
-	glm::vec4 topColor = color;
-	glm::vec4 bottomColor = color;
-
-	if (fakeLighting)
-	{
-		bottomColor *= 0.1;
-		bottomColor.a = 1;
-	}
-
-	// front
-	PushQuad_Core(gameRenderCommands, renderGroup, bitmap, p0, t0, topColor,
-		p1, t1, topColor,
-		p3, t3, bottomColor,
-		p2, t2, bottomColor);
-	// top
-	PushQuad_Core(gameRenderCommands, renderGroup, bitmap, p4, t0, topColor,
-		p5, t1, topColor,
-		p1, t3, topColor,
-		p0, t2, topColor);
-	// left 
-	PushQuad_Core(gameRenderCommands, renderGroup, bitmap, p4, t0, topColor,
-		p0, t1, topColor,
-		p2, t3, bottomColor,
-		p6, t2, bottomColor);
-	// bottom
-	PushQuad_Core(gameRenderCommands, renderGroup, bitmap, p2, t0, bottomColor,
-		p3, t1, bottomColor,
-		p7, t3, bottomColor,
-		p6, t2, bottomColor);
-	// right 
-	PushQuad_Core(gameRenderCommands, renderGroup, bitmap, p1, t0, topColor,
-		p5, t1, topColor,
-		p7, t3, bottomColor,
-		p3, t2, bottomColor);
-	// back
-	PushQuad_Core(gameRenderCommands, renderGroup, bitmap, p5, t0, topColor,
-		p4, t1, topColor,
-		p6, t3, bottomColor,
-		p7, t2, bottomColor);
-}
-
-
-void PushLine(GameRenderCommands* gameRenderCommands, RenderGroup* group, LoadedBitmap* bitmap, glm::vec4 color, glm::vec3 start, glm::vec3 end, float thickness)
-{
-	if (end == start)
-	{
-		return;
-	}
-	glm::vec3 dir = glm::normalize(end - start);
-	glm::vec3 supportUpAXIS = glm::vec3(0, 1, 0);
-	glm::vec3 right = glm::cross(dir, supportUpAXIS);
-	if (right == glm::vec3(0))
-	{
-		supportUpAXIS = glm::vec3(0, 0, -1);
-		right = glm::cross(dir, supportUpAXIS);
-	}
-
-	glm::vec3 up = -glm::cross(dir, right);
-
-//	std::cout << "right " << right << std::endl;
-//	std::cout << "up " << up << std::endl;
-
-	std::vector<glm::vec3> vertices(8);
-
-	vertices[0] = start + thickness * (up - right);
-	vertices[1] = start + thickness * (up + right);
-	vertices[2] = start + thickness * (-up - right);
-	vertices[3] = start + thickness * (-up + right);
-
-	vertices[4] = end + thickness * (up - right);
-	vertices[5] = end + thickness * (up + right);
-	vertices[6] = end + thickness * (-up - right);
-	vertices[7] = end + thickness * (-up + right);
-
-	PushCube(gameRenderCommands, group, bitmap, vertices, color, false);
-	/*
-	std::cout << "start " << start << std::endl;
-	std::cout << "end " << end << std::endl;
-
-
-	std::cout << "vertices[0] " << vertices[0] << std::endl;
-	std::cout << "vertices[1] " << vertices[1] << std::endl;
-	std::cout << "vertices[2] " << vertices[2] << std::endl;
-	std::cout << "vertices[3] " << vertices[3] << std::endl;
-
-	std::cout << "vertices[4] " << vertices[4] << std::endl;
-	std::cout << "vertices[5] " << vertices[5] << std::endl;
-	std::cout << "vertices[6] " << vertices[6] << std::endl;
-	std::cout << "vertices[7] " << vertices[7] << std::endl;
-	*/
-	int a = 1;
-	/*
-	glm::vec3 center = (end + start) / 2.0f;
-	glm::vec3 dim = (end - start) / 2.0f;
-
-	if (dim.x == 0)
-	{
-		dim.x = thickness;
-	}
-	if (dim.y == 0)
-	{
-		dim.y = thickness;
-	}
-	if (dim.z == 0)
-	{
-		dim.z = thickness;
-	}
-
-	PushCube(gameRenderCommands, group, bitmap, color, center, dim, false);
-	*/
-}
 
 
 void PushLine3(GameRenderCommands* gameRenderCommands, RenderGroup* group, LoadedBitmap* bitmap, glm::vec4 color, glm::vec3 start, glm::vec3 end, float thickness)
@@ -587,7 +342,7 @@ void PushLine3(GameRenderCommands* gameRenderCommands, RenderGroup* group, Loade
 	vertices[6] = end + thickness * (-up - right);
 	vertices[7] = end + thickness * (-up + right);
 
-	PushCube(gameRenderCommands, group, bitmap, vertices, color, false);
+	GameRender::PushCube(gameRenderCommands, group, bitmap, vertices, color, false);
 	/*
 	std::cout << "start " << start << std::endl;
 	std::cout << "end " << end << std::endl;
@@ -657,33 +412,26 @@ void PushPlaneOutline(GameRenderCommands* gameRenderCommands, RenderGroup* rende
 	float cubeThickness = 0.5f;
 
 
-	PushLine(gameRenderCommands, renderGroup, bitmap, color, p0, p1, cubeThickness);
-	PushLine(gameRenderCommands, renderGroup, bitmap, color, p1, p2, cubeThickness);
-	PushLine(gameRenderCommands, renderGroup, bitmap, color, p2, p3, cubeThickness);
-	PushLine(gameRenderCommands, renderGroup, bitmap, color, p3, p0, cubeThickness);
+	GameRender::PushLine(gameRenderCommands, renderGroup, bitmap, color, p0, p1, cubeThickness);
+	GameRender::PushLine(gameRenderCommands, renderGroup, bitmap, color, p1, p2, cubeThickness);
+	GameRender::PushLine(gameRenderCommands, renderGroup, bitmap, color, p2, p3, cubeThickness);
+	GameRender::PushLine(gameRenderCommands, renderGroup, bitmap, color, p3, p0, cubeThickness);
 
 }
 
 
 
-// xyz coordinate system
-void PushCoordinateSystem(GameRenderCommands* gameRenderCommands, RenderGroup* group, LoadedBitmap* bitmap, glm::vec3 origin, glm::vec3 dim)
-{
-	glm::vec3 xAxisEnd = origin + dim.x * glm::vec3(1, 0, 0);		glm::vec4 xAxisColor = glm::vec4(1, 0, 0, 1);
-	glm::vec3 yAxisEnd = origin + dim.y * glm::vec3(0, 1, 0);		glm::vec4 yAxisColor = glm::vec4(0, 1, 0, 1);
-	glm::vec3 zAxisEnd = origin + dim.z * glm::vec3(0, 0, 1);		glm::vec4 zAxisColor = glm::vec4(0, 0, 1, 1);
-
-	float cubeThickness = 0.5f;
-	PushLine(gameRenderCommands, group, bitmap, xAxisColor, origin, xAxisEnd, cubeThickness);
-	PushLine(gameRenderCommands, group, bitmap, yAxisColor, origin, yAxisEnd, cubeThickness);
-	PushLine(gameRenderCommands, group, bitmap, zAxisColor, origin, zAxisEnd, cubeThickness);
-}
 
 
 
 void PushTreeRecursive(GameRenderCommands* gameRenderCommands, RenderGroup* group, LoadedBitmap* bitmap, BSPNode* node, bool isFront, int depth)
 {
-	static glm::vec4 colorList[5] = { COLOR_RED, COLOR_GREEN, COLOR_BLUE, COLOR_YELLOW, COLOR_TEAL };
+	static glm::vec4 colorList[5] = { 
+		GameRender::COLOR_RED, 
+		GameRender::COLOR_GREEN, 
+		GameRender::COLOR_BLUE, 
+		GameRender::COLOR_YELLOW, 
+		GameRender::COLOR_TEAL };
 
 	bool renderFlag = true;// depth == 0;
 //	bool renderFlag = depth == 1;
@@ -728,13 +476,13 @@ void PushTreeRecursive(GameRenderCommands* gameRenderCommands, RenderGroup* grou
 	{
 		if (!node->IsLeafNode())
 		{
-			glm::vec4 color = COLOR_GREEN;
+			glm::vec4 color = GameRender::COLOR_GREEN;
 			color.a = 0.01;
 
 			//	if (!IsAxialPlane(node->debugSplitPolygon.plane))
 			{
 				PushPlane(gameRenderCommands, group, bitmap, color, node->debugSplitPolygon, true);
-				PushPlaneOutline(gameRenderCommands, group, bitmap, COLOR_GREEN, node->debugSplitPolygon);
+				PushPlaneOutline(gameRenderCommands, group, bitmap, GameRender::COLOR_GREEN, node->debugSplitPolygon);
 			}
 		}
 
@@ -852,7 +600,7 @@ void RenderEntityPlayerModel(GameRenderCommands* gameRenderCommands,
 	glm::vec3 min = entity->pos + entity->min - offset;
 	glm::vec3 max = entity->pos + entity->max + offset;
 
-	PushCube(gameRenderCommands, renderGroup, bitmap, COLOR_RED, min, max, true);
+	GameRender::PushCube(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_RED, min, max, true);
 }
 
 void RenderEntityStaticModel(GameRenderCommands* gameRenderCommands,
@@ -869,7 +617,7 @@ void RenderEntityStaticModel(GameRenderCommands* gameRenderCommands,
 			entity->model[i].vertices[0],
 			entity->model[i].vertices[1],
 			entity->model[i].vertices[2],
-			entity->model[i].vertices[3], COLOR_WHITE);
+			entity->model[i].vertices[3], GameRender::COLOR_WHITE);
 	}
 }
 
@@ -887,10 +635,43 @@ void RenderEntityGroundModel(GameRenderCommands* gameRenderCommands,
 			entity->model[i].vertices[0],
 			entity->model[i].vertices[1],
 			entity->model[i].vertices[2],
-			entity->model[i].vertices[3], COLOR_WHITE);
+			entity->model[i].vertices[3], GameRender::COLOR_WHITE);
 	}
-
 }
+
+void RenderNavMeshPolygon(GameRenderCommands* gameRenderCommands,
+	RenderGroup* renderGroup,
+	GameAssets* gameAssets,
+	NavMesh::NavMeshPolygon* polygon)
+{
+	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
+	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
+
+	float lineThickness = 0.2f;
+
+	for (int i = 0; i < polygon->vertices.size(); i++)
+	{
+		glm::vec3 p0 = polygon->vertices[i];
+		glm::vec3 p1;
+
+		if (i == polygon->vertices.size() - 1)
+		{
+			p1 = polygon->vertices[0];
+		}
+		else
+		{
+			p1 = polygon->vertices[i + 1];
+		}
+		GameRender::PushLine(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_RED, p0, p1, lineThickness);
+
+		// vertex
+		glm::vec3 offset = glm::vec3(0.5, 0.5, 0.5);
+		glm::vec3 min = p0 - offset;
+		glm::vec3 max = p0 + offset;
+		GameRender::PushCube(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_BLUE, min, max, true);
+	}
+}
+
 
 void CatagorizePosition(World* world, Entity* entity)
 {
@@ -1251,7 +1032,7 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 		switch (entity->flag)
 		{
 			case EntityFlag::STATIC:
-				RenderEntityStaticModel(gameRenderCommands, &group, gameAssets, entity);
+			//	RenderEntityStaticModel(gameRenderCommands, &group, gameAssets, entity);
 				break;
 
 			case EntityFlag::GROUND:
@@ -1267,12 +1048,14 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 		}	
 	}
 
-	float scale = 500;
-	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
-	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
-	PushCoordinateSystem(gameRenderCommands, &group, bitmap, glm::vec3(0, 0, 0), glm::vec3(scale, scale, scale));
+	for (int i = 0; i < world->navMeshPolygons.size(); i++)
+	{
+		NavMesh::NavMeshPolygon* navMeshPolygon = &world->navMeshPolygons[i];
+		RenderNavMeshPolygon(gameRenderCommands, &group, gameAssets, navMeshPolygon);
+	}
 
-	PushTreeRecursive(gameRenderCommands, &group, bitmap, world->tree, true, 0);
+
+	GameRender::RenderCoordinateSystem(gameRenderCommands, &group, gameAssets);
 }
 
 
@@ -1455,7 +1238,7 @@ void DEBUGTextLine(char* s, GameRenderCommands* gameRenderCommands, RenderGroup*
 
 			glm::vec3 leftTopPos = glm::vec3(x, y, 0.2);
 
-			PushBitmap(gameRenderCommands, group, &glyphBitmap->bitmap, COLOR_WHITE, leftTopPos, glm::vec3(width / 2.0, height / 2.0, 0), AlignmentMode::Left, AlignmentMode::Top);
+			PushBitmap(gameRenderCommands, group, &glyphBitmap->bitmap, GameRender::COLOR_WHITE, leftTopPos, glm::vec3(width / 2.0, height / 2.0, 0), AlignmentMode::Left, AlignmentMode::Top);
 
 
 			xPos += (advance * scale);

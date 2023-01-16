@@ -27,8 +27,14 @@
     <ClInclude Include="world.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="math.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="bsp_tree.h">
-      <Filter>Source Files</Filter>
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="game_render.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -41,5 +47,10 @@
     <ClCompile Include="game_code.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="nav_mesh.h">
+      <Filter>Header Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

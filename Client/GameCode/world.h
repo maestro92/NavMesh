@@ -4,6 +4,7 @@
 
 #include "../PlatformShared/platform_shared.h"
 #include "../NavMesh/memory.h"
+#include "nav_mesh.h"
 
 #include "bsp_tree.h"
 
@@ -16,6 +17,8 @@ struct Face
 	// p0 p1 p2 p3 in clock wise order
 	std::vector<glm::vec3> vertices;
 };
+
+
 
 Plane NULL_PLANE;
 
@@ -94,6 +97,7 @@ struct World
 	int maxPlayerEntity;
 	int numPlayerEntity;
 
+	std::vector<NavMesh::NavMeshPolygon> navMeshPolygons;
 };
 
 
@@ -273,6 +277,7 @@ std::vector<Face> CreatePlaneMinMax(glm::vec3 min, glm::vec3 max)
 
 
 
+
 std::vector<Face> CreateCubeFaceMinMax(glm::vec3 min, glm::vec3 max)
 {
 	std::vector<Face> result;
@@ -385,6 +390,8 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	glm::vec3 min;
 	glm::vec3 max;
 
+	std::vector<NavMesh::NavMeshPolygon> polygons;
+
 
 	// ground
 	entity = &world->entities[world->numEntities++];
@@ -395,209 +402,66 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 
 	// obstacle 1
 	entity = &world->entities[world->numEntities++];
+	min = glm::vec3(0, 0, 0);
+	max = glm::vec3(30, 50, 10);
+	faces = CreateCubeFaceMinMax(min, max);
+	NavMesh::NavMeshPolygon polygon = NavMesh::CreatePolygonFromMinMax(min, max);
+	initEntity(entity, pos, STATIC, faces);
+	polygons.push_back(polygon);
+
+	// obstacle 2
+	entity = &world->entities[world->numEntities++];
+	min = glm::vec3(10, 0, -10);
+	max = glm::vec3(20, 50, 30);
+	faces = CreateCubeFaceMinMax(min, max);
+	polygon = NavMesh::CreatePolygonFromMinMax(min, max);
+	initEntity(entity, pos, STATIC, faces);
+	polygons.push_back(polygon);
+
+
+	/*
+	// obstacle 1
+	entity = &world->entities[world->numEntities++];
 	min = glm::vec3(-80, 0, -80);
 	max = glm::vec3(40, 50, -70);
 	faces = CreateCubeFaceMinMax(min, max);
+	NavMesh::NavMeshPolygon polygon = NavMesh::CreatePolygonFromMinMax(min, max);
 	initEntity(entity, pos, STATIC, faces);
-	
+	polygons.push_back(polygon);
+
 	// obstacle 2
 	entity = &world->entities[world->numEntities++];
 	min = glm::vec3(-30, 0, -90);
 	max = glm::vec3(10, 50, 60);
 	faces = CreateCubeFaceMinMax(min, max);
+	polygon = NavMesh::CreatePolygonFromMinMax(min, max);
 	initEntity(entity, pos, STATIC, faces);
+	polygons.push_back(polygon);
+	*/
 
+	/*
 	// obstacle 3
 	entity = &world->entities[world->numEntities++];
 	min = glm::vec3(-50, 0, -20);
 	max = glm::vec3(20, 50, 30);
 	faces = CreateCubeFaceMinMax(min, max);
+	polygon = NavMesh::CreatePolygonFromMinMax(min, max);
 	initEntity(entity, pos, STATIC, faces);
+	polygons.push_back(polygon);
 
 	// obstacle 4
 	entity = &world->entities[world->numEntities++];
 	min = glm::vec3(30, 0, 20);
 	max = glm::vec3(70, 50, 40);
 	faces = CreateCubeFaceMinMax(min, max);
+	polygon = NavMesh::CreatePolygonFromMinMax(min, max);
 	initEntity(entity, pos, STATIC, faces);
-
-
-
-	/*
-	// plane 1
-	entity = &world->entities[world->numEntities++];
-	min = glm::vec3(-200, -20, -200);
-	max = glm::vec3(200, 0, 0);
-
-	faces = CreateCubeFaceMinMax(min, max);
-	brushes.push_back(ConvertFaceToBrush(faces));
-	initEntity(entity, pos, faces);
-	
-	
-	// plane 1 wall 1
-	entity = &world->entities[world->numEntities++];
-	min = glm::vec3(-200, 0, 0);
-	max = glm::vec3(200, 100, 25);
-
-	faces = CreateCubeFaceMinMax(min, max);
-	brushes.push_back(ConvertFaceToBrush(faces));
-	initEntity(entity, pos, faces);
-	
-
-	
-	// plane 1 wall 2
-	entity = &world->entities[world->numEntities++];
-	min = glm::vec3(-201, 0, -200);
-	max = glm::vec3(-200, 100, 0);
-
-	faces = CreateCubeFaceMinMax(min, max);
-	brushes.push_back(ConvertFaceToBrush(faces));
-	initEntity(entity, pos, faces);
-
-
-	// plane 1 wall 3
-	std::cout << "plane 1 wall 3" << std::endl;
-	entity = &world->entities[world->numEntities++];
-	min = glm::vec3(200, 0, -200);
-	max = glm::vec3(201, 100, 0);
-
-	faces = CreateCubeFaceMinMax(min, max);
-	brushes.push_back(ConvertFaceToBrush(faces));
-	initEntity(entity, pos, faces);
-
-
-
-	// plane 1 wall 4
-	std::cout << "plane 1 wall 4" << std::endl;
-	entity = &world->entities[world->numEntities++];
-	min = glm::vec3(-200, 0, -201);
-	max = glm::vec3(-100, 100, -200);
-
-	faces = CreateCubeFaceMinMax(min, max);
-	brushes.push_back(ConvertFaceToBrush(faces));
-	initEntity(entity, pos, faces);
-	
-
-
-
-	// plane 2
-	std::cout << "plane 2" << std::endl;
-	entity = &world->entities[world->numEntities++];
-	min = glm::vec3(0, -50, -400);
-	max = glm::vec3(200, 0, -200);
-
-	faces = CreateCubeFaceMinMax(min, max);
-	brushes.push_back(ConvertFaceToBrush(faces));
-	initEntity(entity, pos, faces);
-		
-
-	// ramp, doing it as a hack
-	std::cout << "ramp" << std::endl;
-	entity = &world->entities[world->numEntities++];
-	min = glm::vec3(-100, -50, -400);
-	max = glm::vec3(0, 0, -200);
-
-	faces = CreateRampMinMax(min, max, POS_Z);
-	brushes.push_back(ConvertFaceToBrush(faces));
-	initEntity(entity, pos, faces);
-
-	
-	// walls for the ramp
-	std::cout << "walls for ramp" << std::endl;
-	entity = &world->entities[world->numEntities++];
-	min = glm::vec3(0, -50, -400);
-	max = glm::vec3(1, 0, -200);
-
-	faces = CreateCubeFaceMinMax(min, max);
-	brushes.push_back(ConvertFaceToBrush(faces));
-	initEntity(entity, pos, faces);
-
-
-	// wall 3
-	std::cout << "wall 3" << std::endl;
-	entity = &world->entities[world->numEntities++];
-
-	min = glm::vec3(0, -50, -401);
-	max = glm::vec3(200, 0, -400);
-
-	faces = CreateCubeFaceMinMax(min, max);
-	brushes.push_back(ConvertFaceToBrush(faces));
-	initEntity(entity, pos, faces);
-
-
-	// plane 4
-	std::cout << "plane 4" << std::endl;
-	entity = &world->entities[world->numEntities++];
-
-	min = glm::vec3(-100, -51, -600);
-	max = glm::vec3(200, -50, -400);
-
-	faces = CreateCubeFaceMinMax(min, max);
-	brushes.push_back(ConvertFaceToBrush(faces));
-	initEntity(entity, pos, faces);
-
-
-
-	// plane 4 wall 4
-	std::cout << "plane 4 wall 4" << std::endl;
-	entity = &world->entities[world->numEntities++];
-	pos = glm::vec3(50, 0, 0);
-	dim = glm::vec3(100, 1, 100);
-
-	min = glm::vec3(-101, -50, -600);
-	max = glm::vec3(-100, 100, -200);
-
-	faces = CreateCubeFaceMinMax(min, max);
-	brushes.push_back(ConvertFaceToBrush(faces));
-	initEntity(entity, pos, faces);
-
-
-	// plane 4 wall 5
-	std::cout << "plane 4 wall 5" << std::endl;
-	entity = &world->entities[world->numEntities++];
-	pos = glm::vec3(50, 0, 0);
-	dim = glm::vec3(100, 1, 100);
-
-	min = glm::vec3(200, -50, -600);
-	max = glm::vec3(201, 100, -200);
-
-	faces = CreateCubeFaceMinMax(min, max);
-	brushes.push_back(ConvertFaceToBrush(faces));
-	initEntity(entity, pos, faces);
-
-
-
-	// plane 4 door 5
-	std::cout << "plane 4 door 5" << std::endl;
-	entity = &world->entities[world->numEntities++];
-	pos = glm::vec3(50, 0, 0);
-	min = glm::vec3(-100, -50, -601);
-	max = glm::vec3(0, 100, -600);
-
-	faces = CreateCubeFaceMinMax(min, max);
-	brushes.push_back(ConvertFaceToBrush(faces));
-	initEntity(entity, pos, faces);
-
-
-	entity = &world->entities[world->numEntities++];
-	pos = glm::vec3(50, 0, 0);
-	min = glm::vec3(100, -50, -601);
-	max = glm::vec3(200, 100, -600);
-
-	faces = CreateCubeFaceMinMax(min, max);
-	brushes.push_back(ConvertFaceToBrush(faces));
-	initEntity(entity, pos, faces);
-
-	
-	entity = &world->entities[world->numEntities++];
-	pos = glm::vec3(50, 0, 0);
-	min = glm::vec3(0, 25, -601);
-	max = glm::vec3(100, 100, -600);
-
-	faces = CreateCubeFaceMinMax(min, max);
-	brushes.push_back(ConvertFaceToBrush(faces));
-	initEntity(entity, pos, faces);
+	polygons.push_back(polygon);
 	*/
+	TryMergePolygons(polygons);
+
+	world->navMeshPolygons = polygons;
+
 }
 
 

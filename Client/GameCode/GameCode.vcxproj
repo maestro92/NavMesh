@@ -151,6 +151,8 @@
     <ClInclude Include="bsp_tree.h" />
     <ClInclude Include="debug.h" />
     <ClInclude Include="game_code.h" />
+    <ClInclude Include="game_render.h" />
+    <ClInclude Include="math.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="world.h" />
   </ItemGroup>
@@ -158,6 +160,9 @@
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="game_code.cpp" />
     <ClCompile Include="stdafx.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="nav_mesh.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
