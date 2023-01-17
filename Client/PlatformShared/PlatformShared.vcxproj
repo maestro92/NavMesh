@@ -147,7 +147,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="collision.h" />
     <ClInclude Include="platform_shared.h" />
     <ClInclude Include="render_shared.h" />
     <ClInclude Include="stdafx.h" />

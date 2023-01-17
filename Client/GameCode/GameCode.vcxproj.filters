@@ -36,6 +36,9 @@
     <ClInclude Include="game_render.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\PlatformShared\collision.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">

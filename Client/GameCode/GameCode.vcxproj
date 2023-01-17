@@ -148,6 +148,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\PlatformShared\collision.h" />
     <ClInclude Include="bsp_tree.h" />
     <ClInclude Include="debug.h" />
     <ClInclude Include="game_code.h" />

@@ -24,9 +24,6 @@
     <ClInclude Include="platform_shared.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="collision.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="render_shared.h">
       <Filter>Header Files</Filter>
     </ClInclude>

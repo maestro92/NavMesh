@@ -123,56 +123,6 @@ void* PushRenderElement_(GameRenderCommands* commands, RenderGroupEntryType type
 
 
 
-/*
-// p0 p1 p2 p3 in clock wise order
-void PushQuad_Core(GameRenderCommands* gameRenderCommands, RenderGroup* renderGroup, LoadedBitmap* bitmap,
-	glm::vec3 p0, glm::vec2 uv0, glm::vec4 color0,
-	glm::vec3 p1, glm::vec2 uv1, glm::vec4 color1,
-	glm::vec3 p2, glm::vec2 uv2, glm::vec4 color2,
-	glm::vec3 p3, glm::vec2 uv3, glm::vec4 color3)
-{
-	if (gameRenderCommands->HasSpaceForVertex(4))
-	{
-		RenderGroupEntryTexturedQuads* entry = renderGroup->quads;
-		entry->numQuads++;
-
-		assert(gameRenderCommands->numBitmaps < gameRenderCommands->maxNumBitmaps);
-		int index = gameRenderCommands->numBitmaps;
-		gameRenderCommands->masterBitmapArray[index] = bitmap;
-		gameRenderCommands->numBitmaps++;
-
-
-		//	cout << "entry masterBitmapArray " << index << " " << bitmap->textureHandle << endl;
-		//	cout << "gameRenderCommands->numBitmaps " << gameRenderCommands->numBitmaps << endl;
-
-		int index2 = gameRenderCommands->numVertex;
-		TexturedVertex* vertexArray = &(gameRenderCommands->masterVertexArray[index2]);
-		vertexArray[0].position = p0;
-		vertexArray[0].normal = p0;
-		vertexArray[0].uv = uv0;
-		vertexArray[0].color = color0;
-
-		vertexArray[1].position = p1;
-		vertexArray[1].normal = p1;
-		vertexArray[1].uv = uv1;
-		vertexArray[1].color = color1;
-
-		// Note that vertexArray[2] and vertexArray[3] has the points swapped since we want to
-		// draw this with trangle strips.
-		vertexArray[2].position = p3;
-		vertexArray[2].normal = p3;
-		vertexArray[2].uv = uv3;
-		vertexArray[2].color = color3;
-
-		vertexArray[3].position = p2;
-		vertexArray[3].normal = p2;
-		vertexArray[3].uv = uv2;
-		vertexArray[3].color = color2;
-
-		gameRenderCommands->numVertex += 4;
-	}
-}
-*/
 
 // p0 p1 p2 p3 in clock wise order
 // p0 top left,		p3 top right
@@ -343,62 +293,7 @@ void PushLine3(GameRenderCommands* gameRenderCommands, RenderGroup* group, Loade
 	vertices[7] = end + thickness * (-up + right);
 
 	GameRender::PushCube(gameRenderCommands, group, bitmap, vertices, color, false);
-	/*
-	std::cout << "start " << start << std::endl;
-	std::cout << "end " << end << std::endl;
-
-
-	std::cout << "vertices[0] " << vertices[0] << std::endl;
-	std::cout << "vertices[1] " << vertices[1] << std::endl;
-	std::cout << "vertices[2] " << vertices[2] << std::endl;
-	std::cout << "vertices[3] " << vertices[3] << std::endl;
-
-	std::cout << "vertices[4] " << vertices[4] << std::endl;
-	std::cout << "vertices[5] " << vertices[5] << std::endl;
-	std::cout << "vertices[6] " << vertices[6] << std::endl;
-	std::cout << "vertices[7] " << vertices[7] << std::endl;
-	*/
-	int a = 1;
-	/*
-	glm::vec3 center = (end + start) / 2.0f;
-	glm::vec3 dim = (end - start) / 2.0f;
-
-	if (dim.x == 0)
-	{
-		dim.x = thickness;
-	}
-	if (dim.y == 0)
-	{
-		dim.y = thickness;
-	}
-	if (dim.z == 0)
-	{
-		dim.z = thickness;
-	}
-
-	PushCube(gameRenderCommands, group, bitmap, color, center, dim, false);
-	*/
 }
-
-/*
-void PushCubeOutline(GameRenderCommands* gameRenderCommands, 
-					RenderGroup* renderGroup, LoadedBitmap* bitmap, glm::vec4 color, glm::vec3 min, glm::vec3 max)
-{
-	// 4 points on front face
-	glm::vec3 p0 = polygon.vertices[0];
-	glm::vec3 p1 = polygon.vertices[1];
-	glm::vec3 p2 = polygon.vertices[2];
-	glm::vec3 p3 = polygon.vertices[3];
-
-	float cubeThickness = 0.5f;
-
-
-	PushLine(gameRenderCommands, renderGroup, bitmap, color, p0, p1, cubeThickness);
-	PushLine(gameRenderCommands, renderGroup, bitmap, color, p1, p2, cubeThickness);
-	PushLine(gameRenderCommands, renderGroup, bitmap, color, p2, p3, cubeThickness);
-	PushLine(gameRenderCommands, renderGroup, bitmap, color, p3, p0, cubeThickness);
-}
-*/
 
 void PushPlaneOutline(GameRenderCommands* gameRenderCommands, RenderGroup* renderGroup, LoadedBitmap* bitmap, glm::vec4 color, BspPolygon polygon)
 {
@@ -1032,7 +927,7 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 		switch (entity->flag)
 		{
 			case EntityFlag::STATIC:
-			//	RenderEntityStaticModel(gameRenderCommands, &group, gameAssets, entity);
+				// RenderEntityStaticModel(gameRenderCommands, &group, gameAssets, entity);
 				break;
 
 			case EntityFlag::GROUND:
@@ -1040,10 +935,12 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 				break;
 
 			case EntityFlag::PLAYER:
+				/*
 				if (debugModeState->cameraDebugMode)
 				{
-			//		RenderEntityPlayerModel(gameRenderCommands, &group, gameAssets, entity);
+					RenderEntityPlayerModel(gameRenderCommands, &group, gameAssets, entity);
 				}
+				*/
 				break;
 		}	
 	}
@@ -1331,7 +1228,7 @@ void RenderProfileBars(DebugState* debugState, GameRenderCommands* gameRenderCom
 
 			// if mouse in region
 			glm::vec3 screenMousePos = PlatformMouseToScreenRenderPos(gameRenderCommands, mousePos);
-			if (IsPointInsideRect({ rectMin, rectMax }, screenMousePos))
+			if (Collision::IsPointInsideRect({ rectMin, rectMax }, screenMousePos))
 			{
 				DEBUGTextLine(node->element->GUID, gameRenderCommands, renderGroup, gameAssets, screenMousePos);
 			}

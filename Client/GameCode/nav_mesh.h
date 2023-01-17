@@ -11,6 +11,7 @@
 
 namespace NavMesh
 {
+	static int DebugCounter = 0;
 
 	struct GraphNode
 	{
@@ -60,8 +61,14 @@ namespace NavMesh
 
 	struct NavMeshPolygon
 	{
+		int debugId;
 		// stored clockwise
 		std::vector<glm::vec3> vertices;
+
+		NavMeshPolygon()
+		{
+			debugId = DebugCounter++;
+		}
 
 		bool operator== (const NavMeshPolygon& p2) const {
 
@@ -184,7 +191,8 @@ namespace NavMesh
 
 			int iter = 0;
 			GraphNode* curNode = lowestNode;
-			boundary.push_back(curNode->vertex);
+
+
 			Edge prevEdge;
 			glm::vec3 prevEdgeVector;	// normalized
 			glm::vec3 nextVertex;
@@ -193,9 +201,15 @@ namespace NavMesh
 			while (true)
 			{
 				std::cout << iter << std::endl;
+				std::cout << "	Cur Node " << curNode->vertex << std::endl;
+
 				if (iter != 0 && Math::Equals(curNode->vertex, lowestNode->vertex))
 				{
 					break;
+				}
+				else
+				{
+					boundary.push_back(curNode->vertex);
 				}
 
 				// for the first interation	
@@ -209,27 +223,33 @@ namespace NavMesh
 				{
 					// we choose the next neighbor that has the smallest couter-clockwise angle
 					// get all edges
-					for (int i = 0; i < curNode->neighbors.size(); i++)
+					for (int i = 0; i < curNode->neighbors.size(); i++) 
 					{
+						std::cout << "		 " << curNode->neighbors[i] << std::endl;
+
 						glm::vec3 vector = glm::normalize(curNode->neighbors[i] - curNode->vertex);
 						double angle = atan2(vector.z, vector.x) * 180 / PI;
+						std::cout << "		 angle " << angle << std::endl;
+
 						if (angle < 0)
 						{
 							angle += 360;
 						}
 
+						std::cout << "		 angle " << angle << std::endl;
+
 						if (angle < smallestAngle)
 						{
 							nextVertex = curNode->neighbors[i];
 							smallestAngle = angle;
-							prevEdge = {curNode->vertex, nextVertex};
-							prevEdgeVector = glm::normalize(nextVertex - curNode->vertex);
-							curNode = GetGraphNode(nextVertex);
 						}
 					}
 				}
 				else
 				{
+					glm::vec3 dPrev = -prevEdgeVector;
+					smallestAngle = 360;
+
 					// get all edges
 					for (int i = 0; i < curNode->neighbors.size(); i++)
 					{
@@ -238,36 +258,32 @@ namespace NavMesh
 							continue;
 						}
 
+						std::cout << "		 " << curNode->neighbors[i] << std::endl;
+
 						glm::vec3 vector = glm::normalize(curNode->neighbors[i] - curNode->vertex);
 
-						glm::vec3 dPrev = prevEdgeVector;
+
 						glm::vec3 dNext = vector;
 
-						// the atan2 function return arctan y/x in the interval [-pi, +pi] radians
-						double theta0 = atan2(dPrev.y, dPrev.x) * 180 / PI;
-						double theta1 = atan2(dNext.y, dNext.x) * 180 / PI;
+						float angle = Math::ComputeRotationAngle_XZPlane(dPrev, dNext);
 
-						// handle angle wrap around
-						float diff = theta0 - theta1;
-						float angle = (180 + diff + 360);
-						while (angle > 360)
-						{
-							angle -= 360;
-						}
-						
+						std::cout << "			angle " << angle << std::endl;
+
 						if (angle < smallestAngle)
 						{
 							smallestAngle = angle;
 							nextVertex = curNode->neighbors[i];
-							prevEdge = { curNode->vertex, nextVertex };
-							prevEdgeVector = glm::normalize(nextVertex - curNode->vertex);
-							curNode = GetGraphNode(nextVertex);
 						}
 					}
 				}
 
 
-				boundary.push_back(curNode->vertex);
+				prevEdge = { curNode->vertex, nextVertex };
+				prevEdgeVector = glm::normalize(prevEdge.vertices[1] - prevEdge.vertices[0]);
+				curNode = GetGraphNode(nextVertex);
+	
+
+//				boundary.push_back(curNode->vertex);
 				iter++;
 			}
 
@@ -365,12 +381,10 @@ namespace NavMesh
 		return { p2, p1, p0, p3 };
 	}
 
-
 	NavMeshPolygon CreatePolygonFromMinMax(glm::vec3 min, glm::vec3 max)
 	{
-		NavMeshPolygon polygon = {
-			GetNavMeshPolygonVertices(min, max)
-		};
+		NavMeshPolygon polygon;
+		polygon.vertices = GetNavMeshPolygonVertices(min, max);
 		return polygon;
 	}
 
@@ -424,18 +438,19 @@ namespace NavMesh
 			NewVertexInfo newVertex = newVertices[i];
 
 			// add vertex to polygon
-			for (int j = 0; i < polygon0->vertices.size(); j++)
+			for (int j = 0; j < polygon0->vertices.size(); j++)
 			{
 				Edge edge = (*polygon0).GetEdge(j);
 
-				// if (newVertex.edge == edge)
-				if (newVertex.edge == edge)
+				if (Collision::IsPointOnLine(edge.vertices[0], edge.vertices[1], newVertex.point))
 				{
-					polygon0->vertices.insert(polygon0->vertices.begin() + j, newVertex.point);
+					polygon0->vertices.insert(polygon0->vertices.begin() + j + 1, newVertex.point);
 					break;
 				}
 			}
 		}
+
+		std::cout << "sizes " << polygon0->vertices.size() << std::endl;
 	}
 
 	void TryAddNewVertexToList(float intersectionTime, std::vector<NewVertexInfo>& newVertices, Edge edge)
@@ -516,7 +531,7 @@ namespace NavMesh
 			
 			// then find the union polygon by tracing the outer boundary
 
-		//	result.polygon.vertices = graph.GetOuterBoundary();
+			result.polygon.vertices = graph.GetOuterBoundary();
 		}
 		else
 		{
@@ -559,15 +574,21 @@ namespace NavMesh
 					NavMeshPolygon* polygon0 = &polygons[i];
 					NavMeshPolygon* polygon1 = &polygons[j];
 
+					if (polygon0->debugId == 2 && polygon1->debugId == 3)
+					{
+						int a = 1;
+					}
+
 					MergePolygonResult result = TryMergePolygon(polygon0, polygon1);
 					intersectionFound = result.intersects;
 
 					if (result.intersects)
 					{
-					//	RemoveNavMeshPolygon(polygons, polygon0);
+						// want to remove from the back, so we remove j first, then i
 						RemoveNavMeshPolygon(polygons, polygon1);
+						RemoveNavMeshPolygon(polygons, polygon0);
 
-					//	polygons.push_back(result.polygon);
+						polygons.push_back(result.polygon);
 						break;
 					}
 				}
@@ -577,8 +598,6 @@ namespace NavMesh
 					break;
 				}
 			}
-
-			break;
 
 			if (!intersectionFound) {
 				break;
