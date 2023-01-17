@@ -34,8 +34,17 @@ namespace Math
 		return angle;
 	}
 
+	float ConvertAngleToN180ToP180(float angle)
+	{
+		angle = fmod(angle + 180, 360);
+		if (angle < 0)
+			angle += 360;
+		return angle - 180;
+	}
+
+
 	// angle needed to get form vector 0 to vector 1
-	// gives an angle [0 - 360]
+	// gives an counter-clockwise angle [0 - 360]
 	float ComputeRotationAngle_XZPlane(glm::vec3 vec0, glm::vec3 vec1)
 	{
 		// the atan2 function return arctan y/x in the interval [-pi, +pi] radians
@@ -63,4 +72,52 @@ namespace Math
 
 		return diff;
 	}
+
+
+	float CalculateInteriorAngle(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2)
+	{
+		// orders matter
+
+
+		glm::vec3 dPrev = glm::normalize(v1 - v0);
+		glm::vec3 dNext = glm::normalize(v2 - v1);
+
+		// the atan2 function return arctan y/x in the interval [-pi, +pi] radians
+		double theta0 = atan2(dPrev.z, dPrev.x) * 180 / PI;
+		double theta1 = atan2(dNext.z, dNext.x) * 180 / PI;
+
+		// handle angle wrap around
+
+		/*
+			the idea is that
+			theta0 is in -pi to pi
+			theta1 is in -pi to pi
+			when you calculate theta0 - theta1
+			it can be -2pi to 2pi
+			first we add 180, so that it is in
+			-pi to 3pi
+			then we add 360 to make -pi disappear.
+			cuz if you think about it, when you have a angle in -pi to pi
+			the mapping is
+					angle = angle + 360
+					if angle > 360
+						angle -= 360
+			this works cuz
+			if our angle is negative
+				adding 360 converts your angle (if it is negative) to positive.
+
+			if our angle is possitive
+				adding 360 is still the samething. The subsequent if statement clamps it in the [0, 360] range
+			so same thing here, once our angle is in -pi to 3pi range
+			we do the samething
+			*/
+		float diff = theta0 - theta1;
+		float angle = (180 + diff + 360);
+		while (angle > 360)
+		{
+			angle -= 360;
+		}
+		return angle;
+	}
+
 }

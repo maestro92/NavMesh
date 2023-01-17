@@ -113,9 +113,15 @@ namespace Triangulation
 			{
 				glm::vec3 testPoint = vertices[i].pos;
 
-				bool isInside = Collision::IsPointInsideTriangle(testPoint, earTriangle[0].pos, earTriangle[1].pos, earTriangle[2].pos);
+				if (vertices[i].id == 4)
+				{
+					int a = 1;
+				}
+
+				bool isInside = Collision::IsPointInsideTriangle_Barycentric(testPoint, earTriangle[0].pos, earTriangle[1].pos, earTriangle[2].pos);
 				if (isInside)
 				{
+					std::cout << "vertices " << vertices[i].id << " is inside " << std::endl;
 					return false;
 				}
 			}
@@ -220,6 +226,17 @@ namespace Triangulation
 					v2 = 0;
 				}
 
+				glm::vec3 edge0 = trigVertices[v0].pos - trigVertices[v1].pos;
+				glm::vec3 edge1 = trigVertices[v2].pos - trigVertices[v1].pos;
+
+				float angle2 = Math::CalculateInteriorAngle(trigVertices[v0].pos, trigVertices[v1].pos, trigVertices[v2].pos);
+				// not a convex vertex
+				if (angle2 >= 180)
+				{
+					continue;
+				}
+
+				earTriangle.clear();
 				earTriangle.push_back(trigVertices[v0]);
 				earTriangle.push_back(trigVertices[v1]);
 				earTriangle.push_back(trigVertices[v2]);
@@ -238,6 +255,9 @@ namespace Triangulation
 					break;
 				}
 			}
+
+
+
 
 			iter++;
 		}

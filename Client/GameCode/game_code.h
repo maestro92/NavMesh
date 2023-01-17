@@ -1346,4 +1346,7 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 	ptr += size;
 
 	DEBUGTextLine(buffer, gameRenderCommands, &group, transientState->assets, startPos);
+
+
+
 }
