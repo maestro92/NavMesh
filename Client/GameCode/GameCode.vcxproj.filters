@@ -36,7 +36,10 @@
     <ClInclude Include="game_render.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\PlatformShared\collision.h">
+    <ClInclude Include="collision.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="triangulation.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -59,11 +59,17 @@ namespace NavMesh
 		Edge edge;
 	};
 
+	struct Vertex
+	{
+		int debugId;
+		glm::vec3 pos;
+	};
+
 	struct NavMeshPolygon
 	{
 		int debugId;
-		// stored clockwise
-		std::vector<glm::vec3> vertices;
+		// stored counter clockwise
+		std::vector<glm::vec3> vertices;	
 
 		NavMeshPolygon()
 		{
@@ -343,6 +349,62 @@ namespace NavMesh
 		return false;
 	}
 
+
+
+
+	// https://stackoverflow.com/questions/563198/whats-the-most-efficent-way-to-calculate-where-two-line-segments-intersect/565282#565282
+	// https://www.codeproject.com/Tips/862988/Find-the-Intersection-Point-of-Two-Line-Segments
+	bool LineSegmentLineSegmentIntersection_NotCountingVertex(glm::vec2 p0, glm::vec2 p1, glm::vec2 q0, glm::vec2 q1,
+		glm::vec2& intersectionPoint, float& intersectinTime0, float& intersectinTime1, bool considerCollinearOverlapAsIntersect)
+	{
+		glm::vec2 r = p1 - p0;
+		glm::vec2 s = q1 - q0;
+
+		float rxs = Math::Cross(r, s);
+		float qpxr = Math::Cross(q0 - p0, r);
+		float qpxs = Math::Cross(q0 - p0, s);
+
+		// if r x s = 0 and (q-p) x r = 0, then the two lines are collinear
+		if (Math::IsZero(rxs) && Math::IsZero(qpxr))
+		{
+			if (considerCollinearOverlapAsIntersect)
+			{
+				float qpdotr = glm::dot(q0 - p0, r);
+				float rdotr = glm::dot(r, r);
+
+				float qpdots = glm::dot(p0 - q0, s);
+				float sdots = glm::dot(s, s);
+
+				if ((0 <= qpdotr && qpdotr <= rdotr) ||
+					(0 <= qpdots && qpdots <= sdots))
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
+		if (Math::IsZero(rxs) && !Math::IsZero(qpxr))
+		{
+			return false;
+		}
+
+		float t = qpxs / rxs;
+		float u = qpxr / rxs;
+
+		if (!Math::IsZero(rxs) && (0 < t && t < 1) && (0 < u && u < 1))
+		{
+			intersectionPoint = p0 + r * t;
+			intersectinTime0 = t;
+			intersectinTime1 = u;
+			return true;
+		}
+
+		return false;
+	}
+
+
+
 	/*
 	float ClosestPtSegmentSegment(glm::vec3 p0, glm::vec3 p1, glm::vec3 q0, glm::vec3 q1, float& t, float& s, )
 	*/
@@ -469,16 +531,16 @@ namespace NavMesh
 	}
 
 
-	struct MergePolygonResult
+	struct UnionPolygonResult
 	{
 		bool intersects;
 		NavMeshPolygon polygon;
 	};
 
 	// https://stackoverflow.com/questions/2667748/how-do-i-combine-complex-polygons
-	MergePolygonResult TryMergePolygon(NavMeshPolygon* polygon0, NavMeshPolygon* polygon1)
+	UnionPolygonResult TryUnionizePolygon(NavMeshPolygon* polygon0, NavMeshPolygon* polygon1)
 	{
-		MergePolygonResult result;
+		UnionPolygonResult result;
 		result.intersects = false;
 
 		if ((*polygon0) == (*polygon1))
@@ -555,7 +617,153 @@ namespace NavMesh
 		}
 	}
 
-	void TryMergePolygons(std::vector<NavMeshPolygon>& polygons)
+	bool IntersectsWithPolygon(NavMeshPolygon& polygon, Edge edge)
+	{
+		for (int i = 0; i < polygon.vertices.size(); i++)
+		{
+			Edge edge0 = polygon.GetEdge(i);
+
+			// we just doing a 2D line tests now!
+			glm::vec2 p0 = glm::vec2(edge.vertices[0].x, edge.vertices[0].z);
+			glm::vec2 p1 = glm::vec2(edge.vertices[1].x, edge.vertices[1].z);
+			glm::vec2 p2 = glm::vec2(edge0.vertices[0].x, edge0.vertices[0].z);
+			glm::vec2 p3 = glm::vec2(edge0.vertices[1].x, edge0.vertices[1].z);
+
+			glm::vec2 intersectionPoint;
+			float intersectionTime0, intersectionTime1;
+			if (LineSegmentLineSegmentIntersection_NotCountingVertex(p0, p1, p2, p3, intersectionPoint, intersectionTime0, intersectionTime1, true))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+
+
+	std::vector<glm::vec3> GetVertexListFromStartIndex(std::vector<glm::vec3>& list, glm::vec3 startVertex)
+	{
+		std::vector<glm::vec3> vertexList;
+		int startIndex = 0;
+		for (int i = 0; i < list.size(); i++)
+		{
+			if (Math::Equals(list[i], startVertex))
+			{
+				startIndex = i;
+			}
+		}
+
+		int curIndex = startIndex;
+		bool first = true;
+		while (true)
+		{
+			if (curIndex == startIndex && first == false) {
+				vertexList.push_back(list[curIndex]);
+				break;
+			}
+
+			vertexList.push_back(list[curIndex]);
+			curIndex++;
+			first = false;
+
+			if (curIndex == list.size())
+			{
+				curIndex = 0;
+			}
+		}
+
+		return vertexList;
+	}
+
+
+	// edge[0] is the vertex from the polygon,
+	// edge[1] is the vertex from the hole
+	void AddHoleToPolygon(NavMeshPolygon& polygon, NavMeshPolygon& hole, Edge edge)
+	{
+		std::vector<glm::vec3> newVertices;
+		int curIndex = 0;
+		for (curIndex = 0; curIndex < polygon.vertices.size(); curIndex++)
+		{
+			newVertices.push_back(polygon.vertices[curIndex]);
+
+			if (Math::Equals(polygon.vertices[curIndex], edge.vertices[0]))
+			{
+				break;
+			}
+		}
+
+		std::vector<glm::vec3> reversedHoleVertices;
+		for (int i = hole.vertices.size()-1; i >= 0; i--)
+		{
+			reversedHoleVertices.push_back(hole.vertices[i]);
+		}
+
+		std::vector<glm::vec3> holeVertices = GetVertexListFromStartIndex(reversedHoleVertices, edge.vertices[1]);
+
+		// now add the hole vertices
+		for (int j = 0; j < holeVertices.size(); j++)
+		{
+			newVertices.push_back(holeVertices[j]);
+		}
+
+		// we have to add edge[0] again. 
+		for (int i = curIndex; i < polygon.vertices.size(); i++)
+		{
+			newVertices.push_back(polygon.vertices[i]);
+		}
+
+		polygon.vertices = newVertices;
+	}
+
+
+	void ConnectHole(NavMeshPolygon& polygon, NavMeshPolygon& hole)
+	{
+		bool connected = false;
+		for (int i = 0; i < hole.vertices.size(); i++)
+		{
+			for (int j = 0; j < polygon.vertices.size(); j++)
+			{
+				Edge edge = { polygon.vertices[j], hole.vertices[i]};
+
+				if (IntersectsWithPolygon(polygon, edge))
+				{
+					continue;
+				}
+
+				if (IntersectsWithPolygon(hole, edge))
+				{
+					continue;
+				}
+
+				connected = true;
+				AddHoleToPolygon(polygon, hole, edge);
+				break;
+			}
+
+			if (connected)
+			{
+				break;
+			}
+		}
+	}
+
+	void ConnectHoles(NavMeshPolygon& ground, std::vector<NavMeshPolygon>& holes)
+	{
+		for (int i = 0; i < holes.size(); i++)
+		{
+			ConnectHole(ground, holes[i]);
+		}
+	}
+
+	// using the ear clipping algorithm
+	// https://www.geometrictools.com/Documentation/TriangulationByEarClipping.pdf
+	void Triangulate(NavMeshPolygon& polygon)
+	{
+
+	}
+
+
+	void TryUnionizePolygons(std::vector<NavMeshPolygon>& polygons)
 	{
 		while (true)
 		{
@@ -574,12 +782,7 @@ namespace NavMesh
 					NavMeshPolygon* polygon0 = &polygons[i];
 					NavMeshPolygon* polygon1 = &polygons[j];
 
-					if (polygon0->debugId == 2 && polygon1->debugId == 3)
-					{
-						int a = 1;
-					}
-
-					MergePolygonResult result = TryMergePolygon(polygon0, polygon1);
+					UnionPolygonResult result = TryUnionizePolygon(polygon0, polygon1);
 					intersectionFound = result.intersects;
 
 					if (result.intersects)

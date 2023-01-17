@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../PlatformShared/platform_shared.h"
-#include "../PlatformShared/collision.h"
+#include "collision.h"
 
 //#include "debug_interface.h"
 #include "memory.h"
