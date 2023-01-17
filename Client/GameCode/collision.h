@@ -88,6 +88,15 @@ namespace Collision
 	}
 
 
+	// triangle is counter clockswise
+	bool IsPointInsideTriangle_Barycentric_NotOnTheLine(glm::vec3 testPoint, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2)
+	{
+		float u, v, w;
+		Barycentric(p0, p1, p2, testPoint, u, v, w);
+		return v > 0.0f && w > 0.0f && (v + w) < 1.0f;
+	}
+
+
 
 	void ClosestPtPointLineSegment(glm::vec3 linePt0, glm::vec3 linePt1, glm::vec3 point, float& t, glm::vec3& closestPoint)
 	{

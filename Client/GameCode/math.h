@@ -48,8 +48,8 @@ namespace Math
 	float ComputeRotationAngle_XZPlane(glm::vec3 vec0, glm::vec3 vec1)
 	{
 		// the atan2 function return arctan y/x in the interval [-pi, +pi] radians
-		double theta0 = atan2(vec0.z, vec0.x) * 180 / PI;
-		double theta1 = atan2(vec1.z, vec1.x) * 180 / PI;
+		double theta0 = atan2(vec0.x, vec0.z) * 180 / PI;
+		double theta1 = atan2(vec1.x, vec1.z) * 180 / PI;
 
 	//	std::cout << "			theta0 " << theta0 << std::endl;
 	//	std::cout << "			theta1 " << theta1 << std::endl;
@@ -83,8 +83,8 @@ namespace Math
 		glm::vec3 dNext = glm::normalize(v2 - v1);
 
 		// the atan2 function return arctan y/x in the interval [-pi, +pi] radians
-		double theta0 = atan2(dPrev.z, dPrev.x) * 180 / PI;
-		double theta1 = atan2(dNext.z, dNext.x) * 180 / PI;
+		double theta0 = atan2(dPrev.x, dPrev.z) * 180 / PI;
+		double theta1 = atan2(dNext.x, dNext.z) * 180 / PI;
 
 		// handle angle wrap around
 

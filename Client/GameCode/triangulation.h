@@ -118,7 +118,7 @@ namespace Triangulation
 					int a = 1;
 				}
 
-				bool isInside = Collision::IsPointInsideTriangle_Barycentric(testPoint, earTriangle[0].pos, earTriangle[1].pos, earTriangle[2].pos);
+				bool isInside = Collision::IsPointInsideTriangle_Barycentric_NotOnTheLine(testPoint, earTriangle[0].pos, earTriangle[1].pos, earTriangle[2].pos);
 				if (isInside)
 				{
 					std::cout << "vertices " << vertices[i].id << " is inside " << std::endl;
@@ -211,6 +211,11 @@ namespace Triangulation
 		{
 			std::cout << "iter " << iter << " size is " << trigVertices.size() << std::endl;
 
+			// we want to minimize the distance between the triangle vertices
+			float bestDist = FLT_MAX;
+			int bestEar = -1;
+			std::vector<TrigulationVertex> bestEarTriangle;
+
 			for (int i = 0; i < trigVertices.size(); i++)
 			{
 				v0 = i - 1;
@@ -226,8 +231,7 @@ namespace Triangulation
 					v2 = 0;
 				}
 
-				glm::vec3 edge0 = trigVertices[v0].pos - trigVertices[v1].pos;
-				glm::vec3 edge1 = trigVertices[v2].pos - trigVertices[v1].pos;
+
 
 				float angle2 = Math::CalculateInteriorAngle(trigVertices[v0].pos, trigVertices[v1].pos, trigVertices[v2].pos);
 				// not a convex vertex
@@ -243,21 +247,31 @@ namespace Triangulation
 
 				if (IsEar(earTriangle, trigVertices))
 				{
-					triangles.push_back({
-							earTriangle[0].pos, 
-							earTriangle[1].pos, 
-							earTriangle[2].pos 
-						});
+					glm::vec3 edge0 = trigVertices[v0].pos - trigVertices[v1].pos;
+					glm::vec3 edge1 = trigVertices[v2].pos - trigVertices[v1].pos;
+					glm::vec3 edge2 = trigVertices[v0].pos - trigVertices[v2].pos;
 
-					int index = FindIndex(trigVertices, trigVertices[v1]);
-
-					trigVertices.erase(trigVertices.begin()+index);
-					break;
+					float dist = glm::dot(edge0, edge0) + glm::dot(edge1, edge1) + glm::dot(edge2, edge2);
+					if (dist < bestDist)
+					{
+						bestDist = dist;
+						bestEar = v1;
+						bestEarTriangle = earTriangle;
+					}
 				}
 			}
 
+			assert(bestEar != -1);
 
+			// remove the ear
+			triangles.push_back({
+				bestEarTriangle[0].pos,
+				bestEarTriangle[1].pos,
+				bestEarTriangle[2].pos
+			});
 
+			int index = FindIndex(trigVertices, trigVertices[bestEar]);
+			trigVertices.erase(trigVertices.begin() + index);
 
 			iter++;
 		}

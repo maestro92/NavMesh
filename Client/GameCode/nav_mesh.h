@@ -187,7 +187,7 @@ namespace NavMesh
 			GraphNode* lowestNode = &nodes[0];
 			for (int i = 0; i < nodes.size(); i++)
 			{
-				if (nodes[i].vertex.z < lowestNode->vertex.z)
+				if (nodes[i].vertex.x < lowestNode->vertex.x)
 				{
 					lowestNode = &nodes[i];
 				}
@@ -234,7 +234,7 @@ namespace NavMesh
 						std::cout << "		 " << curNode->neighbors[i] << std::endl;
 
 						glm::vec3 vector = glm::normalize(curNode->neighbors[i] - curNode->vertex);
-						double angle = atan2(vector.z, vector.x) * 180 / PI;
+						double angle = atan2(vector.x, vector.z) * 180 / PI;
 						std::cout << "		 angle " << angle << std::endl;
 
 						if (angle < 0)

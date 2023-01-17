@@ -120,6 +120,7 @@ void initPlayerEntity(Entity* entity, glm::vec3 pos)
 	entity->zAxis = glm::vec3(0.0, 0.0, 1.0);
 }
 
+// the list of vertices are in no particular order.
 std::vector<glm::vec3> GetCubeVertices(glm::vec3 min, glm::vec3 max)
 {
 	/*
@@ -406,6 +407,7 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	
 	NavMesh::NavMeshPolygon polygon;
 
+	/*
 	// Testing 
 	// obstacle 1
 	entity = &world->entities[world->numEntities++];
@@ -433,11 +435,11 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	polygon = NavMesh::CreatePolygonFromMinMax(min, max);
 	initEntity(entity, pos, STATIC, faces);
 	holes.push_back(polygon);
-	
+	*/
 
 
 	
-	/*
+	
 	// obstacle 0
 	entity = &world->entities[world->numEntities++];
 	min = glm::vec3(-80, 0, -80);
@@ -458,7 +460,6 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	initEntity(entity, pos, STATIC, faces);
 	holes.push_back(polygon);
 
-	
 	// obstacle 2
 	entity = &world->entities[world->numEntities++];
 	min = glm::vec3(-50, 0, -20);
@@ -469,7 +470,6 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	initEntity(entity, pos, STATIC, faces);
 	holes.push_back(polygon);
 	
-	
 	// obstacle 3
 	entity = &world->entities[world->numEntities++];
 	min = glm::vec3(30, 0, 20);
@@ -479,11 +479,18 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 
 	initEntity(entity, pos, STATIC, faces);
 	holes.push_back(polygon);
-
+	
+	
+	/*
+	// Testing 
+	entity = &world->entities[world->numEntities++];
+	min = glm::vec3(0, 0, 0);
+	max = glm::vec3(10, 50, 10);
+	faces = CreateCubeFaceMinMax(min, max);
+	polygon = NavMesh::CreatePolygonFromMinMax(min, max);
+	initEntity(entity, pos, STATIC, faces);
+	holes.push_back(polygon);
 	*/
-
-
-
 
 
 
@@ -491,13 +498,14 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	// step 3, we unionize the obstacle polygons (holes)
 	TryUnionizePolygons(holes);
 
+	
 	// step 4, combine the boundary polgyon with ostacle polygons (holes),
 	// so we are representing the world as a single polygon
 	ConnectHoles(groundPolygon, holes);
 	
 	
 	// setp 5, triangulate the whole thing
-	std::vector<Triangulation::TrigulationTriangle> triangles = Triangulation::Triangulate(holes[0].vertices);
+	std::vector<Triangulation::TrigulationTriangle> triangles = Triangulation::Triangulate(groundPolygon.vertices);
 	std::vector<NavMesh::NavMeshPolygon> polygons;
 
 	for (int i = 0; i < triangles.size(); i++)
@@ -510,8 +518,9 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	}
 	
 
-	//world->navMeshPolygons = holes;
+	// world->navMeshPolygons = holes;
 	world->navMeshPolygons = polygons;
+	// world->navMeshPolygons = { groundPolygon };
 }
 
 
