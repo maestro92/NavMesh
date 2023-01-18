@@ -419,25 +419,25 @@ void UseShaderProgramBegin(TexturedQuadlShader* program, glm::mat4* cameraTransf
 	if (IsValidArray(positionArray))
 	{
 		glEnableVertexAttribArray(positionArray);
-		glVertexAttribPointer(positionArray, 3, GL_FLOAT, false, sizeof(TexturedVertex), (void*)OffsetOf(TexturedVertex, position));
+		glVertexAttribPointer(positionArray, 3, GL_FLOAT, false, sizeof(RenderSystem::TexturedVertex), (void*)OffsetOf(RenderSystem::TexturedVertex, position));
 	}
 	
 	if (IsValidArray(normalArray))
 	{
 		glEnableVertexAttribArray(normalArray);
-		glVertexAttribPointer(normalArray, 3, GL_FLOAT, false, sizeof(TexturedVertex), (void*)OffsetOf(TexturedVertex, normal));
+		glVertexAttribPointer(normalArray, 3, GL_FLOAT, false, sizeof(RenderSystem::TexturedVertex), (void*)OffsetOf(RenderSystem::TexturedVertex, normal));
 	}	
 	
 	if (IsValidArray(UVArray))
 	{
 		glEnableVertexAttribArray(UVArray);
-		glVertexAttribPointer(UVArray, 2, GL_FLOAT, false, sizeof(TexturedVertex), (void*)OffsetOf(TexturedVertex, uv));
+		glVertexAttribPointer(UVArray, 2, GL_FLOAT, false, sizeof(RenderSystem::TexturedVertex), (void*)OffsetOf(RenderSystem::TexturedVertex, uv));
 	}
 
 	if (IsValidArray(colorArray))
 	{
 		glEnableVertexAttribArray(colorArray);
-		glVertexAttribPointer(colorArray, 4, GL_FLOAT, false, sizeof(TexturedVertex), (void*)OffsetOf(TexturedVertex, color));
+		glVertexAttribPointer(colorArray, 4, GL_FLOAT, false, sizeof(RenderSystem::TexturedVertex), (void*)OffsetOf(RenderSystem::TexturedVertex, color));
 	}
 
 	glUniformMatrix4fv(program->MVPMatId, 1, GL_FALSE, glm::value_ptr(*cameraTransform));
@@ -481,7 +481,7 @@ void UseShaderProgramEnd(TexturedQuadlShader* program)
 static int counter = 0;
 glm::vec3 backgroundColor;
 
-void OpenGLRenderCommands(OpenGLStuff* openGL, GameRenderCommands* commands, glm::ivec2 drawRegionMin,
+void OpenGLRenderCommands(OpenGLStuff* openGL, RenderSystem::GameRenderCommands* commands, glm::ivec2 drawRegionMin,
 	glm::ivec2 drawRegionMax,
 	glm::ivec2 windowDimensions)
 {
@@ -519,8 +519,8 @@ void OpenGLRenderCommands(OpenGLStuff* openGL, GameRenderCommands* commands, glm
 	glBindBuffer(GL_ARRAY_BUFFER, openGL->vertexBufferHandle);
 
 	int numVertex = commands->numVertex;
-	int sizebytes = commands->numVertex * sizeof(TexturedVertex);
-	glBufferData(GL_ARRAY_BUFFER, commands->numVertex * sizeof(TexturedVertex),
+	int sizebytes = commands->numVertex * sizeof(RenderSystem::TexturedVertex);
+	glBufferData(GL_ARRAY_BUFFER, commands->numVertex * sizeof(RenderSystem::TexturedVertex),
 		commands->masterVertexArray, GL_STATIC_DRAW);
 
 
@@ -539,24 +539,58 @@ void OpenGLRenderCommands(OpenGLStuff* openGL, GameRenderCommands* commands, glm
 	//		glDisable(GL_DEPTH_TEST);
 		}
 
-		RenderEntryHeader* header = (RenderEntryHeader*)curAt;
-		curAt += sizeof(RenderEntryHeader);
+		RenderSystem::RenderEntryHeader* header = (RenderSystem::RenderEntryHeader*)curAt;
+		curAt += sizeof(RenderSystem::RenderEntryHeader);
 
 		void* data = (uint8*)header + sizeof(*header);
 		switch (header->type)
 		{
-			case RenderGroupEntryType_Clear:
+			case RenderSystem::RenderGroupEntryType_Clear:
 			{
 
 
 			}
 			break;
+
+			case RenderSystem::RenderGroupEntryType_TexturedTriangles:
+			{
+				// Iterate 
+				curAt += sizeof(RenderSystem::RenderGroupEntryTexturedTriangles);
+				RenderSystem::RenderGroupEntryTexturedTriangles* entry = (RenderSystem::RenderGroupEntryTexturedTriangles*)data;
+
+				UseShaderProgramBegin(&openGL->generalShader, &entry->renderSetup.transformMatrix);
+
+				int currentTextureHandle = -1;
+
+
+				//	std::cout << "entry->numQuads " << entry->numQuads << std::endl;
+				for (int j = 0; j < entry->numTriangles; j++)
+				{
+					int bitmayArrayIndex = entry->masterBitmapArrayOffset;
+					LoadedBitmap* bitmap = commands->masterBitmapArray[bitmayArrayIndex + j];
+
+					// std::cout << "bitmap->textureHandle " << bitmap->textureHandle << std::endl;
+
+					if (currentTextureHandle != (GLuint)POINTER_TO_UINT32(bitmap->textureHandle))
+					{
+						glActiveTexture2(GL_TEXTURE0);
+						glBindTexture(GL_TEXTURE_2D, (GLuint)POINTER_TO_UINT32(bitmap->textureHandle));
+						currentTextureHandle = (GLuint)POINTER_TO_UINT32(bitmap->textureHandle);
+					}
+
+					int offset = entry->masterVertexArrayOffset + j * 3;
+					glDrawArrays(GL_TRIANGLE_STRIP, offset, 3);
+				}
+
+				glBindTexture(GL_TEXTURE_2D, 0);
+			}
+
 			
-			case RenderGroupEntryType_TexturedQuads:
+			case RenderSystem::RenderGroupEntryType_TexturedQuads:
 			{	
 				// Iterate 
-				curAt += sizeof(RenderGroupEntryTexturedQuads);
-				RenderGroupEntryTexturedQuads* entry = (RenderGroupEntryTexturedQuads*)data;
+				curAt += sizeof(RenderSystem::RenderGroupEntryTexturedQuads);
+				RenderSystem::RenderGroupEntryTexturedQuads* entry = (RenderSystem::RenderGroupEntryTexturedQuads*)data;
 
 				UseShaderProgramBegin(&openGL->generalShader, &entry->renderSetup.transformMatrix);
 

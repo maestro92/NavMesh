@@ -12,7 +12,7 @@
 
 #include "SDL_image.h"
 
-#include "sdl_faceoff_opengl.h"
+#include "sdl_api_opengl.h"
 
 #include "../GameCode/game_code.h"
 
@@ -541,7 +541,7 @@ int main(int argc, char *argv[])
 		void* renderCommandsPushBuffer = VirtualAlloc(0, (size_t)renderCommandsPushBufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 
 		int maxNumVertex = 65535;
-		void* texturedArrayBuffer = VirtualAlloc(0, maxNumVertex * sizeof(TexturedVertex), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+		void* texturedArrayBuffer = VirtualAlloc(0, maxNumVertex * sizeof(RenderSystem::TexturedVertex), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 
 		int maxNumBitmaps = 65535 >> 2;
 		void* bitmapArrayBuffer = VirtualAlloc(0, maxNumBitmaps * sizeof(LoadedBitmap*), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
@@ -587,7 +587,7 @@ int main(int argc, char *argv[])
 				SDL_WarpMouseInWindow(window, windowDimensions.x / 2, windowDimensions.y / 2);				
 			}
 
-			GameRenderCommands gameRenderCommands = {};
+			RenderSystem::GameRenderCommands gameRenderCommands = {};
 
 			gameRenderCommands.settings.dims = windowDimensions;
 
@@ -596,7 +596,7 @@ int main(int argc, char *argv[])
 			gameRenderCommands.numRenderGroups = 0;
 
 			gameRenderCommands.maxNumVertex = maxNumVertex;
-			gameRenderCommands.masterVertexArray = (TexturedVertex*)texturedArrayBuffer;
+			gameRenderCommands.masterVertexArray = (RenderSystem::TexturedVertex*)texturedArrayBuffer;
 			gameRenderCommands.numVertex = 0;
 
 			gameRenderCommands.maxNumBitmaps = maxNumBitmaps;

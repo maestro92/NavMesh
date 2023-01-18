@@ -164,51 +164,6 @@ struct GameMemory
 	PlatformWorkQueue* workQueue;
 };
 
-
-enum RenderGroupEntryType
-{
-	RenderGroupEntryType_Clear,
-	RenderGroupEntryType_TexturedQuads,
-};
-
-struct RenderEntryHeader
-{
-	uint16 type;
-};
-
-struct RenderEntryClear
-{
-	glm::vec4 color;
-};
-
-struct RenderSetup
-{
-	glm::mat4 transformMatrix;
-};
-
-struct RenderGroupEntryTexturedQuads
-{
-	RenderSetup renderSetup;
-	int numQuads;
-	int masterVertexArrayOffset;
-	int masterBitmapArrayOffset;
-};
-
-// this is just for convenience
-struct RenderGroup
-{
-	RenderGroupEntryTexturedQuads* quads;
-};
-
-
-struct TexturedVertex
-{
-	glm::vec3 position;
-	glm::vec3 normal;
-	glm::vec2 uv;
-	glm::vec4 color;
-};
-
 struct LoadedBitmap
 {
 	void* memory;
@@ -220,66 +175,121 @@ struct LoadedBitmap
 	uint32 textureHandle;
 };
 
-struct GameRenderSettings
+namespace RenderSystem
 {
-	glm::ivec2 dims;
-};
-
-struct GameRenderCommands
-{
-	GameRenderSettings settings;
-
-	uint8* pushBufferBase;
-	uint32 pushBufferSize;	
-	uint32 maxPushBufferSize;
-
-	uint32 numRenderGroups;
-
-	unsigned int maxNumVertex;
-	unsigned int numVertex;
-	TexturedVertex* masterVertexArray;
-
-	// an array of pointer
-	uint32 maxNumBitmaps;
-	uint32 numBitmaps;
-	LoadedBitmap** masterBitmapArray;
-
-
-	// hack for now
-	// eventually we want to add this to a render group concept
-	// instead of per TexturedQuad.
-
-	uint8* CurrentPushBufferAt()
+	enum RenderGroupEntryType
 	{
-		return pushBufferBase + pushBufferSize;
-	}
+		RenderGroupEntryType_Clear,
+		RenderGroupEntryType_TexturedTriangles,
+		RenderGroupEntryType_TexturedQuads,
+	};
 
-	bool HasSpaceFor(uint32 size)
+	struct RenderEntryHeader
 	{
-		return (pushBufferSize + size) <= maxPushBufferSize;
-	}
+		uint16 type;
+	};
 
-	bool HasSpaceForVertex(int numVertices)
+	struct RenderEntryClear
 	{
-		return numVertex + numVertices <= maxNumVertex;
-	}
+		glm::vec4 color;
+	};
 
-	void PrintDebug()
+	struct RenderSetup
 	{
-		for (unsigned int i = 0; i < numVertex; i++)
-		{			
-			std::cout << "i " << i << ": " << masterVertexArray[i].position << std::endl;
+		glm::mat4 transformMatrix;
+	};
+
+	struct RenderGroupEntryTexturedTriangles
+	{
+		RenderSetup renderSetup;
+		int numTriangles;
+		int masterVertexArrayOffset;
+		int masterBitmapArrayOffset;
+	};
+
+	struct RenderGroupEntryTexturedQuads
+	{
+		RenderSetup renderSetup;
+		int numQuads;
+		int masterVertexArrayOffset;
+		int masterBitmapArrayOffset;
+	};
+
+	// this is just for convenience
+	struct RenderGroup
+	{
+		RenderGroupEntryTexturedQuads* quads;
+	};
+
+
+	struct TexturedVertex
+	{
+		glm::vec3 position;
+		glm::vec3 normal;
+		glm::vec2 uv;
+		glm::vec4 color;
+	};
+
+	struct GameRenderSettings
+	{
+		glm::ivec2 dims;
+	};
+
+	struct GameRenderCommands
+	{
+		GameRenderSettings settings;
+
+		uint8* pushBufferBase;
+		uint32 pushBufferSize;	
+		uint32 maxPushBufferSize;
+
+		uint32 numRenderGroups;
+
+		unsigned int maxNumVertex;
+		unsigned int numVertex;
+		TexturedVertex* masterVertexArray;
+
+		// an array of pointer
+		uint32 maxNumBitmaps;
+		uint32 numBitmaps;
+		LoadedBitmap** masterBitmapArray;
+
+
+		// hack for now
+		// eventually we want to add this to a render group concept
+		// instead of per TexturedQuad.
+
+		uint8* CurrentPushBufferAt()
+		{
+			return pushBufferBase + pushBufferSize;
 		}
-	}
 
-};
+		bool HasSpaceFor(uint32 size)
+		{
+			return (pushBufferSize + size) <= maxPushBufferSize;
+		}
 
+		bool HasSpaceForVertex(int numVertices)
+		{
+			return numVertex + numVertices <= maxNumVertex;
+		}
+
+		void PrintDebug()
+		{
+			for (unsigned int i = 0; i < numVertex; i++)
+			{			
+				std::cout << "i " << i << ": " << masterVertexArray[i].position << std::endl;
+			}
+		}
+
+	};
+}
 
 typedef void(*GameUpdateAndRender_t)(GameMemory* gameMemory,
 	GameInputState* gameInput,
-	GameRenderCommands* gameRenderCommands, glm::ivec2 windowDimensions, bool isDebugMode);
+	RenderSystem::GameRenderCommands* gameRenderCommands, glm::ivec2 windowDimensions, bool isDebugMode);
 
 typedef void(*DebugSystemUpdateAndRender_t)(GameMemory* gameMemory,
 	GameInputState* gameInput,
-	GameRenderCommands* gameRenderCommands, glm::ivec2 windowDimensions, bool isDebugMode);
+	RenderSystem::GameRenderCommands* gameRenderCommands, glm::ivec2 windowDimensions, bool isDebugMode);
 

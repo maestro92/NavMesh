@@ -97,15 +97,19 @@ struct TransientState
 
 
 
-#define PushRenderElement(gameRenderCommands, type) (RenderGroupEntry##type*)PushRenderElement_(gameRenderCommands, RenderGroupEntryType_##type, sizeof(RenderGroupEntry##type))
-void* PushRenderElement_(GameRenderCommands* commands, RenderGroupEntryType type, uint32 size)
+#define PushRenderElement(gameRenderCommands, type) (RenderSystem::RenderGroupEntry##type*)PushRenderElement_(\
+gameRenderCommands, \
+RenderSystem::RenderGroupEntryType_##type, \
+sizeof(RenderSystem::RenderGroupEntry##type))
+
+void* PushRenderElement_(RenderSystem::GameRenderCommands* commands, RenderSystem::RenderGroupEntryType type, uint32 size)
 {
 	void* result = 0;
 
-	size += sizeof(RenderEntryHeader);
+	size += sizeof(RenderSystem::RenderEntryHeader);
 	if (commands->HasSpaceFor(size))
 	{
-		RenderEntryHeader* header = (RenderEntryHeader*)commands->CurrentPushBufferAt();
+		RenderSystem::RenderEntryHeader* header = (RenderSystem::RenderEntryHeader*)commands->CurrentPushBufferAt();
 		header->type = type;
 		result = (uint8*)header + sizeof(*header);
 
@@ -124,106 +128,9 @@ void* PushRenderElement_(GameRenderCommands* commands, RenderGroupEntryType type
 
 
 
-// p0 p1 p2 p3 in clock wise order
-// p0 top left,		p3 top right
-// p1 bottom left,	p2 bottom right 
-void PushQuad(GameRenderCommands* gameRenderCommands, RenderGroup* renderGroup, LoadedBitmap* bitmap,
-	glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec4 color, bool fakeLighting = false)
-{
-	glm::vec2 t0 = glm::vec2(0, 0);
-	glm::vec2 t1 = glm::vec2(1, 0);
-	glm::vec2 t2 = glm::vec2(1, 1);
-	glm::vec2 t3 = glm::vec2(0, 1);
-
-	glm::vec4 topColor = color;
-	glm::vec4 bottomColor = color;
-
-	if (fakeLighting)
-	{
-		bottomColor *= 0.1;
-		bottomColor.a = 1;
-	}
-
-	GameRender::PushQuad_Core(gameRenderCommands, renderGroup, bitmap, p0, t0, topColor,
-		p1, t1, bottomColor,
-		p2, t2, bottomColor,
-		p3, t3, topColor);
-}
-
-enum AlignmentMode
-{
-	Centered,
-	Left,
-	Right,
-	Top,
-	Bottom
-};
-
-void PushBitmap(GameRenderCommands* gameRenderCommands,
-	RenderGroup* renderGroup,
-	LoadedBitmap* bitmap,
-	glm::vec4 color,
-	glm::vec3 position,
-	glm::vec3 halfDim, AlignmentMode hAlignment, AlignmentMode vAlignment)
-{
-	glm::vec3 min = position;
-	glm::vec3 max = position;
-	switch (hAlignment)
-	{
-	case AlignmentMode::Centered:
-		min.x -= halfDim.x;
-		max.x += halfDim.x;
-		break;
-	case AlignmentMode::Left:
-		max.x += halfDim.x * 2;
-		break;
-	case AlignmentMode::Right:
-		min.x -= halfDim.x * 2;
-		break;
-	default:
-		break;
-	}
-
-	switch (vAlignment)
-	{
-	case AlignmentMode::Centered:
-		min.y -= halfDim.y;
-		max.y += halfDim.y;
-		break;
-	case AlignmentMode::Top:
-		min.y -= halfDim.y * 2;
-		break;
-	case AlignmentMode::Bottom:
-		max.y += halfDim.y * 2;
-		break;
-	default:
-		break;
-	}
-
-	glm::vec3 p0 = glm::vec3(min.x, max.y, max.z);
-	glm::vec3 p1 = glm::vec3(max.x, max.y, max.z);
-	glm::vec3 p2 = glm::vec3(min.x, min.y, max.z);
-	glm::vec3 p3 = glm::vec3(max.x, min.y, max.z);
-
-	glm::vec2 t0 = glm::vec2(0, 0);
-	glm::vec2 t1 = glm::vec2(1, 0);
-	glm::vec2 t2 = glm::vec2(0, 1);
-	glm::vec2 t3 = glm::vec2(1, 1);
-
-	glm::vec4 c0 = color;
-	glm::vec4 c1 = color;
-	glm::vec4 c2 = color;
-	glm::vec4 c3 = color;
 
 
-	// front
-	GameRender::PushQuad_Core(gameRenderCommands, renderGroup, bitmap, p0, t0, c0,
-		p1, t1, c1,
-		p3, t3, c3,
-		p2, t2, c2);
-}
-
-
+/*
 // this assumes BspPolygon is a plane
 void PushPlane(GameRenderCommands* gameRenderCommands, RenderGroup* renderGroup, LoadedBitmap* bitmap, glm::vec4 color, 
 				BspPolygon polygon, bool fakeLighting = false)
@@ -256,45 +163,6 @@ void PushPlane(GameRenderCommands* gameRenderCommands, RenderGroup* renderGroup,
 		p3, t3, bottomColor);
 }
 
-
-
-void PushLine3(GameRenderCommands* gameRenderCommands, RenderGroup* group, LoadedBitmap* bitmap, glm::vec4 color, glm::vec3 start, glm::vec3 end, float thickness)
-{
-	if (end == start)
-	{
-		return;
-	}
-	glm::vec3 dir = glm::normalize(end - start);
-	glm::vec3 supportUpAXIS = glm::vec3(0, 1, 0);
-
-	glm::vec3 right = glm::cross(dir, supportUpAXIS);
-	if (right == glm::vec3(0))
-	{
-		supportUpAXIS = glm::vec3(0, 0, -1);
-		right = glm::cross(dir, supportUpAXIS);
-	}
-
-
-	glm::vec3 up = -glm::cross(dir, right);
-
-	//	std::cout << "right " << right << std::endl;
-	//	std::cout << "up " << up << std::endl;
-
-	std::vector<glm::vec3> vertices(8);
-
-	vertices[0] = start + thickness * (up - right);
-	vertices[1] = start + thickness * (up + right);
-	vertices[2] = start + thickness * (-up - right);
-	vertices[3] = start + thickness * (-up + right);
-
-	vertices[4] = end + thickness * (up - right);
-	vertices[5] = end + thickness * (up + right);
-	vertices[6] = end + thickness * (-up - right);
-	vertices[7] = end + thickness * (-up + right);
-
-	GameRender::PushCube(gameRenderCommands, group, bitmap, vertices, color, false);
-}
-
 void PushPlaneOutline(GameRenderCommands* gameRenderCommands, RenderGroup* renderGroup, LoadedBitmap* bitmap, glm::vec4 color, BspPolygon polygon)
 {
 
@@ -313,11 +181,6 @@ void PushPlaneOutline(GameRenderCommands* gameRenderCommands, RenderGroup* rende
 	GameRender::PushLine(gameRenderCommands, renderGroup, bitmap, color, p3, p0, cubeThickness);
 
 }
-
-
-
-
-
 
 void PushTreeRecursive(GameRenderCommands* gameRenderCommands, RenderGroup* group, LoadedBitmap* bitmap, BSPNode* node, bool isFront, int depth)
 {
@@ -388,7 +251,7 @@ void PushTreeRecursive(GameRenderCommands* gameRenderCommands, RenderGroup* grou
 	PushTreeRecursive(gameRenderCommands, group, bitmap, node->children[0], true, depth + 1);
 	PushTreeRecursive(gameRenderCommands, group, bitmap, node->children[1], false, depth + 1);
 }
-
+*/
 
 glm::vec3 GetHorizontalVector(glm::vec3 dir, bool left)
 {
@@ -482,8 +345,9 @@ glm::mat4 GetCameraMatrix(const glm::vec3& eye, const glm::vec3& center, const g
 	return result;
 }
 
-void RenderEntityPlayerModel(GameRenderCommands* gameRenderCommands,
-	RenderGroup* renderGroup,
+void RenderEntityPlayerModel(
+	RenderSystem::GameRenderCommands* gameRenderCommands,
+	RenderSystem::RenderGroup* renderGroup,
 	GameAssets* gameAssets,
 	Entity* entity)
 {
@@ -495,11 +359,12 @@ void RenderEntityPlayerModel(GameRenderCommands* gameRenderCommands,
 	glm::vec3 min = entity->pos + entity->min - offset;
 	glm::vec3 max = entity->pos + entity->max + offset;
 
-	GameRender::PushCube(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_RED, min, max, true);
+	GameRender::PushCube(gameRenderCommands, renderGroup, bitmap, min, max, GameRender::COLOR_RED, true);
 }
 
-void RenderEntityStaticModel(GameRenderCommands* gameRenderCommands,
-	RenderGroup* renderGroup,
+void RenderEntityStaticModel(
+	RenderSystem::GameRenderCommands* gameRenderCommands,
+	RenderSystem::RenderGroup* renderGroup,
 	GameAssets* gameAssets,
 	Entity* entity)
 {
@@ -508,7 +373,7 @@ void RenderEntityStaticModel(GameRenderCommands* gameRenderCommands,
 
 	for (int i = 0; i < entity->model.size(); i++)
 	{
-		PushQuad(gameRenderCommands, renderGroup, bitmap,
+		GameRender::PushQuad(gameRenderCommands, renderGroup, bitmap,
 			entity->model[i].vertices[0],
 			entity->model[i].vertices[1],
 			entity->model[i].vertices[2],
@@ -516,8 +381,9 @@ void RenderEntityStaticModel(GameRenderCommands* gameRenderCommands,
 	}
 }
 
-void RenderEntityGroundModel(GameRenderCommands* gameRenderCommands,
-	RenderGroup* renderGroup,
+void RenderEntityGroundModel(
+	RenderSystem::GameRenderCommands* gameRenderCommands,
+	RenderSystem::RenderGroup* renderGroup,
 	GameAssets* gameAssets,
 	Entity* entity)
 {
@@ -526,7 +392,7 @@ void RenderEntityGroundModel(GameRenderCommands* gameRenderCommands,
 
 	for (int i = 0; i < entity->model.size(); i++)
 	{
-		PushQuad(gameRenderCommands, renderGroup, bitmap,
+		GameRender::PushQuad(gameRenderCommands, renderGroup, bitmap,
 			entity->model[i].vertices[0],
 			entity->model[i].vertices[1],
 			entity->model[i].vertices[2],
@@ -534,8 +400,9 @@ void RenderEntityGroundModel(GameRenderCommands* gameRenderCommands,
 	}
 }
 
-void RenderNavMeshPolygon(GameRenderCommands* gameRenderCommands,
-	RenderGroup* renderGroup,
+void RenderNavMeshPolygon(
+	RenderSystem::GameRenderCommands* gameRenderCommands,
+	RenderSystem::RenderGroup* renderGroup,
 	GameAssets* gameAssets,
 	NavMesh::NavMeshPolygon* polygon)
 {
@@ -563,7 +430,9 @@ void RenderNavMeshPolygon(GameRenderCommands* gameRenderCommands,
 		glm::vec3 offset = glm::vec3(0.5, 0.5, 0.5);
 		glm::vec3 min = p0 - offset;
 		glm::vec3 max = p0 + offset;
-		GameRender::PushCube(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_BLUE, min, max, true);
+		
+
+		GameRender::PushCube(gameRenderCommands, renderGroup, bitmap, min, max, GameRender::COLOR_BLUE, true);
 	}
 }
 
@@ -777,7 +646,7 @@ glm::vec3 UpdateEntityViewDirection(Entity* entity, GameInputState* gameInputSta
 
 
 void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
-	GameInputState* gameInputState, GameRenderCommands* gameRenderCommands, glm::ivec2 windowDimensions, DebugModeState* debugModeState)
+	GameInputState* gameInputState, RenderSystem::GameRenderCommands* gameRenderCommands, glm::ivec2 windowDimensions, DebugModeState* debugModeState)
 {
 	Entity* controlledEntity = &gameState->debugCameraEntity;
 
@@ -907,9 +776,9 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 
 
 	// We start a render setup
-	RenderGroup group = {};
+	RenderSystem::RenderGroup group = {};
 
-	RenderSetup renderSetup = {};
+	RenderSystem::RenderSetup renderSetup = {};
 	//	renderSetup.cameraProjectionMatrix = cameraProj;
 	//	renderSetup.cameraTransformMatrix = cameraTransform;
 	renderSetup.transformMatrix = cameraProj * glm::inverse(cameraMatrix);
@@ -959,7 +828,7 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 extern DebugTable* globalDebugTable;
 
 
-extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemory, GameInputState * gameInputState, GameRenderCommands * gameRenderCommands,
+extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemory, GameInputState * gameInputState, RenderSystem::GameRenderCommands * gameRenderCommands,
 	glm::ivec2 windowDimensions, DebugModeState* debugModeState)
 {
 	//	cout << "Update And Render-2" << endl;
@@ -1082,7 +951,7 @@ void RestartCollation(DebugState* debugState)
 }
 
 
-glm::vec3 PlatformMouseToScreenRenderPos(GameRenderCommands* gameRenderCommands, glm::ivec2 mousePos)
+glm::vec3 PlatformMouseToScreenRenderPos(RenderSystem::GameRenderCommands* gameRenderCommands, glm::ivec2 mousePos)
 {
 	float halfWidth = gameRenderCommands->settings.dims.x / 2.0f;
 	float halfHeight = gameRenderCommands->settings.dims.y / 2.0f;
@@ -1091,7 +960,7 @@ glm::vec3 PlatformMouseToScreenRenderPos(GameRenderCommands* gameRenderCommands,
 
 
 
-void DEBUGTextLine(char* s, GameRenderCommands* gameRenderCommands, RenderGroup* group, GameAssets* gameAssets, glm::vec3 position)
+void DEBUGTextLine(char* s, RenderSystem::GameRenderCommands* gameRenderCommands, RenderSystem::RenderGroup* group, GameAssets* gameAssets, glm::vec3 position)
 {
 	// how big do we want char to be displayed
 	const float DEBUG_CHAR_BITMAP_SCALE = 1;
@@ -1135,7 +1004,14 @@ void DEBUGTextLine(char* s, GameRenderCommands* gameRenderCommands, RenderGroup*
 
 			glm::vec3 leftTopPos = glm::vec3(x, y, 0.2);
 
-			PushBitmap(gameRenderCommands, group, &glyphBitmap->bitmap, GameRender::COLOR_WHITE, leftTopPos, glm::vec3(width / 2.0, height / 2.0, 0), AlignmentMode::Left, AlignmentMode::Top);
+			GameRender::PushBitmap(
+				gameRenderCommands, 
+				group, 
+				&glyphBitmap->bitmap, 
+				GameRender::COLOR_WHITE, 
+				leftTopPos, 
+				glm::vec3(width / 2.0, height / 2.0, 0), 
+				GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Top);
 
 
 			xPos += (advance * scale);
@@ -1146,8 +1022,8 @@ void DEBUGTextLine(char* s, GameRenderCommands* gameRenderCommands, RenderGroup*
 
 }
 
-void RenderProfileBars(DebugState* debugState, GameRenderCommands* gameRenderCommands,
-	RenderGroup* renderGroup, GameAssets* gameAssets, glm::ivec2 mousePos)
+void RenderProfileBars(DebugState* debugState, RenderSystem::GameRenderCommands* gameRenderCommands,
+	RenderSystem::RenderGroup* renderGroup, GameAssets* gameAssets, glm::ivec2 mousePos)
 {
 
 	// we have lanes for our threads 
@@ -1161,9 +1037,10 @@ void RenderProfileBars(DebugState* debugState, GameRenderCommands* gameRenderCom
 	glm::vec3 profileRectDim = glm::vec3(200, 100, 0);
 	glm::vec3 profileRectMin = glm::vec3(-halfWidth, halfHeight - profileRectDim.y, 0);
 	glm::vec3 profileRectMax = profileRectMin + profileRectDim;
+	
 	// background
-	PushBitmap(gameRenderCommands, renderGroup, defaultBitmap, glm::vec4(0, 0, 0.25, 0.25), profileRectMin,
-		glm::vec3(profileRectDim.x / 2.0, profileRectDim.y / 2.0, 0), AlignmentMode::Left, AlignmentMode::Bottom);
+	GameRender::PushBitmap(gameRenderCommands, renderGroup, defaultBitmap, glm::vec4(0, 0, 0.25, 0.25), profileRectMin,
+		glm::vec3(profileRectDim.x / 2.0, profileRectDim.y / 2.0, 0), GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Bottom);
 
 	//cout << "RenderProfileBars " << endl;
 	if (debugState->mostRecentFrame != NULL)
@@ -1223,8 +1100,8 @@ void RenderProfileBars(DebugState* debugState, GameRenderCommands* gameRenderCom
 
 			float zOffset = 0.1;
 
-			PushBitmap(gameRenderCommands, renderGroup, defaultBitmap, color, glm::vec3(rectMin.x, rectMin.y, zOffset),
-				glm::vec3(dim.x / 2.0, dim.y / 2.0, 0), AlignmentMode::Left, AlignmentMode::Bottom);
+			GameRender::PushBitmap(gameRenderCommands, renderGroup, defaultBitmap, color, glm::vec3(rectMin.x, rectMin.y, zOffset),
+				glm::vec3(dim.x / 2.0, dim.y / 2.0, 0), GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Bottom);
 
 			// if mouse in region
 			glm::vec3 screenMousePos = PlatformMouseToScreenRenderPos(gameRenderCommands, mousePos);
@@ -1238,7 +1115,7 @@ void RenderProfileBars(DebugState* debugState, GameRenderCommands* gameRenderCom
 
 extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * gameMemory,
 	GameInputState * gameInputState,
-	GameRenderCommands * gameRenderCommands,
+	RenderSystem::GameRenderCommands * gameRenderCommands,
 	glm::ivec2 windowDimensions, DebugModeState* debugModeState)
 {
 	DebugState* debugState = (DebugState*)gameMemory->debugStorage;
@@ -1250,7 +1127,7 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 		MemoryIndex debugArenaSize = gameMemory->debugStorageSize - sizeof(DebugState) - collationArenaSize;
 		debugState->debugArena.Init(debugArenaBase, debugArenaSize);
 
-		debugState->renderGroup = PushStruct(&debugState->debugArena, RenderGroup);
+		debugState->renderGroup = PushStruct(&debugState->debugArena, RenderSystem::RenderGroup);
 
 		uint8* collationArenaBase = (uint8*)gameMemory->debugStorage + sizeof(DebugState) + debugArenaSize;
 		debugState->collationArena.Init(collationArenaBase, collationArenaSize);
@@ -1273,9 +1150,9 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 
 
 	// We start a render setup
-	RenderGroup group = {};
+	RenderSystem::RenderGroup group = {};
 
-	RenderSetup renderSetup = {};
+	RenderSystem::RenderSetup renderSetup = {};
 	renderSetup.transformMatrix = cameraProj;// *glm::inverse(globalDebugCameraMat);
 
 

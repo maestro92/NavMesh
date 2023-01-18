@@ -157,7 +157,7 @@ struct DebugState
 
 
 	// Things for rendering
-	RenderGroup* renderGroup;
+	RenderSystem::RenderGroup* renderGroup;
 	MemoryArena debugArena; 
 
 	void PrintDebugElement()

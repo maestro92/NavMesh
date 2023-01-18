@@ -129,43 +129,6 @@ namespace Triangulation
 		return true;
 	}
 
-	/*
-	std::vector<TrigulationVertex> FindAllEars(std::vector<TrigulationVertex>& vertices)
-	{
-		std::vector<TrigulationVertex> ears;
-
-		int v0 = 0;
-		int v1 = 0;
-		int v2 = 0;
-		std::vector<TrigulationVertex> earTriangle;
-
-		for (int i = 0; i < vertices.size(); i++)
-		{
-			v0 = i - 1;
-			v1 = i;
-			v2 = i + 1;
-
-			if (i == 0)
-			{
-				v0 = vertices.size() - 1;
-			}
-			else if (i == vertices.size() - 1)
-			{
-				v2 = 0;
-			}
-
-			earTriangle.push_back(vertices[v0]);
-			earTriangle.push_back(vertices[v1]);
-			earTriangle.push_back(vertices[v2]);
-
-			if (IsEar(earTriangle, vertices))
-			{
-				ears.push_back(vertices[v1]);
-			}
-		}
-	}
-	*/
-
 	int FindIndex(std::vector<TrigulationVertex>& trigVertices, TrigulationVertex vertex)
 	{
 		for (int i = 0; i < trigVertices.size(); i++)
@@ -177,7 +140,6 @@ namespace Triangulation
 		}
 		return -1;
 	}
-
 
 	std::vector<TrigulationTriangle> Triangulate(std::vector<glm::vec3> vertices)
 	{
@@ -230,8 +192,6 @@ namespace Triangulation
 				{
 					v2 = 0;
 				}
-
-
 
 				float angle2 = Math::CalculateInteriorAngle(trigVertices[v0].pos, trigVertices[v1].pos, trigVertices[v2].pos);
 				// not a convex vertex

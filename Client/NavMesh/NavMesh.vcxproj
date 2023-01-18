@@ -99,7 +99,7 @@
     <ClInclude Include="asset.h" />
     <ClInclude Include="debug_interface.h" />
     <ClInclude Include="memory.h" />
-    <ClInclude Include="sdl_faceoff_opengl.h" />
+    <ClInclude Include="sdl_api_opengl.h" />
     <ClInclude Include="sdl_handmade.h" />
     <ClInclude Include="stb_truetype.h" />
     <ClInclude Include="test_asset_builder.h" />
