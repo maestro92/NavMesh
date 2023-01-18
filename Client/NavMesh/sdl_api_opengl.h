@@ -551,41 +551,7 @@ void OpenGLRenderCommands(OpenGLStuff* openGL, RenderSystem::GameRenderCommands*
 
 			}
 			break;
-
-			case RenderSystem::RenderGroupEntryType_TexturedTriangles:
-			{
-				// Iterate 
-				curAt += sizeof(RenderSystem::RenderGroupEntryTexturedTriangles);
-				RenderSystem::RenderGroupEntryTexturedTriangles* entry = (RenderSystem::RenderGroupEntryTexturedTriangles*)data;
-
-				UseShaderProgramBegin(&openGL->generalShader, &entry->renderSetup.transformMatrix);
-
-				int currentTextureHandle = -1;
-
-
-				//	std::cout << "entry->numQuads " << entry->numQuads << std::endl;
-				for (int j = 0; j < entry->numTriangles; j++)
-				{
-					int bitmayArrayIndex = entry->masterBitmapArrayOffset;
-					LoadedBitmap* bitmap = commands->masterBitmapArray[bitmayArrayIndex + j];
-
-					// std::cout << "bitmap->textureHandle " << bitmap->textureHandle << std::endl;
-
-					if (currentTextureHandle != (GLuint)POINTER_TO_UINT32(bitmap->textureHandle))
-					{
-						glActiveTexture2(GL_TEXTURE0);
-						glBindTexture(GL_TEXTURE_2D, (GLuint)POINTER_TO_UINT32(bitmap->textureHandle));
-						currentTextureHandle = (GLuint)POINTER_TO_UINT32(bitmap->textureHandle);
-					}
-
-					int offset = entry->masterVertexArrayOffset + j * 3;
-					glDrawArrays(GL_TRIANGLE_STRIP, offset, 3);
-				}
-
-				glBindTexture(GL_TEXTURE_2D, 0);
-			}
-
-			
+		
 			case RenderSystem::RenderGroupEntryType_TexturedQuads:
 			{	
 				// Iterate 

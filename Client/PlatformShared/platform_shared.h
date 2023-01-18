@@ -177,10 +177,14 @@ struct LoadedBitmap
 
 namespace RenderSystem
 {
+	struct RenderSetup
+	{
+		glm::mat4 transformMatrix;
+	};
+
 	enum RenderGroupEntryType
 	{
 		RenderGroupEntryType_Clear,
-		RenderGroupEntryType_TexturedTriangles,
 		RenderGroupEntryType_TexturedQuads,
 	};
 
@@ -192,19 +196,6 @@ namespace RenderSystem
 	struct RenderEntryClear
 	{
 		glm::vec4 color;
-	};
-
-	struct RenderSetup
-	{
-		glm::mat4 transformMatrix;
-	};
-
-	struct RenderGroupEntryTexturedTriangles
-	{
-		RenderSetup renderSetup;
-		int numTriangles;
-		int masterVertexArrayOffset;
-		int masterBitmapArrayOffset;
 	};
 
 	struct RenderGroupEntryTexturedQuads

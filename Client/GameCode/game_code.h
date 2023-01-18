@@ -359,7 +359,7 @@ void RenderEntityPlayerModel(
 	glm::vec3 min = entity->pos + entity->min - offset;
 	glm::vec3 max = entity->pos + entity->max + offset;
 
-	GameRender::PushCube(gameRenderCommands, renderGroup, bitmap, min, max, GameRender::COLOR_RED, true);
+	GameRender::PushCube(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_RED, min, max, true);
 }
 
 void RenderEntityStaticModel(
@@ -432,7 +432,19 @@ void RenderNavMeshPolygon(
 		glm::vec3 max = p0 + offset;
 		
 
-		GameRender::PushCube(gameRenderCommands, renderGroup, bitmap, min, max, GameRender::COLOR_BLUE, true);
+		GameRender::PushCube(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_BLUE, min, max, true);
+	}
+
+	if (polygon->vertices.size() == 3)
+	{
+		glm::vec4 shadedRed = glm::vec4(0.1, 0, 0, 0.4);
+		std::vector<glm::vec3> liftedVertex;
+		for (int j = 0; j < polygon->vertices.size(); j++)
+		{
+			// lifting it slightly higher
+			liftedVertex.push_back(polygon->vertices[j] + glm::vec3(0,0.1,0));
+		}
+		GameRender::PushTriangle(gameRenderCommands, renderGroup, bitmap, shadedRed, liftedVertex, false);
 	}
 }
 

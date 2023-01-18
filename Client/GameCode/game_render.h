@@ -107,20 +107,24 @@ namespace GameRender
 	
 
 
+	// right now, since the rendering pipeline only supports quads, im going to 
+	// render triangles as quads and wasting one vertex
 	void PushTriangle(
 		RenderSystem::GameRenderCommands* gameRenderCommands, 
 		RenderSystem::RenderGroup* renderGroup, 
 		LoadedBitmap* bitmap,
-		std::vector<glm::vec3>& vertices, glm::vec4 color, bool fakeLighting = false)
+		glm::vec4 color,
+		std::vector<glm::vec3>& vertices, 
+		bool fakeLighting = false)
 	{
 		assert(vertices.size() == 3);
 
-		if (fakeLighting)
-		{
-
-		}
-
-
+		GameRender::PushQuad(gameRenderCommands, renderGroup, bitmap, 
+			vertices[0],
+			vertices[1],
+			vertices[2],	// wasting one vertex here
+			vertices[2],
+			color, fakeLighting);
 	}
 
 
@@ -219,8 +223,8 @@ namespace GameRender
 		RenderSystem::GameRenderCommands* gameRenderCommands,
 		RenderSystem::RenderGroup* renderGroup,
 		LoadedBitmap* bitmap,
-		glm::vec3 min, glm::vec3 max,
 		glm::vec4 color,
+		glm::vec3 min, glm::vec3 max,
 		bool fakeLighting = false)
 	{
 		/*
