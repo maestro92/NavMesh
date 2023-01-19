@@ -427,11 +427,10 @@ void RenderNavMeshPolygon(
 		GameRender::PushLine(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_RED, p0, p1, lineThickness);
 
 		// vertex
-		glm::vec3 offset = glm::vec3(0.5, 0.5, 0.5);
+		glm::vec3 offset = glm::vec3(0.3, 0.3, 0.3);
 		glm::vec3 min = p0 - offset;
 		glm::vec3 max = p0 + offset;
 		
-
 		GameRender::PushCube(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_BLUE, min, max, true);
 	}
 
@@ -447,7 +446,6 @@ void RenderNavMeshPolygon(
 		GameRender::PushTriangle(gameRenderCommands, renderGroup, bitmap, shadedRed, liftedVertex, false);
 	}
 }
-
 
 void CatagorizePosition(World* world, Entity* entity)
 {
@@ -543,12 +541,12 @@ void PerformMove2(World* world, Entity* entity, PlayerMoveData* move)
 			int a = 1;
 		}
 
-		cout << "origin " << origin << endl;
-		cout << "end " << end << endl;
+	//	cout << "origin " << origin << endl;
+	//	cout << "end " << end << endl;
 
 		TraceResult result = BoxTrace(origin, end, entity->min, entity->max, world->tree, true);
 
-		cout << "result time fraction " << result.timeFraction << endl;
+	//	cout << "result time fraction " << result.timeFraction << endl;
 
 		if (result.outputAllSolid)
 		{
@@ -831,6 +829,34 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 		NavMesh::NavMeshPolygon* navMeshPolygon = &world->navMeshPolygons[i];
 		RenderNavMeshPolygon(gameRenderCommands, &group, gameAssets, navMeshPolygon);
 	}
+
+	for (int i = 0; i < world->dualGraph->nodes.size(); i++)
+	{
+		NavMesh::DualGraphNode* node = &world->dualGraph->nodes[i];
+		
+		BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
+		LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
+
+		// vertex
+		glm::vec3 offset = glm::vec3(0.5, 0.5, 0.5);
+		glm::vec3 min = node->center - offset;
+		glm::vec3 max = node->center + offset;
+		GameRender::PushCube(gameRenderCommands, &group, bitmap, GameRender::COLOR_GREEN, min, max, true);
+
+		for (int j = 0; j < node->neighbors.size(); j++)
+		{
+			int neighborId = node->neighbors[j].id;
+			NavMesh::DualGraphNode* neighbor = &world->dualGraph->nodes[neighborId];
+
+			// so we dont over draw. We only draw from lowerId to larger Id
+			if (neighborId > node->id)
+			{
+				GameRender::PushDashedLine(gameRenderCommands, &group, bitmap, GameRender::COLOR_GREEN, node->center, neighbor->center, 0.2);
+			}
+		}
+	}
+
+
 
 
 	GameRender::RenderCoordinateSystem(gameRenderCommands, &group, gameAssets);

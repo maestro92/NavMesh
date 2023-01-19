@@ -98,6 +98,7 @@ struct World
 	int numPlayerEntity;
 
 	std::vector<NavMesh::NavMeshPolygon> navMeshPolygons;
+	NavMesh::DualGraph* dualGraph;
 };
 
 
@@ -520,6 +521,9 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 
 	// world->navMeshPolygons = holes;
 	world->navMeshPolygons = polygons;
+
+	world->dualGraph = new NavMesh::DualGraph(polygons);
+
 	// world->navMeshPolygons = { groundPolygon };
 }
 
@@ -743,11 +747,12 @@ void RecursiveHullCheck(BSPNode* node, float startFraction, float endFraction,
 	TraceResult* result, TraceSetupInfo* setupInfo, bool print = false)
 {
 
-
+	/*
 	if (print)
 	{
 		std::cout << "visiting node " << node->id << std::endl;
 	}
+	*/
 
 	// already hit something nearer
 	if (result->timeFraction <= startFraction)

@@ -154,6 +154,7 @@
     <ClInclude Include="game_code.h" />
     <ClInclude Include="game_render.h" />
     <ClInclude Include="math.h" />
+    <ClInclude Include="pathfinding.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="triangulation.h" />
     <ClInclude Include="world.h" />

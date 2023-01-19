@@ -374,6 +374,8 @@ namespace GameRender
 	}
 
 
+
+
 	void PushLine(
 		RenderSystem::GameRenderCommands* gameRenderCommands, 
 		RenderSystem::RenderGroup* group, 
@@ -410,6 +412,36 @@ namespace GameRender
 		PushCube(gameRenderCommands, group, bitmap, vertices, color, false);
 	}
 
+
+
+
+	void PushDashedLine(
+		RenderSystem::GameRenderCommands* gameRenderCommands,
+		RenderSystem::RenderGroup* group,
+		LoadedBitmap* bitmap,
+		glm::vec4 color, glm::vec3 start, glm::vec3 end, float thickness)
+	{
+
+		float stepSize = 1;
+
+		glm::vec3 dir = end - start;
+
+		glm::vec3 normalizedDir = glm::normalize(dir);
+		float totalDistSq = glm::distance(start, end);
+
+		glm::vec3 curStart = start;
+
+
+		while (totalDistSq > 0)
+		{
+			glm::vec3 segmentEnd = curStart + normalizedDir * stepSize;
+			PushLine(gameRenderCommands, group, bitmap, color, curStart, segmentEnd, thickness);
+
+			curStart = segmentEnd + normalizedDir * stepSize;
+
+			totalDistSq -= 2 * stepSize;
+		}
+	}
 
 	void PushLine3(
 		RenderSystem::GameRenderCommands* gameRenderCommands, 

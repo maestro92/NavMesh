@@ -13,31 +13,7 @@ namespace NavMesh
 {
 	static int DebugCounter = 0;
 
-	struct GraphNode
-	{
-		glm::vec3 vertex;
-		std::vector<glm::vec3> neighbors;
 
-		bool ContainsNeighbor(glm::vec3 candidate)
-		{
-			for (int i = 0; i < neighbors.size(); i++)
-			{
-				if (Math::Equals(neighbors[i], vertex))
-				{
-					return true;
-				}
-			}
-			return false;
-		}
-
-		void TryAddNeighbor(glm::vec3 candidate)
-		{
-			if (!ContainsNeighbor(candidate))
-			{
-				neighbors.push_back(candidate);
-			}
-		}
-	};
 
 
 	struct Edge
@@ -76,6 +52,19 @@ namespace NavMesh
 			debugId = DebugCounter++;
 		}
 
+		glm::vec3 GetCentroid()
+		{
+			glm::vec3 sum;
+			int size = vertices.size();
+			for (int i = 0; i < size; i++)
+			{
+				sum += vertices[i];
+			}
+
+			float fSize = (float)size;
+			return glm::vec3(sum.x / fSize,	sum.y / fSize, sum.z / fSize);
+		}
+
 		bool operator== (const NavMeshPolygon& p2) const {
 
 			for (int i = 0; i < p2.vertices.size(); i++)
@@ -100,7 +89,6 @@ namespace NavMesh
 			return false;
 		}
 
-
 		// gets the edge between vertex and the next vertex
 		Edge GetEdge(int vertexIndex)
 		{
@@ -120,12 +108,38 @@ namespace NavMesh
 		}
 	};
 
-	// assuming the polygon is mergeable
-	struct Graph
+	struct UnionPolygonGraphNode
 	{
-		std::vector<GraphNode> nodes;
+		glm::vec3 vertex;
+		std::vector<glm::vec3> neighbors;
 
-		GraphNode* GetGraphNode(glm::vec3 vertex)
+		bool ContainsNeighbor(glm::vec3 candidate)
+		{
+			for (int i = 0; i < neighbors.size(); i++)
+			{
+				if (Math::Equals(neighbors[i], vertex))
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
+		void TryAddNeighbor(glm::vec3 candidate)
+		{
+			if (!ContainsNeighbor(candidate))
+			{
+				neighbors.push_back(candidate);
+			}
+		}
+	};
+
+	// assuming the polygon is mergeable
+	struct UnionPolygonGraph
+	{
+		std::vector<UnionPolygonGraphNode> nodes;
+
+		UnionPolygonGraphNode* GetGraphNode(glm::vec3 vertex)
 		{
 			for (int i = 0; i < nodes.size(); i++)
 			{
@@ -145,10 +159,10 @@ namespace NavMesh
 				glm::vec3 vertex = vertices[i];
 
 				// if we dont have this node yet, we create a new one
-				GraphNode* node = GetGraphNode(vertex);
+				UnionPolygonGraphNode* node = GetGraphNode(vertex);
 				if (node == NULL)
 				{
-					GraphNode newNode;
+					UnionPolygonGraphNode newNode;
 					newNode.vertex = vertex;
 					nodes.push_back(newNode);
 				}
@@ -169,8 +183,8 @@ namespace NavMesh
 					vertex1 = vertices[i + 1];
 				}
 
-				GraphNode* node0 = GetGraphNode(vertex0);
-				GraphNode* node1 = GetGraphNode(vertex1);
+				UnionPolygonGraphNode* node0 = GetGraphNode(vertex0);
+				UnionPolygonGraphNode* node1 = GetGraphNode(vertex1);
 
 				node0->TryAddNeighbor(vertex1);
 				node1->TryAddNeighbor(vertex0);
@@ -184,7 +198,7 @@ namespace NavMesh
 		{
 			assert(nodes.size() > 0);
 
-			GraphNode* lowestNode = &nodes[0];
+			UnionPolygonGraphNode* lowestNode = &nodes[0];
 			for (int i = 0; i < nodes.size(); i++)
 			{
 				if (nodes[i].vertex.x < lowestNode->vertex.x)
@@ -196,7 +210,7 @@ namespace NavMesh
 			std::vector<glm::vec3> boundary;
 
 			int iter = 0;
-			GraphNode* curNode = lowestNode;
+			UnionPolygonGraphNode* curNode = lowestNode;
 
 
 			Edge prevEdge;
@@ -452,6 +466,7 @@ namespace NavMesh
 
 
 
+
 	bool ContainsVertex(std::vector<glm::vec3>& list, glm::vec3 vertex)
 	{
 		for (int i = 0; i < list.size(); i++)
@@ -587,7 +602,7 @@ namespace NavMesh
 			AddNewVerticesToPolygons(newVertices1, polygon1);
 
 			// generate Graph with vertex and edge
-			Graph graph;
+			UnionPolygonGraph graph;
 			graph.AddPolygon(polygon0->vertices);
 			graph.AddPolygon(polygon1->vertices);
 			
@@ -755,14 +770,6 @@ namespace NavMesh
 		}
 	}
 
-	// using the ear clipping algorithm
-	// https://www.geometrictools.com/Documentation/TriangulationByEarClipping.pdf
-	void Triangulate(NavMeshPolygon& polygon)
-	{
-
-	}
-
-
 	void TryUnionizePolygons(std::vector<NavMeshPolygon>& polygons)
 	{
 		while (true)
@@ -807,4 +814,91 @@ namespace NavMesh
 			}
 		}
 	}
+
+	struct Neighbor
+	{
+		int id;
+		std::vector<Edge> portals;
+	};
+
+	struct DualGraphNode {
+		int id;
+		glm::vec3 center;
+		std::vector<Neighbor> neighbors;
+		
+		void AddNeighbor(int neighbor, std::vector<Edge> sharedEdges)
+		{
+			for (int i = 0; i < neighbors.size(); i++)
+			{
+				if (neighbors[i].id == neighbor)
+				{
+					return;
+				}
+			}
+
+			Neighbor neighborNode = { neighbor, sharedEdges };
+			neighbors.push_back(neighborNode);
+		}
+	};
+
+	struct DualGraph
+	{
+		std::vector<NavMeshPolygon> polygons;
+		std::vector<DualGraphNode> nodes;
+
+		DualGraph(std::vector<NavMeshPolygon>& polygonsIn)
+		{
+			for (int i = 0; i < polygonsIn.size(); i++)
+			{
+				NavMeshPolygon* polygon = &polygonsIn[i];
+
+				DualGraphNode node;
+				node.id = i;
+				node.center = polygon->GetCentroid();
+				nodes.push_back(node);
+
+				polygons.push_back(*polygon);
+			}
+
+			for (int i = 0; i < polygons.size(); i++)
+			{
+				NavMeshPolygon* polygon0 = &polygons[i];
+
+				for (int j = i+1; j < polygons.size(); j++)
+				{
+					NavMeshPolygon* polygon1 = &polygons[j];
+					
+					std::vector<Edge> sharedEdges;
+					if (AreNeighbors(polygon0, polygon1, sharedEdges))
+					{
+						nodes[i].AddNeighbor(j, sharedEdges);
+						nodes[j].AddNeighbor(i, sharedEdges);
+					}
+				}
+			}
+		}
+
+		bool AreNeighbors(NavMeshPolygon* p0, NavMeshPolygon* p1, std::vector<Edge>& sharedEdges)
+		{
+			for (int i = 0; i < p0->vertices.size(); i++)
+			{
+				Edge edge0 = p0->GetEdge(i);
+
+				for (int j = 0; j < p1->vertices.size(); j++)
+				{
+					Edge edge1 = p1->GetEdge(j);
+
+					if (edge0 == edge1)
+					{
+						sharedEdges.push_back(edge0);
+						return true;
+					}
+				}
+			}
+
+			return false;
+		}
+
+	};
+
 };
