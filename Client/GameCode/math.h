@@ -5,11 +5,16 @@
 
 #define PI 3.14159265
 
+
 namespace Math
 {
-
 	float EPSILON = 1e-5;
 
+	std::ostream& operator<<(std::ostream& os, const glm::vec3& vec)
+	{
+		os << vec.x << " " << vec.y << " " << vec.z;
+		return os;
+	}
 
 	bool Equals(glm::vec3 v0, glm::vec3 v1)
 	{
@@ -24,6 +29,11 @@ namespace Math
 	float Cross(glm::vec2 v0, glm::vec2 v1)
 	{
 		return v0.x * v1.y - v1.x * v0.y;
+	}
+
+	inline float TriArea_ZXPlane(const glm::vec3 d0, const glm::vec3 d1)
+	{
+		return d0.z * d1.x - d1.z * d0.x;
 	}
 
 	float ConvertAngleTo0To360(float angle)

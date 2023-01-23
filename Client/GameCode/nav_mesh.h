@@ -815,15 +815,18 @@ namespace NavMesh
 		}
 	}
 
-	struct Neighbor
-	{
-		int id;
-		std::vector<Edge> portals;
-	};
 
 	struct DualGraphNode {
+		
+		struct Neighbor
+		{
+			int id;
+			std::vector<Edge> portals;
+		};
+		
 		int id;
 		glm::vec3 center;
+		NavMeshPolygon* navMeshPolygon;
 		std::vector<Neighbor> neighbors;
 		
 		void AddNeighbor(int neighbor, std::vector<Edge> sharedEdges)
@@ -855,6 +858,7 @@ namespace NavMesh
 				DualGraphNode node;
 				node.id = i;
 				node.center = polygon->GetCentroid();
+				node.navMeshPolygon = polygon;
 				nodes.push_back(node);
 
 				polygons.push_back(*polygon);
@@ -878,6 +882,13 @@ namespace NavMesh
 			}
 		}
 
+		DualGraphNode* GetNode(int id)
+		{
+			assert(0 <= id && id < nodes.size());
+			return &nodes[id];
+		}
+
+
 		bool AreNeighbors(NavMeshPolygon* p0, NavMeshPolygon* p1, std::vector<Edge>& sharedEdges)
 		{
 			for (int i = 0; i < p0->vertices.size(); i++)
@@ -897,6 +908,40 @@ namespace NavMesh
 			}
 
 			return false;
+		}
+
+
+		void DedupAddPortal(std::vector<Edge>& portals, Edge edge)
+		{
+			for (int i = 0; i < portals.size(); i++)
+			{
+				if (portals[i] == edge)
+				{
+					return;
+				}
+			}
+			portals.push_back(edge);
+		}
+
+		std::vector<Edge> GetPortalList(std::vector<int> nodeIds)
+		{
+			std::vector<Edge> portals;
+			for (int i = 0; i < nodeIds.size(); i++)
+			{
+				int nodeId = nodeIds[i];
+				DualGraphNode* node = &nodes[nodeId];
+
+				for (int j = 0; j < node->neighbors.size(); j++)
+				{
+					DualGraphNode::Neighbor* neighbor = &node->neighbors[j];
+
+					for (int k = 0; k < neighbor->portals.size(); k++)
+					{
+						DedupAddPortal(portals, neighbor->portals[k]);
+					}
+				}
+			}
+			return portals;
 		}
 
 	};

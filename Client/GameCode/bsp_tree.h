@@ -41,7 +41,7 @@ bool PlaneEqual(Plane p0, Plane p1)
 }
 
 
-struct Edge
+struct BspEdge
 {
 	glm::vec3 vertices[2];
 };

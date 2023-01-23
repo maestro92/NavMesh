@@ -11,6 +11,7 @@ namespace GameRender
 	glm::vec4 COLOR_BLUE = glm::vec4(0, 0, 1, 1);
 	glm::vec4 COLOR_YELLOW = glm::vec4(1, 1, 0, 1);
 	glm::vec4 COLOR_TEAL = glm::vec4(0, 1, 1, 1);
+	glm::vec4 COLOR_ORANGE = glm::vec4(1, 0.5, 1, 1);
 
 	enum AlignmentMode
 	{
@@ -412,15 +413,27 @@ namespace GameRender
 		PushCube(gameRenderCommands, group, bitmap, vertices, color, false);
 	}
 
+	void PushLine(
+		RenderSystem::GameRenderCommands* gameRenderCommands,
+		RenderSystem::RenderGroup* group,
+		GameAssets* gameAssets,
+		glm::vec4 color, glm::vec3 start, glm::vec3 end, float thickness)
+	{
+		BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
+		LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
 
-
+		PushLine(gameRenderCommands, group, bitmap, color, start, end, thickness);
+	}
 
 	void PushDashedLine(
 		RenderSystem::GameRenderCommands* gameRenderCommands,
 		RenderSystem::RenderGroup* group,
-		LoadedBitmap* bitmap,
+		GameAssets* gameAssets,
 		glm::vec4 color, glm::vec3 start, glm::vec3 end, float thickness)
 	{
+
+		BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
+		LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
 
 		float stepSize = 1;
 
@@ -484,6 +497,25 @@ namespace GameRender
 		GameRender::PushCube(gameRenderCommands, group, bitmap, vertices, color, false);
 	}
 
+
+	void RenderPoint(
+		RenderSystem::GameRenderCommands* gameRenderCommands,
+		RenderSystem::RenderGroup* renderGroup,
+		GameAssets* gameAssets,
+		glm::vec4 color,
+		glm::vec3 pos,
+		float thickness)
+	{
+		BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
+		LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
+
+		// vertex
+		glm::vec3 offset = glm::vec3(thickness, thickness, thickness);
+		glm::vec3 min = pos - offset;
+		glm::vec3 max = pos + offset;
+
+		GameRender::PushCube(gameRenderCommands, renderGroup, bitmap, color, min, max, true);
+	}
 
 
 	void RenderCoordinateSystem(

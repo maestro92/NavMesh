@@ -6,6 +6,7 @@
 #include "../NavMesh/memory.h"
 #include "nav_mesh.h"
 #include "triangulation.h"
+#include "pathfinding.h"
 #include "bsp_tree.h"
 
 #define	DIST_EPSILON	(0.03125)
@@ -99,6 +100,11 @@ struct World
 
 	std::vector<NavMesh::NavMeshPolygon> navMeshPolygons;
 	NavMesh::DualGraph* dualGraph;
+
+	std::vector<glm::vec3> waypoints;
+	std::vector<NavMesh::Edge> portals;
+	glm::vec3 start;
+	glm::vec3 destination;
 };
 
 
@@ -379,6 +385,40 @@ Brush ConvertFaceToBrush(std::vector<Face> faces)
 }
 
 
+NavMesh::NavMeshPolygon CreateTestGround(World* world)
+{
+	Entity* entity = NULL;
+	glm::vec3 pos;
+	glm::vec3 min;
+	glm::vec3 max;
+	std::vector<Face> faces;
+
+	// ground
+	entity = &world->entities[world->numEntities++];
+	min = glm::vec3(-100, -20, -100);
+	max = glm::vec3(100, 0, 100);
+	faces = CreateCubeFaceMinMax(min, max);
+
+	NavMesh::NavMeshPolygon groundPolygon;
+	
+	std::vector<glm::vec3> vertices;
+	
+	vertices.push_back(glm::vec3(-40, 0, 50));
+	vertices.push_back(glm::vec3(30, 0, 90));
+	vertices.push_back(glm::vec3(90, 0, 40));
+	vertices.push_back(glm::vec3(30, 0, 20));
+	vertices.push_back(glm::vec3(60, 0, -30));
+	vertices.push_back(glm::vec3(110, 0, -80));
+	vertices.push_back(glm::vec3(70, 0, -100));
+	vertices.push_back(glm::vec3(10, 0, -60));
+	
+	groundPolygon.vertices = vertices;
+
+	initEntity(entity, pos, GROUND, faces);
+	return groundPolygon;
+}
+
+
 void CreateAreaA(World* world, std::vector<Brush>& brushes)
 {
 	Entity* entity = NULL;
@@ -392,9 +432,13 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	glm::vec3 min;
 	glm::vec3 max;
 
-//	std::vector<NavMesh::NavMeshPolygon> polygons;
-	std::vector<NavMesh::NavMeshPolygon> holes;
 
+	std::vector<NavMesh::NavMeshPolygon> holes;
+	NavMesh::NavMeshPolygon polygon;
+	NavMesh::NavMeshPolygon groundPolygon;
+
+
+	/*
 	// ground
 	entity = &world->entities[world->numEntities++];
 	min = glm::vec3(-100, -20, -100);
@@ -402,45 +446,13 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	faces = CreateCubeFaceMinMax(min, max);
 
 	glm::vec3 polyMeshMin = glm::vec3(-100, 0, -100);
-	NavMesh::NavMeshPolygon groundPolygon = NavMesh::CreatePolygonFromMinMax(polyMeshMin, max);
+	groundPolygon = NavMesh::CreatePolygonFromMinMax(polyMeshMin, max);
 	initEntity(entity, pos, GROUND, faces);
-
-	
-	NavMesh::NavMeshPolygon polygon;
-
-	/*
-	// Testing 
-	// obstacle 1
-	entity = &world->entities[world->numEntities++];
-	min = glm::vec3(0, 0, 0);
-	max = glm::vec3(30, 50, 10);
-	faces = CreateCubeFaceMinMax(min, max);
-	polygon = NavMesh::CreatePolygonFromMinMax(min, max);
-	initEntity(entity, pos, STATIC, faces);
-	holes.push_back(polygon);
-
-	// obstacle 2
-	entity = &world->entities[world->numEntities++];
-	min = glm::vec3(10, 0, -10);
-	max = glm::vec3(20, 50, 40);
-	faces = CreateCubeFaceMinMax(min, max);
-	polygon = NavMesh::CreatePolygonFromMinMax(min, max);
-	initEntity(entity, pos, STATIC, faces);
-	holes.push_back(polygon);
-	
-	// obstacle 3
-	entity = &world->entities[world->numEntities++];
-	min = glm::vec3(0, 0, 20);
-	max = glm::vec3(30, 50, 30);
-	faces = CreateCubeFaceMinMax(min, max);
-	polygon = NavMesh::CreatePolygonFromMinMax(min, max);
-	initEntity(entity, pos, STATIC, faces);
-	holes.push_back(polygon);
 	*/
 
+	groundPolygon = CreateTestGround(world);
 
-	
-	
+	/*
 	// obstacle 0
 	entity = &world->entities[world->numEntities++];
 	min = glm::vec3(-80, 0, -80);
@@ -461,16 +473,17 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	initEntity(entity, pos, STATIC, faces);
 	holes.push_back(polygon);
 
+
 	// obstacle 2
 	entity = &world->entities[world->numEntities++];
 	min = glm::vec3(-50, 0, -20);
 	max = glm::vec3(20, 50, 30);
 	faces = CreateCubeFaceMinMax(min, max);
 	polygon = NavMesh::CreatePolygonFromMinMax(min, max);
-	
+
 	initEntity(entity, pos, STATIC, faces);
 	holes.push_back(polygon);
-	
+
 	// obstacle 3
 	entity = &world->entities[world->numEntities++];
 	min = glm::vec3(30, 0, 20);
@@ -480,30 +493,14 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 
 	initEntity(entity, pos, STATIC, faces);
 	holes.push_back(polygon);
-	
-	
-	/*
-	// Testing 
-	entity = &world->entities[world->numEntities++];
-	min = glm::vec3(0, 0, 0);
-	max = glm::vec3(10, 50, 10);
-	faces = CreateCubeFaceMinMax(min, max);
-	polygon = NavMesh::CreatePolygonFromMinMax(min, max);
-	initEntity(entity, pos, STATIC, faces);
-	holes.push_back(polygon);
 	*/
-
-
-
 
 	// step 3, we unionize the obstacle polygons (holes)
 	TryUnionizePolygons(holes);
-
 	
 	// step 4, combine the boundary polgyon with ostacle polygons (holes),
 	// so we are representing the world as a single polygon
 	ConnectHoles(groundPolygon, holes);
-	
 	
 	// setp 5, triangulate the whole thing
 	std::vector<Triangulation::TrigulationTriangle> triangles = Triangulation::Triangulate(groundPolygon.vertices);
@@ -523,6 +520,14 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	world->navMeshPolygons = polygons;
 
 	world->dualGraph = new NavMesh::DualGraph(polygons);
+
+	world->start = glm::vec3(90, 0, -80);
+	world->destination = glm::vec3(-30, 0, 50);
+
+	PathFinding::PathfindingResult pathingResult = PathFinding::FindPath(world->dualGraph, world->start, world->destination);
+	world->portals = pathingResult.portals;
+	world->waypoints = pathingResult.waypoints;
+
 
 	// world->navMeshPolygons = { groundPolygon };
 }

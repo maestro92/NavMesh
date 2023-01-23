@@ -320,6 +320,12 @@ void SDLProcessPendingEvents(GameInputState* game_input_state)
 					{
 						SDLProcessKeyboardEvent(&game_input_state->moveDown2, isDown);
 					}
+
+					else if (keyCode == SDLK_1)
+					{
+						game_input_state->drawingShapeMode = !game_input_state->drawingShapeMode;
+					}
+
 					else if (keyCode == SDLK_x)
 					{
 						debugModeState.cameraDebugMode = !debugModeState.cameraDebugMode;

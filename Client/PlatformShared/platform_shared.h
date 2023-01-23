@@ -125,6 +125,9 @@ struct GameInputState
 		GameButtonState moveBack2;
 		GameButtonState moveUp2;
 		GameButtonState moveDown2;
+	
+
+		bool drawingShapeMode;
 	};
 
 	GameButtonState mouseButtons[PlatformMouseButton_Count];
