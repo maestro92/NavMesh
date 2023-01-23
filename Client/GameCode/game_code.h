@@ -859,16 +859,7 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 	*/
 
 
-	/*
-	for (int i = 1; i < world->waypoints.size(); i++)
-	{
-		glm::vec3 p0 = world->waypoints[i - 1];
-		glm::vec3 p1 = world->waypoints[i];
 
-		GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_GREEN, p1, 0.5);
-		GameRender::PushDashedLine(gameRenderCommands, &group, gameAssets, GameRender::COLOR_GREEN, p0, p1, 0.2);
-	}
-	*/
 
 	GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_GREEN, world->start, 1);
 	GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_RED, world->destination, 1);
@@ -876,7 +867,7 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 	
 	for (int i = 0; i < world->portals.size(); i++)
 	{
-
+		/*
 		NavMesh::Edge edge = world->portals[i];
 		
 		if (i == 3)
@@ -885,7 +876,7 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 			GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_GREEN, edge.vertices[1], 1);
 			GameRender::PushLine(gameRenderCommands, &group, gameAssets, GameRender::COLOR_TEAL, edge.vertices[0], edge.vertices[1], 0.5);
 		}
-
+		*/
 		
 
 		/*
@@ -902,6 +893,15 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 		*/
 	}
 	
+
+	for (int i = 1; i < world->waypoints.size(); i++)
+	{
+		glm::vec3 p0 = world->waypoints[i - 1];
+		glm::vec3 p1 = world->waypoints[i];
+
+		GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_GREEN, p1, 0.5);
+		GameRender::PushDashedLine(gameRenderCommands, &group, gameAssets, GameRender::COLOR_GREEN, p0, p1, 0.5);
+	}
 
 
 	GameRender::RenderCoordinateSystem(gameRenderCommands, &group, gameAssets);

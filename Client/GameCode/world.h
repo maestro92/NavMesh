@@ -406,12 +406,12 @@ NavMesh::NavMeshPolygon CreateTestGround(World* world)
 	vertices.push_back(glm::vec3(-40, 0, 50));
 	vertices.push_back(glm::vec3(30, 0, 90));
 	vertices.push_back(glm::vec3(90, 0, 40));
-	vertices.push_back(glm::vec3(30, 0, 20));
-	vertices.push_back(glm::vec3(60, 0, -30));
+	vertices.push_back(glm::vec3(60, 0, -30));	
 	vertices.push_back(glm::vec3(110, 0, -80));
 	vertices.push_back(glm::vec3(70, 0, -100));
 	vertices.push_back(glm::vec3(10, 0, -60));
-	
+	vertices.push_back(glm::vec3(30, 0, 20));
+
 	groundPolygon.vertices = vertices;
 
 	initEntity(entity, pos, GROUND, faces);
@@ -438,7 +438,7 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	NavMesh::NavMeshPolygon groundPolygon;
 
 
-	/*
+	
 	// ground
 	entity = &world->entities[world->numEntities++];
 	min = glm::vec3(-100, -20, -100);
@@ -448,11 +448,11 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	glm::vec3 polyMeshMin = glm::vec3(-100, 0, -100);
 	groundPolygon = NavMesh::CreatePolygonFromMinMax(polyMeshMin, max);
 	initEntity(entity, pos, GROUND, faces);
-	*/
+	
 
-	groundPolygon = CreateTestGround(world);
+	// groundPolygon = CreateTestGround(world);
 
-	/*
+	
 	// obstacle 0
 	entity = &world->entities[world->numEntities++];
 	min = glm::vec3(-80, 0, -80);
@@ -493,7 +493,7 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 
 	initEntity(entity, pos, STATIC, faces);
 	holes.push_back(polygon);
-	*/
+	
 
 	// step 3, we unionize the obstacle polygons (holes)
 	TryUnionizePolygons(holes);
@@ -521,8 +521,12 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 
 	world->dualGraph = new NavMesh::DualGraph(polygons);
 
-	world->start = glm::vec3(90, 0, -80);
-	world->destination = glm::vec3(-30, 0, 50);
+//	world->start = glm::vec3(90, 0, -80);
+//	world->destination = glm::vec3(-30, 0, 50);
+
+
+	world->start = glm::vec3(90, 0, 90);
+	world->destination = glm::vec3(-90, 0, -90);
 
 	PathFinding::PathfindingResult pathingResult = PathFinding::FindPath(world->dualGraph, world->start, world->destination);
 	world->portals = pathingResult.portals;

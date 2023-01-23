@@ -190,10 +190,14 @@ namespace PathFinding
 	}
 
 	// points are counter clock-wise in ZX plane
-	void SetPortalPoints(NavMesh::Edge edge, glm::vec3& p0, glm::vec3& p1)
+	void TrySetPortalPoints(std::vector<NavMesh::Edge> edges, int index, glm::vec3& p0, glm::vec3& p1)
 	{
-		p0 = edge.vertices[0];
-		p1 = edge.vertices[1];
+		if (0 <= index && index < edges.size())
+		{
+			NavMesh::Edge edge = edges[index];
+			p0 = edge.vertices[0];
+			p1 = edge.vertices[1];
+		}
 	}
 
 	// http://digestingduck.blogspot.com/2010/03/simple-stupid-funnel-algorithm.html
@@ -212,7 +216,6 @@ namespace PathFinding
 			std::cout << vec.x << " " << vec.y << " " << vec.z << std::endl << std::endl;
 		}
 
-
 		// we setup the first funnel
 		glm::vec3 portalApex = start;
 
@@ -223,6 +226,7 @@ namespace PathFinding
 		results.push_back(start);
 
 		int apexIndex = 0, leftIndex = 0, rightIndex = 0;
+		glm::vec3 dirL, dirR;
 
 		for (int i = 1; i < portals.size(); i++)
 		{
@@ -231,29 +235,47 @@ namespace PathFinding
 			NavMesh::Edge edge = portals[i];
 
 
-			glm::vec3 vec = portals[i].vertices[0];
-			std::cout << vec.x << " " << vec.y << " " << vec.z << std::endl;
 
-			vec = portals[i].vertices[1];
-			std::cout << vec.x << " " << vec.y << " " << vec.z << std::endl << std::endl;
-
-
-			vec = portalApex;
-			std::cout << "apex is " << vec.x << " " << vec.y << " " << vec.z << std::endl << std::endl;
+			glm::vec3 vec = portalApex;
+			std::cout << "		apex is " << vec.x << " " << vec.y << " " << vec.z << std::endl << std::endl;
 
 
 			vec = portalLeftPoint;
-			std::cout << "Left Point is " << vec.x << " " << vec.y << " " << vec.z << std::endl << std::endl;
+			std::cout << "		LeftIndex to " << leftIndex << std::endl;
+			std::cout << "		Left Point is " << vec.x << " " << vec.y << " " << vec.z << std::endl << std::endl;
 
 			vec = portalRightPoint;
-			std::cout << "right point is " << vec.x << " " << vec.y << " " << vec.z << std::endl << std::endl;
+			std::cout << "		RightIndex to " << rightIndex << std::endl;
+			std::cout << "		right point is " << vec.x << " " << vec.y << " " << vec.z << std::endl << std::endl;
+
+
+
+			vec = portals[i].vertices[0];
+			std::cout << "		newPortalRightPoint " << vec.x << " " << vec.y << " " << vec.z << std::endl;
+
+			vec = portals[i].vertices[1];
+			std::cout << "		newPortalLeftPoint " << vec.x << " " << vec.y << " " << vec.z << std::endl << std::endl;
 
 
 			// first check the right vertex
 			glm::vec3 newPortalRightPoint = edge.vertices[0];
+			glm::vec3 newPortalLeftPoint = edge.vertices[1];
 
-			glm::vec3 dirL = portalLeftPoint - portalApex;
-			glm::vec3 dirR = portalRightPoint - portalApex;
+			if (Math::Equals(newPortalRightPoint, portalRightPoint))
+			{
+				portalRightPoint = newPortalRightPoint;
+				rightIndex = i;
+			}
+
+			if (Math::Equals(newPortalLeftPoint, portalLeftPoint))
+			{
+				portalLeftPoint = newPortalLeftPoint;
+				leftIndex = i;
+			}
+
+
+			dirL = portalLeftPoint - portalApex;
+			dirR = portalRightPoint - portalApex;
 
 			glm::vec3 dirNewR = newPortalRightPoint - portalApex;
 			// we first check if the new newPortalRight is counter-clockwise of portalRightPoint
@@ -278,19 +300,21 @@ namespace PathFinding
 					portalApex = portalLeftPoint;
 					apexIndex = leftIndex;
 
-					SetPortalPoints(portals[apexIndex], portalRightPoint, portalLeftPoint);
-					leftIndex = apexIndex;
-					rightIndex = apexIndex;
+					leftIndex = i + 1;
+					// we either restart on leftIndex Edge or rightIndex Edge
+					TrySetPortalPoints(portals, leftIndex, portalRightPoint, portalLeftPoint);
+					rightIndex = leftIndex;
 
 					// reset the index
-					i = apexIndex + 1;
+					i = leftIndex;
+					std::cout << "	resetting to " << i << std::endl;
 					continue;
 				}
 			}
 
 
 			// then check the left vertex
-			glm::vec3 newPortalLeftPoint = edge.vertices[1];
+
 			glm::vec3 dirNewL = newPortalLeftPoint - portalApex;
 
 			// we first check if the new newPortalLeft is clockwise of portalLeftPoint
@@ -312,14 +336,27 @@ namespace PathFinding
 					portalApex = portalRightPoint;
 					apexIndex = rightIndex;
 
-					SetPortalPoints(portals[apexIndex], portalRightPoint, portalLeftPoint);
-					leftIndex = apexIndex;
-					rightIndex = apexIndex;
+					rightIndex = i + 1;
+					TrySetPortalPoints(portals, rightIndex, portalRightPoint, portalLeftPoint);
+					leftIndex = rightIndex;
 
 					// reset the index
-					i = apexIndex + 1;
+					i = rightIndex;
+					std::cout << "	resetting to " << i << std::endl;
 					continue;
 				}
+			}
+		}
+
+		if (apexIndex < portals.size() - 1)
+		{
+			if (glm::length2(dirL) < glm::length2(dirR))
+			{
+				results.push_back(portalLeftPoint);
+			}
+			else
+			{
+				results.push_back(portalRightPoint);
 			}
 		}
 
