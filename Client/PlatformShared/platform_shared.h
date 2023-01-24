@@ -113,19 +113,22 @@ struct GameInputState
 	GameButtonState buttons[4];
 	struct
 	{
-		GameButtonState moveForward;
+		GameButtonState moveUp;
 		GameButtonState moveLeft;
 		GameButtonState moveRight;
-		GameButtonState moveBack;
+		GameButtonState moveDown;
 	
-	
+		GameButtonState zoomIn;
+		GameButtonState zoomOut;
+
+	/*
 		GameButtonState moveForward2;
 		GameButtonState moveLeft2;
 		GameButtonState moveRight2;
 		GameButtonState moveBack2;
 		GameButtonState moveUp2;
 		GameButtonState moveDown2;
-	
+	*/
 
 		bool drawingShapeMode;
 	};

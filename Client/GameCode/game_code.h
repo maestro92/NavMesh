@@ -409,7 +409,7 @@ void RenderNavMeshPolygon(
 	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
 	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
 
-	float lineThickness = 0.2f;
+	float lineThickness = 0.5f;
 
 	for (int i = 0; i < polygon->vertices.size(); i++)
 	{
@@ -661,7 +661,12 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 	Entity* controlledEntity = &gameState->debugCameraEntity;
 
 	World* world = &gameState->world;
-	glm::vec3 newViewDir;
+	
+	controlledEntity = &gameState->debugCameraEntity;
+
+
+	glm::vec3 newViewDir = controlledEntity->GetViewDirection();
+	/*
 	if (debugModeState->cameraDebugMode)
 	{
 		controlledEntity = &gameState->debugCameraEntity;
@@ -691,6 +696,7 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 		newWalkDir.y = 0;
 		newWalkDir = glm::normalize(newWalkDir);
 	}
+	*/
 
 	//	cam->SetViewDirection(newViewDir);
 
@@ -700,23 +706,23 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 	float stepSize = 40.0f;
 //	if (debugModeState->cameraDebugMode)
 	{
-		if (gameInputState->moveForward.endedDown) {
-//			newWalkDir.y = 0;
-			pmove.velocity += stepSize * newWalkDir;
+		if (gameInputState->moveUp.endedDown) {
+			pmove.velocity += stepSize * glm::vec3(0, 1, 0);
 		}
 		if (gameInputState->moveLeft.endedDown) {
-			newWalkDir = GetHorizontalVector(newWalkDir, true);
-//			newWalkDir.y = 0;
-			pmove.velocity += stepSize * newWalkDir;
+			pmove.velocity += stepSize * glm::vec3(-1, 0, 0);
 		}
 		if (gameInputState->moveRight.endedDown) {
-			newWalkDir = GetHorizontalVector(newWalkDir, false);
-//			newWalkDir.y = 0;
-			pmove.velocity += stepSize * newWalkDir;
+			pmove.velocity += stepSize * glm::vec3(1, 0, 0);
 		}
-		if (gameInputState->moveBack.endedDown) {
-//			newWalkDir.y = 0;
-			pmove.velocity += -stepSize * newWalkDir;
+		if (gameInputState->moveDown.endedDown) {
+			pmove.velocity += stepSize * glm::vec3(0, -1, 0);
+		}
+		if (gameInputState->zoomIn.endedDown) {
+			pmove.velocity += stepSize * newViewDir;
+		}
+		if (gameInputState->zoomOut.endedDown) {
+			pmove.velocity += stepSize * -newViewDir;
 		}
 	}
 	/*
@@ -741,6 +747,7 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 	}
 	*/
 
+	/*
 	stepSize = 0.1f;
 
 	if (gameInputState->moveForward2.endedDown){world->entities[world->startPlayerEntityId].pos.x += stepSize;}
@@ -751,6 +758,7 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 
 	if (gameInputState->moveUp2.endedDown)	{world->entities[world->startPlayerEntityId].pos.y += stepSize;}
 	if (gameInputState->moveDown2.endedDown){world->entities[world->startPlayerEntityId].pos.y += -stepSize;}
+	*/
 
 //	if (!debugModeState->cameraDebugMode)
 	{
@@ -885,7 +893,7 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 			NavMesh::Edge edge = world->portals[i];
 
 			GameRender::PushLine(gameRenderCommands, &group, gameAssets, GameRender::COLOR_YELLOW, world->start, edge.vertices[0], 0.2);
-			GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_YELLOW, edge.vertices[0], 1);
+			GameRender::RenderPoint(gameRenderCommands, &gr0000000000000000oup, gameAssets, GameRender::COLOR_YELLOW, edge.vertices[0], 1);
 
 			GameRender::PushLine(gameRenderCommands, &group, gameAssets, GameRender::COLOR_TEAL, world->start, edge.vertices[1], 0.2);
 			GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_TEAL, edge.vertices[1], 1);
@@ -922,7 +930,7 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 
 		// allocate memroy for entities
 
-	if (gameInputState->moveForward.endedDown)
+	if (gameInputState->moveUp.endedDown)
 	{
 		//	cout << "move forward" << endl;
 	}
@@ -934,7 +942,7 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 	{
 		//	cout << "move right" << endl;
 	}
-	if (gameInputState->moveBack.endedDown)
+	if (gameInputState->moveDown.endedDown)
 	{
 		//	cout << "move back" << endl;
 	}
@@ -952,10 +960,10 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		initWorld(&gameState->world);
 
 		gameState->debugCameraEntity = {};
-		gameState->debugCameraEntity.pos = glm::vec3(-262, 500, -75);
-		gameState->debugCameraEntity.xAxis = glm::vec3(0.0, 0.0, 1.0);
-		gameState->debugCameraEntity.yAxis = glm::vec3(1.0, 0.0, 0.0);
-		gameState->debugCameraEntity.zAxis = glm::vec3(0.0, 1.0, 0.0);
+		gameState->debugCameraEntity.pos = glm::vec3(0, -90, 400);
+		gameState->debugCameraEntity.xAxis = glm::normalize(glm::vec3(1.0, 0.0, 0.0));
+		gameState->debugCameraEntity.yAxis = glm::normalize(glm::vec3(0.0, 0.96, 0.25));
+		gameState->debugCameraEntity.zAxis = glm::normalize(glm::vec3(0.0, -0.25, 0.96));
 		gameState->debugCameraEntity.min = glm::vec3(-10, -10, -10);
 		gameState->debugCameraEntity.max = glm::vec3(10, 10, 10);
 

@@ -281,12 +281,12 @@ namespace PathFinding
 			// we first check if the new newPortalRight is counter-clockwise of portalRightPoint
 			// if not, the sign of the cross product will be different, and we just ignore
 
-			float temp = Math::TriArea_ZXPlane(dirR, dirNewR);
+			float temp = Math::TriArea_XYPlane(dirR, dirNewR);
 
-			if (Math::TriArea_ZXPlane(dirR, dirNewR) >= 0)
+			if (Math::TriArea_XYPlane(dirR, dirNewR) >= 0)
 			{
 				// we then want to check that it's not counter-clockwise of portalLeftPoint
-				if (Math::TriArea_ZXPlane(dirNewR, dirL) > 0)
+				if (Math::TriArea_XYPlane(dirNewR, dirL) > 0)
 				{
 					portalRightPoint = newPortalRightPoint;
 					rightIndex = i;
@@ -319,10 +319,10 @@ namespace PathFinding
 
 			// we first check if the new newPortalLeft is clockwise of portalLeftPoint
 			// if not, the sign of the cross product will be different, and we just ignore
-			if (Math::TriArea_ZXPlane(dirNewL, dirL) >= 0)
+			if (Math::TriArea_XYPlane(dirNewL, dirL) >= 0)
 			{
 				// we then want to check that it's not clockwise of portalRightPoint
-				if (Math::TriArea_ZXPlane(dirR, dirNewL) > 0)
+				if (Math::TriArea_XYPlane(dirR, dirNewL) > 0)
 				{
 					portalLeftPoint = newPortalLeftPoint;
 					leftIndex = i;

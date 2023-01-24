@@ -537,6 +537,6 @@ namespace GameRender
 		float cubeThickness = 0.5f;
 		PushLine(gameRenderCommands, renderGroup, bitmap, COLOR_RED, origin, xAxisEnd, cubeThickness);
 		PushLine(gameRenderCommands, renderGroup, bitmap, COLOR_GREEN, origin, yAxisEnd, cubeThickness);
-		PushLine(gameRenderCommands, renderGroup, bitmap, COLOR_BLUE, origin, zAxisEnd, cubeThickness);
+	//	PushLine(gameRenderCommands, renderGroup, bitmap, COLOR_BLUE, origin, zAxisEnd, cubeThickness);
 	}
 };

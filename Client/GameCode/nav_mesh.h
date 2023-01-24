@@ -248,7 +248,7 @@ namespace NavMesh
 						std::cout << "		 " << curNode->neighbors[i] << std::endl;
 
 						glm::vec3 vector = glm::normalize(curNode->neighbors[i] - curNode->vertex);
-						double angle = atan2(vector.x, vector.z) * 180 / PI;
+						double angle = atan2(vector.y, vector.x) * 180 / PI;
 						std::cout << "		 angle " << angle << std::endl;
 
 						if (angle < 0)
@@ -285,7 +285,7 @@ namespace NavMesh
 
 						glm::vec3 dNext = vector;
 
-						float angle = Math::ComputeRotationAngle_XZPlane(dPrev, dNext);
+						float angle = Math::ComputeRotationAngle_XYPlane(dPrev, dNext);
 
 						std::cout << "			angle " << angle << std::endl;
 
@@ -579,10 +579,10 @@ namespace NavMesh
 				Edge edge1 = (*polygon1).GetEdge(j);
 
 				// we just doing a 2D line tests now!
-				glm::vec2 p0 = glm::vec2(edge.vertices[0].x, edge.vertices[0].z);
-				glm::vec2 p1 = glm::vec2(edge.vertices[1].x, edge.vertices[1].z);
-				glm::vec2 p2 = glm::vec2(edge1.vertices[0].x, edge1.vertices[0].z);
-				glm::vec2 p3 = glm::vec2(edge1.vertices[1].x, edge1.vertices[1].z);
+				glm::vec2 p0 = glm::vec2(edge.vertices[0].x, edge.vertices[0].y);
+				glm::vec2 p1 = glm::vec2(edge.vertices[1].x, edge.vertices[1].y);
+				glm::vec2 p2 = glm::vec2(edge1.vertices[0].x, edge1.vertices[0].y);
+				glm::vec2 p3 = glm::vec2(edge1.vertices[1].x, edge1.vertices[1].y);
 
 				glm::vec2 intersectionPoint;
 				float intersectionTime0, intersectionTime1;
@@ -639,10 +639,10 @@ namespace NavMesh
 			Edge edge0 = polygon.GetEdge(i);
 
 			// we just doing a 2D line tests now!
-			glm::vec2 p0 = glm::vec2(edge.vertices[0].x, edge.vertices[0].z);
-			glm::vec2 p1 = glm::vec2(edge.vertices[1].x, edge.vertices[1].z);
-			glm::vec2 p2 = glm::vec2(edge0.vertices[0].x, edge0.vertices[0].z);
-			glm::vec2 p3 = glm::vec2(edge0.vertices[1].x, edge0.vertices[1].z);
+			glm::vec2 p0 = glm::vec2(edge.vertices[0].x, edge.vertices[0].y);
+			glm::vec2 p1 = glm::vec2(edge.vertices[1].x, edge.vertices[1].y);
+			glm::vec2 p2 = glm::vec2(edge0.vertices[0].x, edge0.vertices[0].y);
+			glm::vec2 p3 = glm::vec2(edge0.vertices[1].x, edge0.vertices[1].y);
 
 			glm::vec2 intersectionPoint;
 			float intersectionTime0, intersectionTime1;

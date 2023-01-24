@@ -384,7 +384,7 @@ Brush ConvertFaceToBrush(std::vector<Face> faces)
 	return brush;
 }
 
-
+/*
 NavMesh::NavMeshPolygon CreateTestGround(World* world)
 {
 	Entity* entity = NULL;
@@ -403,21 +403,21 @@ NavMesh::NavMeshPolygon CreateTestGround(World* world)
 	
 	std::vector<glm::vec3> vertices;
 	
-	vertices.push_back(glm::vec3(-40, 0, 50));
-	vertices.push_back(glm::vec3(30, 0, 90));
-	vertices.push_back(glm::vec3(90, 0, 40));
-	vertices.push_back(glm::vec3(60, 0, -30));	
-	vertices.push_back(glm::vec3(110, 0, -80));
-	vertices.push_back(glm::vec3(70, 0, -100));
-	vertices.push_back(glm::vec3(10, 0, -60));
-	vertices.push_back(glm::vec3(30, 0, 20));
+	vertices.push_back(glm::vec3(-40, 50, 0));
+	vertices.push_back(glm::vec3(30, 90, 0));
+	vertices.push_back(glm::vec3(90, 40, 0));
+	vertices.push_back(glm::vec3(60, -30, 0));	
+	vertices.push_back(glm::vec3(110, -80, 0));
+	vertices.push_back(glm::vec3(70, -100, 0));
+	vertices.push_back(glm::vec3(10, -60, 0));
+	vertices.push_back(glm::vec3(30, 20, 0));
 
 	groundPolygon.vertices = vertices;
 
 	initEntity(entity, pos, GROUND, faces);
 	return groundPolygon;
 }
-
+*/
 
 void CreateAreaA(World* world, std::vector<Brush>& brushes)
 {
@@ -441,18 +441,31 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	
 	// ground
 	entity = &world->entities[world->numEntities++];
-	min = glm::vec3(-100, -20, -100);
-	max = glm::vec3(100, 0, 100);
+	min = glm::vec3(-100, -100, -20);
+	max = glm::vec3(100, 100, 0);
 	faces = CreateCubeFaceMinMax(min, max);
 
-	glm::vec3 polyMeshMin = glm::vec3(-100, 0, -100);
-	groundPolygon = NavMesh::CreatePolygonFromMinMax(polyMeshMin, max);
+	glm::vec3 polyMeshMin = glm::vec3(-100, -100, 0);
+	// groundPolygon = NavMesh::CreatePolygonFromMinMax(polyMeshMin, max);
+
+	std::vector<glm::vec3> vertices;
+	vertices.push_back(glm::vec3(50, -40, 0));
+	vertices.push_back(glm::vec3(90, 30, 0));
+	vertices.push_back(glm::vec3(40, 90,0));
+	vertices.push_back(glm::vec3(-30, 60, 0));
+	vertices.push_back(glm::vec3(-80, 110, 0));
+	vertices.push_back(glm::vec3(-100, 70, 0));
+	vertices.push_back(glm::vec3(-60, 10, 0));
+	vertices.push_back(glm::vec3(20, 30, 0));
+	groundPolygon.vertices = vertices;
+
+
 	initEntity(entity, pos, GROUND, faces);
 	
 
 	// groundPolygon = CreateTestGround(world);
 
-	
+	/*
 	// obstacle 0
 	entity = &world->entities[world->numEntities++];
 	min = glm::vec3(-80, 0, -80);
@@ -493,7 +506,7 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 
 	initEntity(entity, pos, STATIC, faces);
 	holes.push_back(polygon);
-	
+	*/
 
 	// step 3, we unionize the obstacle polygons (holes)
 	TryUnionizePolygons(holes);
@@ -531,8 +544,8 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	PathFinding::PathfindingResult pathingResult = PathFinding::FindPath(world->dualGraph, world->start, world->destination);
 	world->portals = pathingResult.portals;
 	world->waypoints = pathingResult.waypoints;
-
-
+	
+	world->navMeshPolygons = polygons;
 	// world->navMeshPolygons = { groundPolygon };
 }
 

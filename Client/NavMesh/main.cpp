@@ -281,7 +281,7 @@ void SDLProcessPendingEvents(GameInputState* game_input_state)
 				{
 					if (keyCode == SDLK_w)
 					{
-						SDLProcessKeyboardEvent(&game_input_state->moveForward, isDown);
+						SDLProcessKeyboardEvent(&game_input_state->moveUp, isDown);
 					}				
 					else if (keyCode == SDLK_a)
 					{
@@ -289,13 +289,22 @@ void SDLProcessPendingEvents(GameInputState* game_input_state)
 					}
 					else if (keyCode == SDLK_s)
 					{
-						SDLProcessKeyboardEvent(&game_input_state->moveBack, isDown);
+						SDLProcessKeyboardEvent(&game_input_state->moveDown, isDown);
 					}
 					else if (keyCode == SDLK_d)
 					{
 						SDLProcessKeyboardEvent(&game_input_state->moveRight, isDown);
 					}
+					else if (keyCode == SDLK_q)
+					{
+						SDLProcessKeyboardEvent(&game_input_state->zoomIn, isDown);
+					}
+					else if (keyCode == SDLK_e)
+					{
+						SDLProcessKeyboardEvent(&game_input_state->zoomOut, isDown);
+					}
 
+					/*
 					else if (keyCode == SDLK_i)
 					{
 						SDLProcessKeyboardEvent(&game_input_state->moveForward2, isDown);
@@ -320,6 +329,7 @@ void SDLProcessPendingEvents(GameInputState* game_input_state)
 					{
 						SDLProcessKeyboardEvent(&game_input_state->moveDown2, isDown);
 					}
+					*/
 
 					else if (keyCode == SDLK_1)
 					{
@@ -330,6 +340,7 @@ void SDLProcessPendingEvents(GameInputState* game_input_state)
 					{
 						debugModeState.cameraDebugMode = !debugModeState.cameraDebugMode;
 					}
+					/*
 					else if (keyCode == SDLK_z)
 					{
 						debugModeState.mouseDebugMode = !debugModeState.mouseDebugMode;
@@ -342,6 +353,7 @@ void SDLProcessPendingEvents(GameInputState* game_input_state)
 							SDL_ShowCursor(SDL_DISABLE);
 						}
 					}
+					*/
 					else if (keyCode == SDLK_ESCAPE)
 					{
 						is_game_running = false;
@@ -477,7 +489,7 @@ int main(int argc, char *argv[])
 		SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN | SDL_WINDOW_OPENGL);
 
 	// we start in game mode, so we disable the mouse cursor
-	SDL_ShowCursor(SDL_DISABLE);
+	// SDL_ShowCursor(SDL_DISABLE);
 
 	SDLLoadedCode gameCode = {};
 	gameCode.srcDllFullPath = "../Debug/GameCode.dll";
@@ -588,10 +600,13 @@ int main(int argc, char *argv[])
 					MouseState & SDLButtonID[ButtonIndex]);
 			}
 			*/
+
+			/*
 			if (!debugModeState.mouseDebugMode)
 			{
 				SDL_WarpMouseInWindow(window, windowDimensions.x / 2, windowDimensions.y / 2);				
 			}
+			*/
 
 			RenderSystem::GameRenderCommands gameRenderCommands = {};
 
