@@ -518,17 +518,33 @@ namespace GameRender
 	}
 
 
+	void RenderLine(
+		RenderSystem::GameRenderCommands* gameRenderCommands,
+		RenderSystem::RenderGroup* renderGroup,
+		GameAssets* gameAssets,
+		glm::vec4 color,
+		glm::vec3 p0,
+		glm::vec3 p1,
+		float thickness)
+	{
+		BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
+		LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
+
+		float cubeThickness = 0.5f;
+		PushLine(gameRenderCommands, renderGroup, bitmap, COLOR_RED, p0, p1, cubeThickness);
+	}
+
 	void RenderCoordinateSystem(
 		RenderSystem::GameRenderCommands* gameRenderCommands,
 		RenderSystem::RenderGroup* renderGroup,
 		GameAssets* gameAssets)
 	{
-		float scale = 500;
+		float scale = 20;
 		BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
 		LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
 
 		glm::vec3 origin = glm::vec3(0);
-		glm::vec3 dim = glm::vec3(scale);
+		glm::vec3 dim = glm::vec3(scale, scale, scale);
 
 		glm::vec3 xAxisEnd = origin + dim.x * glm::vec3(1, 0, 0);
 		glm::vec3 yAxisEnd = origin + dim.y * glm::vec3(0, 1, 0);
@@ -537,6 +553,6 @@ namespace GameRender
 		float cubeThickness = 0.5f;
 		PushLine(gameRenderCommands, renderGroup, bitmap, COLOR_RED, origin, xAxisEnd, cubeThickness);
 		PushLine(gameRenderCommands, renderGroup, bitmap, COLOR_GREEN, origin, yAxisEnd, cubeThickness);
-	//	PushLine(gameRenderCommands, renderGroup, bitmap, COLOR_BLUE, origin, zAxisEnd, cubeThickness);
+		PushLine(gameRenderCommands, renderGroup, bitmap, COLOR_BLUE, origin, zAxisEnd, cubeThickness);
 	}
 };

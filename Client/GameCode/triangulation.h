@@ -8,9 +8,24 @@
 
 namespace Triangulation
 {
+
+	struct DebugState
+	{
+		Triangle superTriangle;
+	};
+
+
+	/*
+	got two methods here
+	1.	EarClipping triangulation
+
+	2.	Delaunay Triangulation
+	
+	
+	*/
+
 	// using the ear clipping algorithm
 	// https://www.geometrictools.com/Documentation/TriangulationByEarClipping.pdf
-
 
 	/*
 	void findConvexReflexAndEars()
@@ -56,18 +71,27 @@ namespace Triangulation
 	*/
 
 	// Just has a DebugId for conveniences
-	struct TrigulationVertex
+	struct Vertex
 	{
 		int id;
 		glm::vec3 pos;
 	};
 
-	struct TrigulationTriangle
+	struct Edge
+	{
+		glm::vec3 vertices[2];
+	};
+
+	struct Triangle
 	{
 		// counter clockwise order
+		glm::vec3 vertices[3];
+		
+		/*
 		glm::vec3 v0;
 		glm::vec3 v1;
 		glm::vec3 v2;
+		*/
 	};
 
 	/*
@@ -96,7 +120,7 @@ namespace Triangulation
 	}
 	*/
 
-	bool IsEar(std::vector<TrigulationVertex>& earTriangle, std::vector<TrigulationVertex>& vertices)
+	bool IsEar(std::vector<Vertex>& earTriangle, std::vector<Vertex>& vertices)
 	{
 		// check if other vertices are inside the triangle
 		for (int i = 0; i < vertices.size(); i++)
@@ -129,7 +153,7 @@ namespace Triangulation
 		return true;
 	}
 
-	int FindIndex(std::vector<TrigulationVertex>& trigVertices, TrigulationVertex vertex)
+	int FindIndex(std::vector<Vertex>& trigVertices, Vertex vertex)
 	{
 		for (int i = 0; i < trigVertices.size(); i++)
 		{
@@ -141,11 +165,11 @@ namespace Triangulation
 		return -1;
 	}
 
-	std::vector<TrigulationTriangle> Triangulate(std::vector<glm::vec3> vertices)
+	std::vector<Triangle> EarClippingTriangulation(std::vector<glm::vec3> vertices)
 	{
 		assert(vertices.size() >= 3);
 
-		std::vector<TrigulationTriangle> triangles;
+		std::vector<Triangle> triangles;
 		if (vertices.size() == 3)
 		{
 			return triangles;
@@ -153,7 +177,7 @@ namespace Triangulation
 
 
 		// converting to 
-		std::vector<TrigulationVertex> trigVertices;
+		std::vector<Vertex> trigVertices;
 		for (int i = 0; i < vertices.size(); i++)
 		{
 			trigVertices.push_back({ i, vertices[i] });
@@ -164,7 +188,7 @@ namespace Triangulation
 		int v0 = 0;
 		int v1 = 0;
 		int v2 = 0;
-		std::vector<TrigulationVertex> earTriangle;
+		std::vector<Vertex> earTriangle;
 
 		int iter = 0;
 
@@ -176,7 +200,7 @@ namespace Triangulation
 			// we want to minimize the distance between the triangle vertices
 			float bestDist = FLT_MAX;
 			int bestEar = -1;
-			std::vector<TrigulationVertex> bestEarTriangle;
+			std::vector<Vertex> bestEarTriangle;
 
 			for (int i = 0; i < trigVertices.size(); i++)
 			{
@@ -244,6 +268,148 @@ namespace Triangulation
 		});
 
 		return triangles;
+	}
+
+
+	
+	Triangle CreateSuperTriangle(std::vector<glm::vec3> vertices)
+	{
+		// create super triangle
+
+		// we first grab the rectangle containing all the points
+		// then 
+		glm::vec3 min = glm::vec3(FLT_MAX);
+		glm::vec3 max = glm::vec3(FLT_MIN);
+		Triangle superTriangle;
+		for (int i = 0; i < vertices.size(); i++)
+		{
+			if (vertices[i].x < min.x)
+			{
+				min.x = vertices[i].x;
+			}
+
+			if (vertices[i].x > max.x)
+			{
+				max.x = vertices[i].x;
+			}
+
+			if (vertices[i].y < min.y)
+			{
+				min.y = vertices[i].y;
+			}
+
+			if (vertices[i].y > max.y)
+			{
+				max.y = vertices[i].y;
+			}
+		}
+
+		/*
+				   apex
+				   .
+				  / \
+				 /   \
+				/	  \
+		    p2 /	   \	p3
+			  .---------.
+			 /|		    |\
+			/ |		    | \
+		   /  |		    |  \
+		  /	  |         |   \
+		 /	  .---------.    \
+		   p0			  p1
+		*/
+
+
+		// leave some buffer
+		min = min - glm::vec3(10, 10, 0);
+		max = max + glm::vec3(10, 10, 0);
+
+		// grab out four points
+		glm::vec3 p0 = min;
+		glm::vec3 p1 = glm::vec3(max.x, min.y, 0);
+
+		glm::vec3 p2 = glm::vec3(min.x, max.y, 0);
+		glm::vec3 p3 = max;
+
+		float height = max.y - min.y;
+		float apexX = (min.x + max.x) / 2;
+		float apexY = max.y + height;
+		glm::vec3 apex = glm::vec3(apexX, apexY, 0);
+
+		glm::vec3 dir0 = glm::normalize(apex - p2);
+		glm::vec3 dir1 = glm::normalize(apex - p3);
+
+		float oneOverStepY = 1 / dir0.y;
+		glm::vec3 triangleBasePt0 = p2 - dir0 * oneOverStepY * height;
+
+		oneOverStepY = 1 / dir1.y;
+		glm::vec3 triangleBasePt1 = p3 - dir1 * oneOverStepY * height;
+
+		return { triangleBasePt0 , triangleBasePt1, apex, };
+	}
+
+
+
+
+	glm::vec2 FindCircumCenter(glm::vec2 a, glm::vec2 b, glm::vec2 c)
+	{
+		// fidn mid point of p0 and p1
+		glm::vec2 p0 = (a + b) / (float)2;
+		glm::vec2 d0 = b - a;
+		d0 = glm::normalize(glm::vec2(-d0.y, d0.x));
+
+		glm::vec2 p1 = (b + c) / (float)2;
+		glm::vec2 d1 = c - b;
+		d1 = glm::normalize(glm::vec2(-d1.y, d1.x));
+
+		// intersection
+		glm::vec2 intersectionPoint;
+		Collision::GetRayRayIntersection2D(p0, d0, p1, d1, intersectionPoint);
+
+		return intersectionPoint;
+	}
+
+
+
+	// https://www.youtube.com/watch?v=GctAunEuHt4&ab_channel=SCIco
+	// this maxmizes the minimum of all the angles of the triangles in the triangulation
+	// using the shou
+	// https://gorillasun.de/blog/bowyer-watson-algorithm-for-delaunay-triangulation
+	void DelaunayTraingulation(std::vector<glm::vec3> vertices, DebugState* triangulationDebug) {
+
+		Triangle superTriangle = CreateSuperTriangle(vertices);
+		triangulationDebug->superTriangle = superTriangle;
+
+		// first add our super triangle
+		std::vector<Triangle> invalidTriangles;
+		invalidTriangles.push_back(superTriangle);
+
+
+		// connect edge of super triangle to the first vertex. 
+
+		glm::vec3 vertex = vertices[0];
+
+		Edge edge0 = { superTriangle.vertices[0], vertex };
+		Edge edge1 = { superTriangle.vertices[1], vertex };
+		Edge edge2 = { superTriangle.vertices[2], vertex };
+
+
+
+	
+		/*
+		for (int i = 0; i < vertices.size(); i++)
+		{
+			glm::vec3 vertex = vertices[i];
+
+			Edge edge0 = { superTriangle.vertices[0], vertex };
+			Edge edge1 = { superTriangle.vertices[1], vertex };
+			Edge edge2 = { superTriangle.vertices[2], vertex };
+
+
+		}
+		*/
+
 	}
 
 }

@@ -83,6 +83,8 @@ struct PlayerEntity
 };
 
 
+
+
 struct World
 {
 	MemoryArena memoryArena;
@@ -105,6 +107,8 @@ struct World
 	std::vector<NavMesh::Edge> portals;
 	glm::vec3 start;
 	glm::vec3 destination;
+
+	Triangulation::DebugState* triangulationDebug;
 };
 
 
@@ -448,10 +452,13 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	glm::vec3 polyMeshMin = glm::vec3(-100, -100, 0);
 	// groundPolygon = NavMesh::CreatePolygonFromMinMax(polyMeshMin, max);
 
+	// https://technology.cpm.org/general/3dgraph/
+	// use this online plotter to as online visualization of your points before running the game
+	// lines are plotted counter-clockswise so it's consistent with the right hand rule
 	std::vector<glm::vec3> vertices;
 	vertices.push_back(glm::vec3(50, -40, 0));
 	vertices.push_back(glm::vec3(90, 30, 0));
-	vertices.push_back(glm::vec3(40, 90,0));
+	vertices.push_back(glm::vec3(40, 90, 0));
 	vertices.push_back(glm::vec3(-30, 60, 0));
 	vertices.push_back(glm::vec3(-80, 110, 0));
 	vertices.push_back(glm::vec3(-100, 70, 0));
@@ -508,23 +515,30 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	holes.push_back(polygon);
 	*/
 
+	/*
 	// step 3, we unionize the obstacle polygons (holes)
 	TryUnionizePolygons(holes);
 	
 	// step 4, combine the boundary polgyon with ostacle polygons (holes),
 	// so we are representing the world as a single polygon
 	ConnectHoles(groundPolygon, holes);
+	*/
+
+
+	Triangulation::DelaunayTraingulation(groundPolygon.vertices, world->triangulationDebug);
 	
+
+
 	// setp 5, triangulate the whole thing
-	std::vector<Triangulation::TrigulationTriangle> triangles = Triangulation::Triangulate(groundPolygon.vertices);
+	std::vector<Triangulation::Triangle> triangles = Triangulation::EarClippingTriangulation(groundPolygon.vertices);
 	std::vector<NavMesh::NavMeshPolygon> polygons;
 
 	for (int i = 0; i < triangles.size(); i++)
 	{
 		NavMesh::NavMeshPolygon polygon;
-		polygon.vertices.push_back(triangles[i].v0);
-		polygon.vertices.push_back(triangles[i].v1);
-		polygon.vertices.push_back(triangles[i].v2);
+		polygon.vertices.push_back(triangles[i].vertices[0]);
+		polygon.vertices.push_back(triangles[i].vertices[1]);
+		polygon.vertices.push_back(triangles[i].vertices[2]);
 		polygons.push_back(polygon);
 	}
 	
@@ -999,6 +1013,7 @@ void initWorld(World* world)
 		//			cout << i << ": " << gameState->entities[i].pos << std::endl;
 	}
 	*/
+	world->triangulationDebug = new Triangulation::DebugState();
 
 	NULL_PLANE = Plane();
 	NULL_PLANE.normal = glm::vec3(0);

@@ -125,4 +125,42 @@ namespace Collision
 		return distSq < EPSILON;
 	}
 
+
+	float Signed2DTrigArea(glm::vec2 a, glm::vec2 b, glm::vec2 c)
+	{
+		return (a.x - c.x) * (b.y - c.y) - (a.y - c.y) * (b.x - c.x);
+	}
+
+	bool GetLineLineIntersectionPoint(glm::vec2 p0, glm::vec2 p1, glm::vec2 p2, glm::vec2 p3, glm::vec2& intersectionPoint)
+	{
+		float a1 = Signed2DTrigArea(p0, p1, p3);
+		float a2 = Signed2DTrigArea(p0, p1, p2);
+
+		if (a1 * a2 < 0.0f)
+		{
+			float a3 = Signed2DTrigArea(p2, p3, p0);
+			float a4 = a3 + a2 - a1;
+
+			if (a3 * a4 < 0.0f)
+			{
+				float t = a3 / (a3 - a4);
+				intersectionPoint = p0 + t * (p1 - p0);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool GetRayRayIntersection2D(glm::vec2 p0, glm::vec2 d0, glm::vec2 p1, glm::vec2 d1, glm::vec2& intersectionPoint)
+	{
+		float dx = p1.x - p0.x;
+		float dy = p1.y - p0.y;
+
+		float det = d1.x * d0.y - d1.y * d0.x;
+		float u = (dy * d1.x - dx * d1.y) / det;
+		float v = (dy * d0.x - dx * d0.y) / det;
+
+		intersectionPoint = p0 + u * d0;
+	}
+
 }

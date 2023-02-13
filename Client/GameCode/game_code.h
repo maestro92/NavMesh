@@ -400,6 +400,37 @@ void RenderEntityGroundModel(
 	}
 }
 
+
+void RenderTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderCommands,
+	RenderSystem::RenderGroup* group,
+	GameAssets* gameAssets,
+	Triangulation::TriangulationDebug* triangulationDebug)
+{
+	float lineThickness = 0.5;
+	for (int i = 0; i < triangulationDebug->superTriangle.size(); i++)
+	{
+		GameRender::RenderPoint(gameRenderCommands, group, gameAssets, GameRender::COLOR_GREEN, triangulationDebug->superTriangle[i], 1);
+	
+		glm::vec3 p0 = triangulationDebug->superTriangle[i];
+		glm::vec3 p1;
+
+		if (i == triangulationDebug->superTriangle.size() - 1)
+		{
+			p1 = triangulationDebug->superTriangle[0];
+		}
+		else
+		{
+			p1 = triangulationDebug->superTriangle[i + 1];
+		}
+		GameRender::RenderLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, p0, p1, lineThickness);
+	}
+
+
+
+}
+
+
+
 void RenderNavMeshPolygon(
 	RenderSystem::GameRenderCommands* gameRenderCommands,
 	RenderSystem::RenderGroup* renderGroup,
@@ -838,6 +869,9 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 		RenderNavMeshPolygon(gameRenderCommands, &group, gameAssets, navMeshPolygon);
 	}
 
+
+
+
 	/*
 	for (int i = 0; i < world->dualGraph->nodes.size(); i++)
 	{
@@ -873,6 +907,7 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 	GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_RED, world->destination, 1);
 
 	
+
 	for (int i = 0; i < world->portals.size(); i++)
 	{
 		/*
@@ -911,6 +946,8 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 		GameRender::PushDashedLine(gameRenderCommands, &group, gameAssets, GameRender::COLOR_GREEN, p0, p1, 0.5);
 	}
 
+
+	RenderTriangulationDebug(gameRenderCommands, &group, gameAssets, world->triangulationDebug);
 
 	GameRender::RenderCoordinateSystem(gameRenderCommands, &group, gameAssets);
 }
