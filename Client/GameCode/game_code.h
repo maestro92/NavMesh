@@ -404,28 +404,38 @@ void RenderEntityGroundModel(
 void RenderTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderCommands,
 	RenderSystem::RenderGroup* group,
 	GameAssets* gameAssets,
-	Triangulation::TriangulationDebug* triangulationDebug)
+	Triangulation::DebugState* triangulationDebug)
 {
 	float lineThickness = 0.5;
-	for (int i = 0; i < triangulationDebug->superTriangle.size(); i++)
+
+	Triangulation::Triangle* superTriangle = &triangulationDebug->superTriangle;
+
+	int size = ArrayCount(superTriangle->vertices);
+
+	for (int i = 0; i < size; i++)
 	{
-		GameRender::RenderPoint(gameRenderCommands, group, gameAssets, GameRender::COLOR_GREEN, triangulationDebug->superTriangle[i], 1);
+		GameRender::RenderPoint(gameRenderCommands, group, gameAssets, GameRender::COLOR_GREEN, triangulationDebug->superTriangle.vertices[i], 1);
 	
-		glm::vec3 p0 = triangulationDebug->superTriangle[i];
+		glm::vec3 p0 = superTriangle->vertices[i];
 		glm::vec3 p1;
 
-		if (i == triangulationDebug->superTriangle.size() - 1)
+		if (i == size - 1)
 		{
-			p1 = triangulationDebug->superTriangle[0];
+			p1 = superTriangle->vertices[0];
 		}
 		else
 		{
-			p1 = triangulationDebug->superTriangle[i + 1];
+			p1 = superTriangle->vertices[i + 1];
 		}
 		GameRender::RenderLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, p0, p1, lineThickness);
 	}
 
-
+	for (int i = 0; i < triangulationDebug->circles.size(); i++)
+	{
+		Triangulation::Circle* circle = &triangulationDebug->circles[i];
+		GameRender::RenderCircle(
+			gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, circle->center, circle->radius, lineThickness);
+	}
 
 }
 
@@ -468,11 +478,11 @@ void RenderNavMeshPolygon(
 	if (polygon->vertices.size() == 3)
 	{
 		glm::vec4 shadedRed = glm::vec4(0.1, 0, 0, 0.4);
-		std::vector<glm::vec3> liftedVertex;
+		glm::vec3 liftedVertex[3];
 		for (int j = 0; j < polygon->vertices.size(); j++)
 		{
 			// lifting it slightly higher
-			liftedVertex.push_back(polygon->vertices[j] + glm::vec3(0,0.1,0));
+			liftedVertex[j] = polygon->vertices[j] + glm::vec3(0,0.1,0);
 		}
 		GameRender::PushTriangle(gameRenderCommands, renderGroup, bitmap, shadedRed, liftedVertex, false);
 	}
@@ -863,12 +873,13 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 		}	
 	}
 
+	
 	for (int i = 0; i < world->navMeshPolygons.size(); i++)
 	{
 		NavMesh::NavMeshPolygon* navMeshPolygon = &world->navMeshPolygons[i];
 		RenderNavMeshPolygon(gameRenderCommands, &group, gameAssets, navMeshPolygon);
 	}
-
+	
 
 
 

@@ -9,9 +9,43 @@
 namespace Triangulation
 {
 
+	// Just has a DebugId for conveniences
+	struct Vertex
+	{
+		int id;
+		glm::vec3 pos;
+	};
+
+	struct Edge
+	{
+		glm::vec3 vertices[2];
+	};
+
+	struct Triangle
+	{
+		// counter clockwise order
+		glm::vec3 vertices[3];
+
+		/*
+		glm::vec3 v0;
+		glm::vec3 v1;
+		glm::vec3 v2;
+		*/
+	};
+
+	struct Circle
+	{
+		glm::vec3 center;
+		float radius;
+	};
+
 	struct DebugState
 	{
 		Triangle superTriangle;
+
+		std::vector<glm::vec3> vertices;
+
+		std::vector<Circle> circles;
 	};
 
 
@@ -70,29 +104,6 @@ namespace Triangulation
 	}
 	*/
 
-	// Just has a DebugId for conveniences
-	struct Vertex
-	{
-		int id;
-		glm::vec3 pos;
-	};
-
-	struct Edge
-	{
-		glm::vec3 vertices[2];
-	};
-
-	struct Triangle
-	{
-		// counter clockwise order
-		glm::vec3 vertices[3];
-		
-		/*
-		glm::vec3 v0;
-		glm::vec3 v1;
-		glm::vec3 v2;
-		*/
-	};
 
 	/*
 	bool CheckIfOtherVerticesAreInTriangle(const std::vector<TrigulationVertex>& earTriangle)
@@ -370,7 +381,23 @@ namespace Triangulation
 		return intersectionPoint;
 	}
 
+	Circle FindCircumCircle(glm::vec2 a, glm::vec2 b, glm::vec2 c)
+	{
+		glm::vec2 center = FindCircumCenter(a, b, c);
+		Circle circle;
+		circle.center = glm::vec3(center.x, center.y, 0);
+		circle.radius = glm::distance(a, center);
+		return circle;
+	}
 
+	Circle FindCircumCircle(Triangle triangle)
+	{
+		glm::vec2 a = glm::vec2(triangle.vertices[0].x, triangle.vertices[0].y);
+		glm::vec2 b = glm::vec2(triangle.vertices[1].x, triangle.vertices[1].y);
+		glm::vec2 c = glm::vec2(triangle.vertices[2].x, triangle.vertices[2].y);
+
+		return FindCircumCircle(a,b,c);
+	}
 
 	// https://www.youtube.com/watch?v=GctAunEuHt4&ab_channel=SCIco
 	// this maxmizes the minimum of all the angles of the triangles in the triangulation
@@ -387,16 +414,37 @@ namespace Triangulation
 
 
 		// connect edge of super triangle to the first vertex. 
+		Triangle curTriangle = superTriangle;
+		glm::vec3 curVertex = vertices[0];
 
-		glm::vec3 vertex = vertices[0];
+		Edge edge0 = { superTriangle.vertices[0], curVertex };
+		Edge edge1 = { superTriangle.vertices[1], curVertex };
+		Edge edge2 = { superTriangle.vertices[2], curVertex };
 
-		Edge edge0 = { superTriangle.vertices[0], vertex };
-		Edge edge1 = { superTriangle.vertices[1], vertex };
-		Edge edge2 = { superTriangle.vertices[2], vertex };
+		// compute circumcircles of the new triangles
+		Triangle newTriangle0 = { curVertex, curTriangle.vertices[0], curTriangle.vertices[1] };
+		Triangle newTriangle1 = { curVertex, curTriangle.vertices[1], curTriangle.vertices[2] };
+		Triangle newTriangle2 = { curVertex, curTriangle.vertices[2], curTriangle.vertices[0] };
+
+
+		/*
+		Triangle newTriangle3 = { glm::vec3(10, -10, 0), glm::vec3(0, 0, 0), glm::vec3(-10, -10, 0) };
+		Circle circle3 = FindCircumCircle(newTriangle3);
+		triangulationDebug->circles.push_back(circle3);
+		*/
 
 
 
-	
+		
+		Circle circle0 = FindCircumCircle(newTriangle0);
+		Circle circle1 = FindCircumCircle(newTriangle1);
+		Circle circle2 = FindCircumCircle(newTriangle2);
+
+		triangulationDebug->circles.push_back(circle0);
+		triangulationDebug->circles.push_back(circle1);
+		triangulationDebug->circles.push_back(circle2);
+		
+
 		/*
 		for (int i = 0; i < vertices.size(); i++)
 		{

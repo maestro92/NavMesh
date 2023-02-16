@@ -157,10 +157,16 @@ namespace Collision
 		float dy = p1.y - p0.y;
 
 		float det = d1.x * d0.y - d1.y * d0.x;
+		if (det == 0)
+		{
+			return false;
+		}
+
 		float u = (dy * d1.x - dx * d1.y) / det;
 		float v = (dy * d0.x - dx * d0.y) / det;
 
 		intersectionPoint = p0 + u * d0;
+		return true;
 	}
 
 }

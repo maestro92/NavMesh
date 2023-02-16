@@ -115,11 +115,9 @@ namespace GameRender
 		RenderSystem::RenderGroup* renderGroup, 
 		LoadedBitmap* bitmap,
 		glm::vec4 color,
-		std::vector<glm::vec3>& vertices, 
+		glm::vec3 vertices[3],
 		bool fakeLighting = false)
 	{
-		assert(vertices.size() == 3);
-
 		GameRender::PushQuad(gameRenderCommands, renderGroup, bitmap, 
 			vertices[0],
 			vertices[1],
@@ -495,6 +493,106 @@ namespace GameRender
 		vertices[7] = end + thickness * (-up + right);
 
 		GameRender::PushCube(gameRenderCommands, group, bitmap, vertices, color, false);
+	}
+
+
+	std::vector<Face> CreateCircleMesh(glm::vec3 center, float radius, float thickness)
+	{
+		// to limit the radius
+		if (thickness > radius / 2)
+			thickness = radius / 2;
+
+		std::vector<Face> result;
+		int step = 1;
+		for (float i = 0; i < 360; i += step)
+		{
+			//phys
+			float cos1 = cos(i * Math::DEGREE_TO_RADIAN);
+			float sin1 = sin(i * Math::DEGREE_TO_RADIAN);
+
+			float cos2 = cos((i + step) * Math::DEGREE_TO_RADIAN);
+			float sin2 = sin((i + step) * Math::DEGREE_TO_RADIAN);
+
+			// outer ring
+			float wx = radius * cos1;
+			float wz = radius * sin1;
+			glm::vec3 simPos0 = glm::vec3(wx, 0, wz);
+
+			wx = radius * cos2;
+			wz = radius * sin2;
+			glm::vec3 simPos1 = glm::vec3(wx, 0, wz);
+
+
+			// inner ring
+			float radius2 = radius - thickness;
+			wx = radius2 * cos1;
+			wz = radius2 * sin1;
+			glm::vec3 simPos2 = glm::vec3(wx, 0, wz);
+
+			wx = radius2 * cos2;
+			wz = radius2 * sin2;
+			glm::vec3 simPos3 = glm::vec3(wx, 0, wz);
+
+			Face face;
+			face.vertices = { simPos2, simPos3, simPos1, simPos0 };
+
+			for (int i = 0; i < face.vertices.size(); i++)
+			{
+				face.vertices[i] += center;
+			}
+
+			result.push_back(face);
+		}
+		return result;
+	}
+
+
+	void RenderCircle(RenderSystem::GameRenderCommands* gameRenderCommands,
+		RenderSystem::RenderGroup* renderGroup,
+		GameAssets* gameAssets,
+		glm::vec4 color,
+		glm::vec3 center,
+		float radius,
+		float thickness)
+	{
+		BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
+		LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
+		int step = 2;
+		for (float i = 0; i < 360; i += step)
+		{
+			//phys
+			float cos1 = cos(i * Math::DEGREE_TO_RADIAN);
+			float sin1 = sin(i * Math::DEGREE_TO_RADIAN);
+
+			float cos2 = cos((i + step) * Math::DEGREE_TO_RADIAN);
+			float sin2 = sin((i + step) * Math::DEGREE_TO_RADIAN);
+
+			// outer ring
+			float wx = radius * cos1;
+			float wy = radius * sin1;
+			glm::vec3 simPos0 = center + glm::vec3(wx, wy, 0);
+
+			wx = radius * cos2;
+			wy = radius * sin2;
+			glm::vec3 simPos1 = center + glm::vec3(wx, wy, 0);
+
+
+			// inner ring
+			float radius2 = radius - thickness;
+			wx = radius2 * cos1;
+			wy = radius2 * sin1;
+			glm::vec3 simPos2 = center + glm::vec3(wx, wy, 0);
+
+			wx = radius2 * cos2;
+			wy = radius2 * sin2;
+			glm::vec3 simPos3 = center + glm::vec3(wx, wy, 0);
+
+			glm::vec3 vertices0[3] = { simPos1, simPos3, simPos2 };
+			glm::vec3 vertices1[3] = { simPos1, simPos2, simPos0 };
+
+			PushTriangle(gameRenderCommands, renderGroup, bitmap, color, vertices0);
+			PushTriangle(gameRenderCommands, renderGroup, bitmap, color, vertices1);
+		}
 	}
 
 

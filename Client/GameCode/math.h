@@ -10,6 +10,10 @@ namespace Math
 {
 	float EPSILON = 1e-5;
 
+	const float DEGREE_TO_RADIAN = 0.0174;    /// pi/180
+	const float RADIAN_TO_DEGREE = 57.32;     /// 180/pi
+
+
 	std::ostream& operator<<(std::ostream& os, const glm::vec3& vec)
 	{
 		os << vec.x << " " << vec.y << " " << vec.z;

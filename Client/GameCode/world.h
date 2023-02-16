@@ -456,14 +456,26 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	// use this online plotter to as online visualization of your points before running the game
 	// lines are plotted counter-clockswise so it's consistent with the right hand rule
 	std::vector<glm::vec3> vertices;
-	vertices.push_back(glm::vec3(50, -40, 0));
-	vertices.push_back(glm::vec3(90, 30, 0));
-	vertices.push_back(glm::vec3(40, 90, 0));
-	vertices.push_back(glm::vec3(-30, 60, 0));
-	vertices.push_back(glm::vec3(-80, 110, 0));
-	vertices.push_back(glm::vec3(-100, 70, 0));
-	vertices.push_back(glm::vec3(-60, 10, 0));
-	vertices.push_back(glm::vec3(20, 30, 0));
+	
+	
+	vertices.push_back(glm::vec3(5, -4, 0));
+	vertices.push_back(glm::vec3(9, 3, 0));
+	vertices.push_back(glm::vec3(4, 9, 0));
+	vertices.push_back(glm::vec3(-3, 6, 0));
+	vertices.push_back(glm::vec3(-8, 11, 0));
+	vertices.push_back(glm::vec3(-10, 7, 0));
+	vertices.push_back(glm::vec3(-6, 1, 0));
+	vertices.push_back(glm::vec3(2, 3, 0));
+	
+
+	/*
+	vertices.push_back(glm::vec3(0, -10, 0));
+	vertices.push_back(glm::vec3(10, 0, 0));
+	vertices.push_back(glm::vec3(-10, 0, 0));
+	vertices.push_back(glm::vec3(0, 10, 0));
+	*/
+
+
 	groundPolygon.vertices = vertices;
 
 
@@ -515,7 +527,7 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	holes.push_back(polygon);
 	*/
 
-	/*
+	/* 
 	// step 3, we unionize the obstacle polygons (holes)
 	TryUnionizePolygons(holes);
 	
@@ -528,7 +540,7 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	Triangulation::DelaunayTraingulation(groundPolygon.vertices, world->triangulationDebug);
 	
 
-
+	
 	// setp 5, triangulate the whole thing
 	std::vector<Triangulation::Triangle> triangles = Triangulation::EarClippingTriangulation(groundPolygon.vertices);
 	std::vector<NavMesh::NavMeshPolygon> polygons;
@@ -560,6 +572,7 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	world->waypoints = pathingResult.waypoints;
 	
 	world->navMeshPolygons = polygons;
+	
 	// world->navMeshPolygons = { groundPolygon };
 }
 
