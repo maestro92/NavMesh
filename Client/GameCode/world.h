@@ -6,6 +6,7 @@
 #include "../NavMesh/memory.h"
 #include "nav_mesh.h"
 #include "triangulation.h"
+#include "voronoi.h"
 #include "pathfinding.h"
 #include "bsp_tree.h"
 
@@ -109,6 +110,7 @@ struct World
 	glm::vec3 destination;
 
 	Triangulation::DebugState* triangulationDebug;
+	Voronoi::DebugState* voronoiDebug;
 };
 
 
@@ -455,26 +457,46 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 // groundPolygon = NavMesh::CreatePolygonFromMinMax(polyMeshMin, max);
 
 	// https://technology.cpm.org/general/3dgraph/
+	// https://oercommons.s3.amazonaws.com/media/courseware/relatedresource/file/imth-6-1-9-6-1-coordinate_plane_plotter/index.html
 	// use this online plotter to as online visualization of your points before running the game
 	// lines are plotted counter-clockswise so it's consistent with the right hand rule
 	std::vector<glm::vec3> vertices;
 	
-	/*
-	vertices.push_back(glm::vec3(50, -40, 0));
-	vertices.push_back(glm::vec3(150, 0, 0));
-	vertices.push_back(glm::vec3(90, 50, 0));
-	*/
-	
+/*
 	vertices.push_back(glm::vec3(5, -4, 0));
 	vertices.push_back(glm::vec3(9, 3, 0));
 	vertices.push_back(glm::vec3(4, 9, 0));
-	
 	vertices.push_back(glm::vec3(-3, 6, 0));
 	vertices.push_back(glm::vec3(-8, 11, 0));
 	vertices.push_back(glm::vec3(-10, 7, 0));
 	vertices.push_back(glm::vec3(-6, 1, 0));
 	vertices.push_back(glm::vec3(2, 3, 0));
+	*/
+
+	float scale = 10;
+	vertices.push_back(glm::vec3(2, 4, 0));
+	vertices.push_back(glm::vec3(-4, 6, 0));
+	vertices.push_back(glm::vec3(-9, 8, 0));
+
+	vertices.push_back(glm::vec3(7, 2, 0));
+	vertices.push_back(glm::vec3(6, -3, 0));
+	vertices.push_back(glm::vec3(5, -9, 0));
 	
+	vertices.push_back(glm::vec3(3, -5, 0));
+	vertices.push_back(glm::vec3(1, -9, 0));
+	vertices.push_back(glm::vec3(-3, -8, 0));
+
+	vertices.push_back(glm::vec3(-12, 3, 0));
+	vertices.push_back(glm::vec3(-8, 0, 0));
+	vertices.push_back(glm::vec3(-9, 2, 0));
+
+	vertices.push_back(glm::vec3(-1, -5, 0));
+	vertices.push_back(glm::vec3(0, 0, 0));
+
+	for (int i = 0; i < vertices.size(); i++)
+	{
+		vertices[i] = vertices[i] * scale;
+	}
 
 	/*
 	vertices.push_back(glm::vec3(0, -10, 0));
@@ -547,6 +569,7 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 
 	Triangulation::DelaunayTraingulation(groundPolygon.vertices, world->triangulationDebug);
 	
+	Voronoi::GenerateVoronoiGraph(world->triangulationDebug->triangles, world->voronoiDebug);
 
 	/*
 	// setp 5, triangulate the whole thing
@@ -1036,6 +1059,8 @@ void initWorld(World* world)
 	}
 	*/
 	world->triangulationDebug = new Triangulation::DebugState();
+	world->voronoiDebug = new Voronoi::DebugState();
+
 
 	NULL_PLANE = Plane();
 	NULL_PLANE.normal = glm::vec3(0);

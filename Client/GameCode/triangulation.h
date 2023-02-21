@@ -9,6 +9,7 @@
 namespace Triangulation
 {
 	const int NUM_TRIANGLE_VERTEX = 3;
+	const int NUM_TRIANGLE_EDGES = 3;
 
 	// Just has a DebugId for conveniences
 	struct Vertex
@@ -39,7 +40,7 @@ namespace Triangulation
 	{
 		// counter clockwise order
 		glm::vec3 vertices[3];
-		std::vector<Edge> edges;
+		Edge edges[3];
 
 		friend bool operator==(const Triangle& l, const Triangle& r)
 		{
@@ -80,35 +81,9 @@ namespace Triangulation
 					edge.vertices[1] = vertices[i + 1];
 				}
 
-				edges.push_back(edge);
+				edges[i] = edge;
 			}
 		}
-	};
-
-
-	struct TriangleV
-	{
-		// counter clockwise order
-		glm::vec3 vertices[3];
-
-		/*
-		glm::vec3 v0;
-		glm::vec3 v1;
-		glm::vec3 v2;
-		*/
-	};
-
-
-	struct Triangle2
-	{
-		// counter clockwise order
-		Vertex vertices[3];
-
-		/*
-		glm::vec3 v0;
-		glm::vec3 v1;
-		glm::vec3 v2;
-		*/
 	};
 
 
@@ -125,6 +100,27 @@ namespace Triangulation
 
 		std::vector<Circle> circles;
 	};
+
+
+	bool IsNeighbor(const Triangle& a, const Triangle& b)
+	{
+		if (a == b)
+		{
+			return false;
+		}
+
+		for (int i = 0; i < NUM_TRIANGLE_EDGES; i++)
+		{
+			for (int j = 0; j < NUM_TRIANGLE_EDGES; j++)
+			{
+				if (a.edges[i] == b.edges[j])
+				{
+					return true;
+				}
+			}
+		}
+		return false;
+	}
 
 
 	/*
@@ -541,7 +537,7 @@ namespace Triangulation
 				continue;
 			}
 
-			for (int j = 0; j < triangle.edges.size(); j++)
+			for (int j = 0; j < NUM_TRIANGLE_EDGES; j++)
 			{
 				if (triangle.edges[j] == curEdge)
 				{
@@ -555,7 +551,7 @@ namespace Triangulation
 
 	void TryAddToPolygonalHole(Triangle curTriangle, std::vector<Triangle>& invalidTriangles, std::vector<Edge>& polygonalHole)
 	{
-		for (int i = 0; i < curTriangle.edges.size(); i++)
+		for (int i = 0; i < NUM_TRIANGLE_EDGES; i++)
 		{
 			Edge edge = curTriangle.edges[i];
 			edge.DebugLog();
@@ -679,13 +675,6 @@ namespace Triangulation
 		}
 		
 		debugCircumCircles.clear();
-		/*
-		Triangle newTriangle3 = { glm::vec3(10, -10, 0), glm::vec3(0, 0, 0), glm::vec3(-10, -10, 0) };
-		Circle circle3 = FindCircumCircle(newTriangle3);
-		triangulationDebug->circles.push_back(circle3);
-		*/
-
-
 
 		for (int i = 0; i < triangles.size(); i++)
 		{
@@ -693,21 +682,14 @@ namespace Triangulation
 		}
 
 		triangulationDebug->circles = debugCircumCircles;
-		
-
-		/*
-		for (int i = 0; i < vertices.size(); i++)
-		{
-			glm::vec3 vertex = vertices[i];
-
-			Edge edge0 = { superTriangle.vertices[0], vertex };
-			Edge edge1 = { superTriangle.vertices[1], vertex };
-			Edge edge2 = { superTriangle.vertices[2], vertex };
-
-
-		}
-		*/
 
 	}
 
+
+
+
+	void GenerateVoronoiGraph()
+	{
+
+	}
 }

@@ -460,6 +460,32 @@ void RenderTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderComman
 
 
 
+void RenderVoronoiDebug(RenderSystem::GameRenderCommands* gameRenderCommands,
+	RenderSystem::RenderGroup* group,
+	GameAssets* gameAssets,
+	Voronoi::DebugState* voronoiDebug)
+{
+	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
+	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
+
+	float pointThickness = 0.2f;
+	float lineThickness = 0.1f;
+	glm::vec4 color = GameRender::COLOR_BLUE;
+	for (int i = 0; i < voronoiDebug->cells.size(); i++)
+	{
+		Voronoi::Cell cell = voronoiDebug->cells[i];
+		GameRender::RenderPoint(gameRenderCommands, group, bitmap, color, cell.center.pos, 1);
+
+		for (int j = 0; j < cell.neighbors.size(); j++)
+		{
+			Voronoi::Vertex neighbor = cell.neighbors[j];
+			GameRender::PushLine(gameRenderCommands, group, bitmap, color, cell.center.pos, neighbor.pos, lineThickness);
+		}
+	}
+}
+
+
+
 void RenderNavMeshPolygon(
 	RenderSystem::GameRenderCommands* gameRenderCommands,
 	RenderSystem::RenderGroup* renderGroup,
@@ -972,6 +998,7 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 
 
 	RenderTriangulationDebug(gameRenderCommands, &group, gameAssets, world->triangulationDebug);
+	RenderVoronoiDebug(gameRenderCommands, &group, gameAssets, world->voronoiDebug);
 
 	GameRender::RenderCoordinateSystem(gameRenderCommands, &group, gameAssets);
 }
