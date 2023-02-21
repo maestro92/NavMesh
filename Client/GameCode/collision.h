@@ -169,4 +169,11 @@ namespace Collision
 		return true;
 	}
 
+	bool IsPointInsideCircle(glm::vec2 center, float radius, glm::vec2 point)
+	{
+		glm::vec2 dx = center - point;
+		float distSquared = glm::dot(dx, dx);
+		return radius * radius > distSquared;
+	}
+
 }

@@ -408,10 +408,9 @@ void RenderTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderComman
 {
 	float lineThickness = 0.5;
 
+	/*
 	Triangulation::Triangle* superTriangle = &triangulationDebug->superTriangle;
-
 	int size = ArrayCount(superTriangle->vertices);
-
 	for (int i = 0; i < size; i++)
 	{
 		GameRender::RenderPoint(gameRenderCommands, group, gameAssets, GameRender::COLOR_GREEN, triangulationDebug->superTriangle.vertices[i], 1);
@@ -429,14 +428,34 @@ void RenderTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderComman
 		}
 		GameRender::RenderLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, p0, p1, lineThickness);
 	}
+	*/
 
+	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
+	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
+
+	float thickness = 0.2f;
+	for (int i = 0; i < triangulationDebug->triangles.size(); i++)
+	{
+		Triangulation::Triangle triangle = triangulationDebug->triangles[i];
+		glm::vec3 liftedVertex[3];
+
+		for (int j = 0; j < Triangulation::NUM_TRIANGLE_VERTEX; j++)
+		{
+			// lifting it slightly higher
+			liftedVertex[j] = triangle.vertices[j] + GameRender::DEBUG_RENDER_OFFSET;
+		}
+		GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, GameRender::COLOR_WHITE, liftedVertex, thickness, false);
+	}
+
+	
 	for (int i = 0; i < triangulationDebug->circles.size(); i++)
 	{
 		Triangulation::Circle* circle = &triangulationDebug->circles[i];
+
 		GameRender::RenderCircle(
 			gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, circle->center, circle->radius, lineThickness);
 	}
-
+	
 }
 
 
@@ -450,31 +469,24 @@ void RenderNavMeshPolygon(
 	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
 	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
 
-	float lineThickness = 0.5f;
+	float thickness = 0.2f;
 
 	for (int i = 0; i < polygon->vertices.size(); i++)
 	{
-		glm::vec3 p0 = polygon->vertices[i];
-		glm::vec3 p1;
+		/*
+		glm::vec3 liftedVertex[3];
 
-		if (i == polygon->vertices.size() - 1)
+		for (int j = 0; j < Triangulation::NUM_TRIANGLE_VERTEX; j++)
 		{
-			p1 = polygon->vertices[0];
+			// lifting it slightly higher
+			liftedVertex[j] = polygon->vertices[j] + GameRender::DEBUG_RENDER_OFFSET;
 		}
-		else
-		{
-			p1 = polygon->vertices[i + 1];
-		}
-		GameRender::PushLine(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_RED, p0, p1, lineThickness);
-
-		// vertex
-		glm::vec3 offset = glm::vec3(0.3, 0.3, 0.3);
-		glm::vec3 min = p0 - offset;
-		glm::vec3 max = p0 + offset;
-		
-		GameRender::PushCube(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_BLUE, min, max, true);
+		GameRender::PushTriangleOutline(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_WHITE, liftedVertex, thickness, false);
+	*/
+		GameRender::RenderPoint(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_GREEN, polygon->vertices[i], 1);
 	}
 
+	/*
 	if (polygon->vertices.size() == 3)
 	{
 		glm::vec4 shadedRed = glm::vec4(0.1, 0, 0, 0.4);
@@ -486,6 +498,7 @@ void RenderNavMeshPolygon(
 		}
 		GameRender::PushTriangle(gameRenderCommands, renderGroup, bitmap, shadedRed, liftedVertex, false);
 	}
+	*/
 }
 
 void CatagorizePosition(World* world, Entity* entity)

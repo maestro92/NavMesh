@@ -449,18 +449,26 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	max = glm::vec3(100, 100, 0);
 	faces = CreateCubeFaceMinMax(min, max);
 
+//	glm::vec3 polyMeshMin = glm::vec3(-100, -100, 0);
 	glm::vec3 polyMeshMin = glm::vec3(-100, -100, 0);
-	// groundPolygon = NavMesh::CreatePolygonFromMinMax(polyMeshMin, max);
+
+// groundPolygon = NavMesh::CreatePolygonFromMinMax(polyMeshMin, max);
 
 	// https://technology.cpm.org/general/3dgraph/
 	// use this online plotter to as online visualization of your points before running the game
 	// lines are plotted counter-clockswise so it's consistent with the right hand rule
 	std::vector<glm::vec3> vertices;
 	
+	/*
+	vertices.push_back(glm::vec3(50, -40, 0));
+	vertices.push_back(glm::vec3(150, 0, 0));
+	vertices.push_back(glm::vec3(90, 50, 0));
+	*/
 	
 	vertices.push_back(glm::vec3(5, -4, 0));
 	vertices.push_back(glm::vec3(9, 3, 0));
 	vertices.push_back(glm::vec3(4, 9, 0));
+	
 	vertices.push_back(glm::vec3(-3, 6, 0));
 	vertices.push_back(glm::vec3(-8, 11, 0));
 	vertices.push_back(glm::vec3(-10, 7, 0));
@@ -479,7 +487,7 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	groundPolygon.vertices = vertices;
 
 
-	initEntity(entity, pos, GROUND, faces);
+//	initEntity(entity, pos, GROUND, faces);
 	
 
 	// groundPolygon = CreateTestGround(world);
@@ -540,7 +548,7 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	Triangulation::DelaunayTraingulation(groundPolygon.vertices, world->triangulationDebug);
 	
 
-	
+	/*
 	// setp 5, triangulate the whole thing
 	std::vector<Triangulation::Triangle> triangles = Triangulation::EarClippingTriangulation(groundPolygon.vertices);
 	std::vector<NavMesh::NavMeshPolygon> polygons;
@@ -572,8 +580,9 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	world->waypoints = pathingResult.waypoints;
 	
 	world->navMeshPolygons = polygons;
-	
-	// world->navMeshPolygons = { groundPolygon };
+	*/
+
+	world->navMeshPolygons = { groundPolygon };
 }
 
 

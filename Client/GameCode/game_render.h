@@ -13,6 +13,8 @@ namespace GameRender
 	glm::vec4 COLOR_TEAL = glm::vec4(0, 1, 1, 1);
 	glm::vec4 COLOR_ORANGE = glm::vec4(1, 0.5, 1, 1);
 
+	glm::vec3 DEBUG_RENDER_OFFSET = glm::vec3(0, 0.1, 0);
+
 	enum AlignmentMode
 	{
 		Centered,
@@ -386,11 +388,11 @@ namespace GameRender
 			return;
 		}
 		glm::vec3 dir = glm::normalize(end - start);
-		glm::vec3 supportUpAXIS = glm::vec3(0, 1, 0);
+		glm::vec3 supportUpAXIS = glm::vec3(0, 0, 1);
 		glm::vec3 right = glm::cross(dir, supportUpAXIS);
 		if (right == glm::vec3(0))
 		{
-			supportUpAXIS = glm::vec3(0, 0, -1);
+			supportUpAXIS = glm::vec3(0, -1, 0);
 			right = glm::cross(dir, supportUpAXIS);
 		}
 
@@ -590,9 +592,32 @@ namespace GameRender
 			glm::vec3 vertices0[3] = { simPos1, simPos3, simPos2 };
 			glm::vec3 vertices1[3] = { simPos1, simPos2, simPos0 };
 
-			PushTriangle(gameRenderCommands, renderGroup, bitmap, color, vertices0);
-			PushTriangle(gameRenderCommands, renderGroup, bitmap, color, vertices1);
+			// PushTriangle(gameRenderCommands, renderGroup, bitmap, color, vertices0);
+			// PushTriangle(gameRenderCommands, renderGroup, bitmap, color, vertices1);
+			GameRender::PushQuad(gameRenderCommands, renderGroup, bitmap,
+				simPos0,
+				simPos2,
+				simPos3,	// wasting one vertex here
+				simPos1,
+				color, false);
 		}
+	}
+
+
+	void RenderPoint(
+		RenderSystem::GameRenderCommands* gameRenderCommands,
+		RenderSystem::RenderGroup* renderGroup,
+		LoadedBitmap* bitmap,
+		glm::vec4 color,
+		glm::vec3 pos,
+		float thickness)
+	{
+		// vertex
+		glm::vec3 offset = glm::vec3(thickness, thickness, thickness);
+		glm::vec3 min = pos - offset;
+		glm::vec3 max = pos + offset;
+
+		GameRender::PushCube(gameRenderCommands, renderGroup, bitmap, color, min, max, true);
 	}
 
 
@@ -607,12 +632,7 @@ namespace GameRender
 		BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
 		LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
 
-		// vertex
-		glm::vec3 offset = glm::vec3(thickness, thickness, thickness);
-		glm::vec3 min = pos - offset;
-		glm::vec3 max = pos + offset;
-
-		GameRender::PushCube(gameRenderCommands, renderGroup, bitmap, color, min, max, true);
+		GameRender::RenderPoint(gameRenderCommands, renderGroup, bitmap, color, pos, thickness);
 	}
 
 
@@ -653,4 +673,38 @@ namespace GameRender
 		PushLine(gameRenderCommands, renderGroup, bitmap, COLOR_GREEN, origin, yAxisEnd, cubeThickness);
 		PushLine(gameRenderCommands, renderGroup, bitmap, COLOR_BLUE, origin, zAxisEnd, cubeThickness);
 	}
+
+
+
+	// right now, since the rendering pipeline only supports quads, im going to 
+	// render triangles as quads and wasting one vertex
+	void PushTriangleOutline(
+		RenderSystem::GameRenderCommands* gameRenderCommands,
+		RenderSystem::RenderGroup* renderGroup,
+		LoadedBitmap* bitmap,
+		glm::vec4 color,
+		glm::vec3 vertices[3],
+		float thickness,
+		bool fakeLighting = false)
+	{
+		const int numVertex = 3;
+
+		for (int i = 0; i < numVertex; i++)
+		{
+			glm::vec3 p = vertices[i];
+			glm::vec3 p1;
+			if (i == numVertex - 1)
+			{
+				p1 = vertices[0];
+			}
+			else
+			{
+				p1 = vertices[i + 1];
+			}
+
+			RenderPoint(gameRenderCommands, renderGroup, bitmap, color, p, thickness);
+			PushLine(gameRenderCommands, renderGroup, bitmap, color, p, p1, thickness);
+		}
+	}
+
 };

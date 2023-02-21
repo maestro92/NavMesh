@@ -8,6 +8,7 @@
 
 namespace Triangulation
 {
+	const int NUM_TRIANGLE_VERTEX = 3;
 
 	// Just has a DebugId for conveniences
 	struct Vertex
@@ -19,9 +20,73 @@ namespace Triangulation
 	struct Edge
 	{
 		glm::vec3 vertices[2];
+
+		friend bool operator==(const Edge& l, const Edge& r)
+		{
+			return Math::Equals(l.vertices[0], r.vertices[0]) && Math::Equals(l.vertices[1], r.vertices[1]) ||
+				Math::Equals(l.vertices[0], r.vertices[1]) && Math::Equals(l.vertices[1], r.vertices[0]);
+		}
+
+		void DebugLog()
+		{
+			std::cout << vertices[0].x << " " << vertices[0].y << " ---> " << vertices[1].x << " " << vertices[1].y << std::endl;
+		}
 	};
 
+
+
 	struct Triangle
+	{
+		// counter clockwise order
+		glm::vec3 vertices[3];
+		std::vector<Edge> edges;
+
+		friend bool operator==(const Triangle& l, const Triangle& r)
+		{
+			for (int i = 0; i < NUM_TRIANGLE_VERTEX; i++)
+			{
+				bool foundMatch = false;
+				for (int j = 0; j < NUM_TRIANGLE_VERTEX; j++)
+				{
+					if (Math::Equals(l.vertices[i], r.vertices[j]))
+					{
+						foundMatch = true;
+						break;
+					}
+				}
+
+				if (!foundMatch)
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+
+		void GenerateEdges()
+		{
+			for (int i = 0; i < NUM_TRIANGLE_VERTEX; i++)
+			{
+				Edge edge;
+
+				if (i == NUM_TRIANGLE_VERTEX - 1)
+				{
+					edge.vertices[0] = vertices[i];
+					edge.vertices[1] = vertices[0];
+				}
+				else
+				{
+					edge.vertices[0] = vertices[i];
+					edge.vertices[1] = vertices[i + 1];
+				}
+
+				edges.push_back(edge);
+			}
+		}
+	};
+
+
+	struct TriangleV
 	{
 		// counter clockwise order
 		glm::vec3 vertices[3];
@@ -33,6 +98,20 @@ namespace Triangulation
 		*/
 	};
 
+
+	struct Triangle2
+	{
+		// counter clockwise order
+		Vertex vertices[3];
+
+		/*
+		glm::vec3 v0;
+		glm::vec3 v1;
+		glm::vec3 v2;
+		*/
+	};
+
+
 	struct Circle
 	{
 		glm::vec3 center;
@@ -41,8 +120,7 @@ namespace Triangulation
 
 	struct DebugState
 	{
-		Triangle superTriangle;
-
+		std::vector<Triangle> triangles;
 		std::vector<glm::vec3> vertices;
 
 		std::vector<Circle> circles;
@@ -283,7 +361,7 @@ namespace Triangulation
 
 
 	
-	Triangle CreateSuperTriangle(std::vector<glm::vec3> vertices)
+	Triangle CreateSuperTriangle(std::vector<Vertex> vertices)
 	{
 		// create super triangle
 
@@ -294,24 +372,24 @@ namespace Triangulation
 		Triangle superTriangle;
 		for (int i = 0; i < vertices.size(); i++)
 		{
-			if (vertices[i].x < min.x)
+			if (vertices[i].pos.x < min.x)
 			{
-				min.x = vertices[i].x;
+				min.x = vertices[i].pos.x;
 			}
 
-			if (vertices[i].x > max.x)
+			if (vertices[i].pos.x > max.x)
 			{
-				max.x = vertices[i].x;
+				max.x = vertices[i].pos.x;
 			}
 
-			if (vertices[i].y < min.y)
+			if (vertices[i].pos.y < min.y)
 			{
-				min.y = vertices[i].y;
+				min.y = vertices[i].pos.y;
 			}
 
-			if (vertices[i].y > max.y)
+			if (vertices[i].pos.y > max.y)
 			{
-				max.y = vertices[i].y;
+				max.y = vertices[i].pos.y;
 			}
 		}
 
@@ -357,7 +435,13 @@ namespace Triangulation
 		oneOverStepY = 1 / dir1.y;
 		glm::vec3 triangleBasePt1 = p3 - dir1 * oneOverStepY * height;
 
-		return { triangleBasePt0 , triangleBasePt1, apex, };
+		Triangle triangle;
+		triangle.vertices[0] = triangleBasePt0;
+		triangle.vertices[1] = triangleBasePt1;
+		triangle.vertices[2] = apex;
+		triangle.GenerateEdges();
+
+		return triangle;
 	}
 
 
@@ -399,34 +483,202 @@ namespace Triangulation
 		return FindCircumCircle(a,b,c);
 	}
 
+	bool DoesCircumcircleContainPoints(Circle circumCircle, Vertex curVertex, std::vector<Vertex>& vertices)
+	{
+		for (int i = 0; i < vertices.size(); i++)
+		{
+			if (vertices[i].id == curVertex.id)
+			{
+				continue;
+			}
+
+			glm::vec2 center = glm::vec2(circumCircle.center.x, circumCircle.center.y);
+			float radius = circumCircle.radius;
+			glm::vec2 point = glm::vec2(curVertex.pos.x, curVertex.pos.y);
+			if (Collision::IsPointInsideCircle(center, radius, point))
+			{
+				return true;
+			}
+		
+		}
+		return false;
+	}
+
+	bool SharedVertex(Triangle a, Triangle b)
+	{
+		for (int i = 0; i < NUM_TRIANGLE_VERTEX; i++)
+		{
+			for (int j = 0; j < NUM_TRIANGLE_VERTEX; j++)
+			{
+				if (Math::Equals(a.vertices[i], b.vertices[j]))
+				{
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	void RemoveTriangle(std::vector<Triangle>& triangles, Triangle triangle)
+	{
+		for (int i = 0; i < triangles.size(); i++)
+		{
+			if (triangles[i] == triangle)
+			{
+				triangles.erase(triangles.begin() + i);
+				break;
+			}
+		}
+	}
+
+	bool IsEdgeSharedByOtherTriangles(Edge curEdge, Triangle curTriangle, std::vector<Triangle>& invalidTriangles)
+	{
+		for (int i = 0; i < invalidTriangles.size(); i++)
+		{
+			Triangle triangle = invalidTriangles[i];
+			if (triangle == curTriangle)
+			{
+				continue;
+			}
+
+			for (int j = 0; j < triangle.edges.size(); j++)
+			{
+				if (triangle.edges[j] == curEdge)
+				{
+					return true;
+				}
+			}
+
+		}
+		return false;
+	}
+
+	void TryAddToPolygonalHole(Triangle curTriangle, std::vector<Triangle>& invalidTriangles, std::vector<Edge>& polygonalHole)
+	{
+		for (int i = 0; i < curTriangle.edges.size(); i++)
+		{
+			Edge edge = curTriangle.edges[i];
+			edge.DebugLog();
+
+			if (!IsEdgeSharedByOtherTriangles(edge, curTriangle, invalidTriangles))
+			{
+				polygonalHole.push_back(edge);
+			}
+		}
+	}
+
+
 	// https://www.youtube.com/watch?v=GctAunEuHt4&ab_channel=SCIco
 	// this maxmizes the minimum of all the angles of the triangles in the triangulation
 	// using the shou
 	// https://gorillasun.de/blog/bowyer-watson-algorithm-for-delaunay-triangulation
 	void DelaunayTraingulation(std::vector<glm::vec3> vertices, DebugState* triangulationDebug) {
 
-		Triangle superTriangle = CreateSuperTriangle(vertices);
-		triangulationDebug->superTriangle = superTriangle;
+		std::vector<Vertex> vertices2;
 
-		// first add our super triangle
+		for (int i = 0; i < vertices.size(); i++)		
+		{
+			vertices2.push_back({i, vertices[i]});
+		}
+
+		Triangle superTriangle = CreateSuperTriangle(vertices2);
+
+		/*
+		Triangle superTriangle;
+		superTriangle.vertices[0] = glm::vec3(0, -100, 0);
+		superTriangle.vertices[1] = glm::vec3(250, 0, 0);
+		superTriangle.vertices[2] = glm::vec3(5, 100, 0);
+
+		superTriangle.GenerateEdges();
+		*/
+
+		/*
+		vertices.push_back(glm::vec3(5, -4, 0));
+		vertices.push_back(glm::vec3(15, 0, 0));
+		vertices.push_back(glm::vec3(9, 5, 0));
+		*/
+
+
+		// first add our super triangle to invalid list
+		std::vector<Triangle> triangles;
+		triangles.push_back(superTriangle);
+
+
 		std::vector<Triangle> invalidTriangles;
-		invalidTriangles.push_back(superTriangle);
+		std::vector<Edge> polygonalHole; // as edges
+		std::vector<Circle> debugCircumCircles;
+
+		for(int i=0; i < vertices.size(); i++)
+		{
+			
+			if (i == 2)
+			{
+		//		break;
+			}
+			
+
+			std::cout << "i " << i << std::endl;
+			invalidTriangles.clear();
+			polygonalHole.clear();
+			debugCircumCircles.clear();
+
+			Vertex curVertex = vertices2[i];
+
+			// find all the triangles that are no longer valid due to insertion
+			for (int j = 0; j < triangles.size(); j++)
+			{
+				Circle circle = FindCircumCircle(triangles[j]);
+				debugCircumCircles.push_back(circle);
+				if (DoesCircumcircleContainPoints(circle, curVertex, vertices2))
+				{
+					invalidTriangles.push_back(triangles[j]);
+				}
+			}
 
 
-		// connect edge of super triangle to the first vertex. 
-		Triangle curTriangle = superTriangle;
-		glm::vec3 curVertex = vertices[0];
+			// find the boundary of a polygonol hole
+			for (int j = 0; j < invalidTriangles.size(); j++)
+			{
+				Triangle triangle = invalidTriangles[j];
+				TryAddToPolygonalHole(triangle, invalidTriangles, polygonalHole);
+			}
 
-		Edge edge0 = { superTriangle.vertices[0], curVertex };
-		Edge edge1 = { superTriangle.vertices[1], curVertex };
-		Edge edge2 = { superTriangle.vertices[2], curVertex };
-
-		// compute circumcircles of the new triangles
-		Triangle newTriangle0 = { curVertex, curTriangle.vertices[0], curTriangle.vertices[1] };
-		Triangle newTriangle1 = { curVertex, curTriangle.vertices[1], curTriangle.vertices[2] };
-		Triangle newTriangle2 = { curVertex, curTriangle.vertices[2], curTriangle.vertices[0] };
+			// remove invalid triangles from triangles
+			for (int j = 0; j < invalidTriangles.size(); j++)
+			{
+				RemoveTriangle(triangles, invalidTriangles[j]);
+			}
 
 
+			// re-triangulate the polygonal hole
+			for (int j = 0; j < polygonalHole.size(); j++)
+			{
+				Triangle newTriangle;
+				newTriangle.vertices[0] = polygonalHole[j].vertices[0];
+				newTriangle.vertices[1] = polygonalHole[j].vertices[1];
+				newTriangle.vertices[2] = curVertex.pos;
+
+				newTriangle.GenerateEdges();
+				triangles.push_back(newTriangle);
+			}
+		}
+
+		
+		// remove all triangles that share an edge or vertices with the original super triangle
+		int curIter = 0;
+		while(curIter < triangles.size())
+		{
+			if (SharedVertex(superTriangle, triangles[curIter]))
+			{
+				triangles.erase(triangles.begin() + curIter);
+			}
+			else
+			{
+				curIter++;
+			}
+		}
+		
+		debugCircumCircles.clear();
 		/*
 		Triangle newTriangle3 = { glm::vec3(10, -10, 0), glm::vec3(0, 0, 0), glm::vec3(-10, -10, 0) };
 		Circle circle3 = FindCircumCircle(newTriangle3);
@@ -435,14 +687,12 @@ namespace Triangulation
 
 
 
-		
-		Circle circle0 = FindCircumCircle(newTriangle0);
-		Circle circle1 = FindCircumCircle(newTriangle1);
-		Circle circle2 = FindCircumCircle(newTriangle2);
+		for (int i = 0; i < triangles.size(); i++)
+		{
+			triangulationDebug->triangles.push_back(triangles[i]);
+		}
 
-		triangulationDebug->circles.push_back(circle0);
-		triangulationDebug->circles.push_back(circle1);
-		triangulationDebug->circles.push_back(circle2);
+		triangulationDebug->circles = debugCircumCircles;
 		
 
 		/*
