@@ -6,6 +6,7 @@
 #include "../NavMesh/memory.h"
 #include "nav_mesh.h"
 #include "triangulation.h"
+#include "cd_triangulation.h"
 #include "voronoi.h"
 #include "pathfinding.h"
 #include "bsp_tree.h"
@@ -111,6 +112,8 @@ struct World
 
 	Triangulation::DebugState* triangulationDebug;
 	Voronoi::DebugState* voronoiDebug;
+
+	CDTriangulation::DebugState* cdTriangulationdebug;
 };
 
 
@@ -473,7 +476,14 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	vertices.push_back(glm::vec3(2, 3, 0));
 	*/
 
+
 	float scale = 10;
+	/*
+	vertices.push_back(glm::vec3(5, -4, 0));
+	vertices.push_back(glm::vec3(9, 3, 0));
+	vertices.push_back(glm::vec3(4, 9, 0));
+	*/
+	
 	vertices.push_back(glm::vec3(2, 4, 0));
 	vertices.push_back(glm::vec3(-4, 6, 0));
 	vertices.push_back(glm::vec3(-9, 8, 0));
@@ -492,11 +502,30 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 
 	vertices.push_back(glm::vec3(-1, -5, 0));
 	vertices.push_back(glm::vec3(0, 0, 0));
+	
+
+	min = glm::vec3(FLT_MAX, FLT_MAX, 0);
+	for (int i = 0; i < vertices.size(); i++)
+	{
+		if (vertices[i].x < min.x)
+		{
+			min.x = vertices[i].x;
+		}
+
+		if (vertices[i].y < min.y)
+		{
+			min.y = vertices[i].y;
+		}
+	}
 
 	for (int i = 0; i < vertices.size(); i++)
 	{
-		vertices[i] = vertices[i] * scale;
+		vertices[i] = (vertices[i] - min) * scale;
+		std::cout << vertices[i].x << " " << vertices[i].y << std::endl;
 	}
+
+	
+
 
 	/*
 	vertices.push_back(glm::vec3(0, -10, 0));
@@ -567,10 +596,13 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	*/
 
 
-	Triangulation::DelaunayTraingulation(groundPolygon.vertices, world->triangulationDebug);
-	
-	Voronoi::GenerateVoronoiGraph(world->triangulationDebug->triangles, world->voronoiDebug);
+	// Triangulation::DelaunayTraingulation_bowyer_watson(groundPolygon.vertices, world->triangulationDebug);
+	// Voronoi::GenerateVoronoiGraph(world->triangulationDebug->triangles, world->voronoiDebug);
 
+
+	glm::ivec2 mapSize = glm::ivec2(256, 256);
+	CDTriangulation::ConstrainedDelaunayTriangulation(groundPolygon.vertices, mapSize, world->cdTriangulationdebug);
+	// 
 	/*
 	// setp 5, triangulate the whole thing
 	std::vector<Triangulation::Triangle> triangles = Triangulation::EarClippingTriangulation(groundPolygon.vertices);
@@ -1060,7 +1092,7 @@ void initWorld(World* world)
 	*/
 	world->triangulationDebug = new Triangulation::DebugState();
 	world->voronoiDebug = new Voronoi::DebugState();
-
+	world->cdTriangulationdebug = new CDTriangulation::DebugState();
 
 	NULL_PLANE = Plane();
 	NULL_PLANE.normal = glm::vec3(0);

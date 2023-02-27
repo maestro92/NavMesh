@@ -151,6 +151,7 @@
     <ClInclude Include="bsp_tree.h" />
     <ClInclude Include="collision.h" />
     <ClInclude Include="debug.h" />
+    <ClInclude Include="cd_triangulation.h" />
     <ClInclude Include="game_code.h" />
     <ClInclude Include="game_render.h" />
     <ClInclude Include="math.h" />

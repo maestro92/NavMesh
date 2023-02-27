@@ -389,20 +389,23 @@ namespace Triangulation
 			}
 		}
 
+
 		/*
 				   apex
 				   .
 				  / \
 				 /   \
-				/	  \
-		    p2 /	   \	p3
+				/     \
+			p2 /       \    p3
 			  .---------.
-			 /|		    |\
-			/ |		    | \
-		   /  |		    |  \
-		  /	  |         |   \
-		 /	  .---------.    \
-		   p0			  p1
+			 /|         |\
+			/ |         | \
+		   /  |         |  \
+		  /   |         |   \
+	  t0 /    .---------.    \ t1
+		   p0             p1
+
+
 		*/
 
 
@@ -469,6 +472,7 @@ namespace Triangulation
 		circle.radius = glm::distance(a, center);
 		return circle;
 	}
+
 
 	Circle FindCircumCircle(Triangle triangle)
 	{
@@ -564,11 +568,27 @@ namespace Triangulation
 	}
 
 
+	void DelaunayTriangulation_Sloan(std::vector<glm::vec3> vertices, DebugState* triangulationDebug)
+	{
+
+	}
+
+
+
 	// https://www.youtube.com/watch?v=GctAunEuHt4&ab_channel=SCIco
 	// this maxmizes the minimum of all the angles of the triangles in the triangulation
 	// using the shou
 	// https://gorillasun.de/blog/bowyer-watson-algorithm-for-delaunay-triangulation
-	void DelaunayTraingulation(std::vector<glm::vec3> vertices, DebugState* triangulationDebug) {
+	// the idea is that we are adding points one at a time
+	// everytime we add a point, we check which regions violate the Delaunay Constraint, 
+	// and we retriangulate those regions. 
+	// (I assume, evertime I retriangulate those regions, it's triangulated into a valid state)
+	// if u have regionA and regionB touching each other. if RegionA is properly triangulated
+	// but regionB does't follow the Delaunay constraint. what u do in region B, shouldn't affect what u do in 
+	// region A. (is that true)?
+	// so the idea is that you are always triangulating invalid regions. 
+	// Do note that sloan's implementation is considerably faster than watsons's implemnetation
+	void DelaunayTraingulation_bowyer_watson(std::vector<glm::vec3> vertices, DebugState* triangulationDebug) {
 
 		std::vector<Vertex> vertices2;
 
@@ -578,21 +598,6 @@ namespace Triangulation
 		}
 
 		Triangle superTriangle = CreateSuperTriangle(vertices2);
-
-		/*
-		Triangle superTriangle;
-		superTriangle.vertices[0] = glm::vec3(0, -100, 0);
-		superTriangle.vertices[1] = glm::vec3(250, 0, 0);
-		superTriangle.vertices[2] = glm::vec3(5, 100, 0);
-
-		superTriangle.GenerateEdges();
-		*/
-
-		/*
-		vertices.push_back(glm::vec3(5, -4, 0));
-		vertices.push_back(glm::vec3(15, 0, 0));
-		vertices.push_back(glm::vec3(9, 5, 0));
-		*/
 
 
 		// first add our super triangle to invalid list
@@ -606,12 +611,11 @@ namespace Triangulation
 
 		for(int i=0; i < vertices.size(); i++)
 		{
-			
-			if (i == 2)
+			if (i == 5)
 			{
-		//		break;
+				break;
 			}
-			
+
 
 			std::cout << "i " << i << std::endl;
 			invalidTriangles.clear();
@@ -659,7 +663,7 @@ namespace Triangulation
 			}
 		}
 
-		
+		/*
 		// remove all triangles that share an edge or vertices with the original super triangle
 		int curIter = 0;
 		while(curIter < triangles.size())
@@ -673,7 +677,7 @@ namespace Triangulation
 				curIter++;
 			}
 		}
-		
+		*/
 		debugCircumCircles.clear();
 
 		for (int i = 0; i < triangles.size(); i++)
@@ -682,14 +686,6 @@ namespace Triangulation
 		}
 
 		triangulationDebug->circles = debugCircumCircles;
-
-	}
-
-
-
-
-	void GenerateVoronoiGraph()
-	{
 
 	}
 }

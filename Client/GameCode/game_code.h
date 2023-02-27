@@ -36,6 +36,8 @@ int MAX_DEBUG_EVENT_ARRAY_COUNT = 8;
 
 float FIXED_UPDATE_TIME_S = 0.016f;
 
+const float DEBUG_CHAR_BITMAP_SCALE = 1;
+
 /*
 struct CameraEntity
 {
@@ -128,130 +130,168 @@ void* PushRenderElement_(RenderSystem::GameRenderCommands* commands, RenderSyste
 
 
 
-
-
-/*
-// this assumes BspPolygon is a plane
-void PushPlane(GameRenderCommands* gameRenderCommands, RenderGroup* renderGroup, LoadedBitmap* bitmap, glm::vec4 color, 
-				BspPolygon polygon, bool fakeLighting = false)
+glm::vec3 PlatformMouseToScreenRenderPos(RenderSystem::GameRenderCommands* gameRenderCommands, glm::ivec2 mousePos)
 {
-	// polygon.PrintDebug();
-
-	// 4 points on front face 
-	glm::vec3 p0 = polygon.vertices[0];
-	glm::vec3 p1 = polygon.vertices[1];
-	glm::vec3 p2 = polygon.vertices[2];
-	glm::vec3 p3 = polygon.vertices[3];
-
-	glm::vec2 t0 = glm::vec2(0, 0);
-	glm::vec2 t1 = glm::vec2(1, 0);
-	glm::vec2 t2 = glm::vec2(0, 1);
-	glm::vec2 t3 = glm::vec2(1, 1);
-
-	glm::vec4 topColor = color;
-	glm::vec4 bottomColor = color;
-
-	if (fakeLighting)
-	{
-		bottomColor *= 0.1;
-		bottomColor.a = 1;
-	}
-
-	GameRender::PushQuad_Core(gameRenderCommands, renderGroup, bitmap, p0, t0, topColor,
-		p1, t1, topColor,
-		p2, t2, bottomColor,
-		p3, t3, bottomColor);
+	float halfWidth = gameRenderCommands->settings.dims.x / 2.0f;
+	float halfHeight = gameRenderCommands->settings.dims.y / 2.0f;
+	return glm::vec3(mousePos.x - halfWidth, mousePos.y - halfHeight, 0);
 }
 
-void PushPlaneOutline(GameRenderCommands* gameRenderCommands, RenderGroup* renderGroup, LoadedBitmap* bitmap, glm::vec4 color, BspPolygon polygon)
+
+
+
+void DEBUGTextLine(const char* s, RenderSystem::GameRenderCommands* gameRenderCommands, RenderSystem::RenderGroup* group, GameAssets* gameAssets, glm::vec3 position)
 {
+	// how big do we want char to be displayed
+	const float DEBUG_CHAR_BITMAP_SCALE = 1;
 
-	// 4 points on front face
-	glm::vec3 p0 = polygon.vertices[0];
-	glm::vec3 p1 = polygon.vertices[1];
-	glm::vec3 p2 = polygon.vertices[2];
-	glm::vec3 p3 = polygon.vertices[3];
+	int ascent = 0;
+	int descent = 0;
+	int lineGap = 0;
+	stbtt_GetFontVMetrics(&debugLoadedFont->fontInfo, &ascent, &descent, &lineGap);
+	float scale = stbtt_ScaleForPixelHeight(&debugLoadedFont->fontInfo, FONT_SCALE);
 
-	float cubeThickness = 0.5f;
+	int lineGapBetweenNextBaseline = (ascent - descent + lineGap);
+	int scaledLineGap = (int)(lineGapBetweenNextBaseline * scale);
 
+	float xPos = position.x;
+	int yBaselinePos = position.y;
 
-	GameRender::PushLine(gameRenderCommands, renderGroup, bitmap, color, p0, p1, cubeThickness);
-	GameRender::PushLine(gameRenderCommands, renderGroup, bitmap, color, p1, p2, cubeThickness);
-	GameRender::PushLine(gameRenderCommands, renderGroup, bitmap, color, p2, p3, cubeThickness);
-	GameRender::PushLine(gameRenderCommands, renderGroup, bitmap, color, p3, p0, cubeThickness);
+	// This is essentially following the example from stb library
+//	for (int i = 0; i < size; i++)
 
-}
-
-void PushTreeRecursive(GameRenderCommands* gameRenderCommands, RenderGroup* group, LoadedBitmap* bitmap, BSPNode* node, bool isFront, int depth)
-{
-	static glm::vec4 colorList[5] = { 
-		GameRender::COLOR_RED, 
-		GameRender::COLOR_GREEN, 
-		GameRender::COLOR_BLUE, 
-		GameRender::COLOR_YELLOW, 
-		GameRender::COLOR_TEAL };
-
-	bool renderFlag = true;// depth == 0;
-//	bool renderFlag = depth == 1;
-
-
-	if (node == NULL)
+	int i = 0;
+	while (s[i] != '\0')
 	{
-		return;
-	}
+		int advance, leftSideBearing;
+		stbtt_GetCodepointHMetrics(&debugLoadedFont->fontInfo, s[i], &advance, &leftSideBearing);
 
-	// cout << "node " << node->brushes.size() << endl;
-	if (node->brushes.size() > 0)
-	{
-		//	std::cout << "brush size" << node->brushes.size() << std::endl;
+		GlyphId glyphID = GetGlyph(gameAssets, debugLoadedFont, s[i]);
+		LoadedGlyph* glyphBitmap = GetGlyph(gameAssets, glyphID);
 
-		for (int i = 0; i < node->brushes.size(); i++)
+		if (s[i] == '\n')
 		{
-			//	std::cout << "	polygon size" << node->brushes[i].polygons.size() << std::endl;
-
-			for (int j = 0; j < node->brushes[i].polygons.size(); j++)
-			{
-				if (renderFlag)
-				{
-					if (isFront)
-					{
-						//	cout << "rendering front" << endl;
-				//		PushPlaneOutline(gameRenderCommands, group, bitmap, COLOR_RED, node->brushes[i].polygons[j]);
-					}
-					else
-					{
-						//	cout << "rendering back" << endl;
-
-				//		PushPlaneOutline(gameRenderCommands, group, bitmap, COLOR_BLUE, node->brushes[i].polygons[j]);
-					}
-				}
-			}
+			xPos = position.x;
+			yBaselinePos -= scaledLineGap;
 		}
-		return;
+		else
+		{
+			float height = DEBUG_CHAR_BITMAP_SCALE * glyphBitmap->bitmap.height;
+			float width = glyphBitmap->bitmap.width / (float)glyphBitmap->bitmap.height * height;
+
+			int x = xPos + glyphBitmap->bitmapXYOffsets.x;
+			int y = yBaselinePos - glyphBitmap->bitmapXYOffsets.y;
+
+			glm::vec3 leftTopPos = glm::vec3(x, y, 0.2);
+
+			GameRender::PushBitmap(
+				gameRenderCommands,
+				group,
+				&glyphBitmap->bitmap,
+				GameRender::COLOR_WHITE,
+				leftTopPos,
+				glm::vec3(width / 2.0, height / 2.0, 0),
+				GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Top);
+
+
+			xPos += (advance * scale);
+			xPos += scale * stbtt_GetCodepointKernAdvance(&debugLoadedFont->fontInfo, s[i], s[i + 1]);
+		}
+		i++;
 	}
 
-	if (renderFlag)
-	{
-		if (!node->IsLeafNode())
-		{
-			glm::vec4 color = GameRender::COLOR_GREEN;
-			color.a = 0.01;
+}
 
-			//	if (!IsAxialPlane(node->debugSplitPolygon.plane))
-			{
-				PushPlane(gameRenderCommands, group, bitmap, color, node->debugSplitPolygon, true);
-				PushPlaneOutline(gameRenderCommands, group, bitmap, GameRender::COLOR_GREEN, node->debugSplitPolygon);
-			}
+void RenderProfileBars(DebugState* debugState, RenderSystem::GameRenderCommands* gameRenderCommands,
+	RenderSystem::RenderGroup* renderGroup, GameAssets* gameAssets, glm::ivec2 mousePos)
+{
+
+	// we have lanes for our threads 
+	// handmade hero day254 24:52
+	float halfWidth = gameRenderCommands->settings.dims.x / 2.0f;
+	float halfHeight = gameRenderCommands->settings.dims.y / 2.0f;
+
+	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
+	LoadedBitmap* defaultBitmap = GetBitmap(gameAssets, bitmapID);
+
+	glm::vec3 profileRectDim = glm::vec3(200, 100, 0);
+	glm::vec3 profileRectMin = glm::vec3(-halfWidth, halfHeight - profileRectDim.y, 0);
+	glm::vec3 profileRectMax = profileRectMin + profileRectDim;
+
+	// background
+	GameRender::PushBitmap(gameRenderCommands, renderGroup, defaultBitmap, glm::vec4(0, 0, 0.25, 0.25), profileRectMin,
+		glm::vec3(profileRectDim.x / 2.0, profileRectDim.y / 2.0, 0), GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Bottom);
+
+	//cout << "RenderProfileBars " << endl;
+	if (debugState->mostRecentFrame != NULL)
+	{
+		// debugState->mostRecentFrame->PrintDebug();
+
+
+		ProfileNode* root = debugState->mostRecentFrame->rootProfileNode;
+
+		float frameSpan = root->duration;
+		float pixelSpan = profileRectDim.x;
+
+		float scale = 0.0f;
+		if (frameSpan > 0)
+		{
+			scale = pixelSpan / frameSpan;
 		}
 
 
-	}
+		uint32 numLanes = debugState->threads.size();
+		float laneHeight = 0.0f;
+		if (numLanes > 0)
+		{
+			laneHeight = profileRectDim.y / numLanes;
+		}
 
-	// render the splitting plane
-	PushTreeRecursive(gameRenderCommands, group, bitmap, node->children[0], true, depth + 1);
-	PushTreeRecursive(gameRenderCommands, group, bitmap, node->children[1], false, depth + 1);
+
+
+		glm::vec4 colors[] = {
+			glm::vec4(1,0,0,1),
+			glm::vec4(0,1,0,1),
+			glm::vec4(0,0,1,1),
+
+			glm::vec4(1,1,0,1),
+			glm::vec4(0,1,1,1),
+			glm::vec4(1,0,1,1)
+		};
+
+
+		// cout << "root->children " << root->children.size() << endl;
+		// the more recent ones are at the top
+		for (uint32 i = 0; i < root->children.size(); i++)
+		{
+			ProfileNode* node = root->children[i];
+			glm::vec4 color = colors[i % ArrayCount(colors)];
+
+			glm::vec3 rectMin, rectMax;
+
+			rectMin.x = profileRectMin.x + scale * node->parentRelativeClock;
+			rectMax.x = rectMin.x + scale * node->duration;
+
+			uint32 laneIndex = 0;
+			rectMin.y = profileRectMax.y - (laneIndex + 1) * laneHeight;
+			rectMax.y = profileRectMax.y - laneIndex * laneHeight;
+
+			glm::vec3 dim = rectMax - rectMin;
+
+			float zOffset = 0.1;
+
+			GameRender::PushBitmap(gameRenderCommands, renderGroup, defaultBitmap, color, glm::vec3(rectMin.x, rectMin.y, zOffset),
+				glm::vec3(dim.x / 2.0, dim.y / 2.0, 0), GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Bottom);
+
+			// if mouse in region
+			glm::vec3 screenMousePos = PlatformMouseToScreenRenderPos(gameRenderCommands, mousePos);
+			if (Collision::IsPointInsideRect({ rectMin, rectMax }, screenMousePos))
+			{
+				DEBUGTextLine(node->element->GUID, gameRenderCommands, renderGroup, gameAssets, screenMousePos);
+			}
+		}
+	}
 }
-*/
 
 glm::vec3 GetHorizontalVector(glm::vec3 dir, bool left)
 {
@@ -483,6 +523,77 @@ void RenderVoronoiDebug(RenderSystem::GameRenderCommands* gameRenderCommands,
 		}
 	}
 }
+
+
+
+void RenderCDTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderCommands,
+	RenderSystem::RenderGroup* group,
+	GameAssets* gameAssets,
+	CDTriangulation::DebugState* triangulationDebug)
+{
+	float lineThickness = 0.5;
+
+	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
+	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
+
+	float thickness = 0.2f;
+	for (int i = 0; i < triangulationDebug->vertices.size(); i++)
+	{
+		GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_GREEN, triangulationDebug->vertices[i], 2);
+	}
+
+
+	std::vector<glm::vec4> colors = {
+		GameRender::COLOR_WHITE, 
+		GameRender::COLOR_YELLOW,
+		GameRender::COLOR_BLUE,
+		GameRender::COLOR_GREEN,
+		GameRender::COLOR_RED,
+		GameRender::COLOR_TEAL,
+		GameRender::COLOR_ORANGE };
+
+	for (int i = 0; i < triangulationDebug->triangles.size(); i++)
+	{
+		CDTriangulation::DelaunayTriangle triangle = triangulationDebug->triangles[i];
+		glm::vec3 liftedVertex[3];
+
+		glm::vec3 centroid;
+
+		for (int j = 0; j < Triangulation::NUM_TRIANGLE_VERTEX; j++)
+		{
+			// lifting it slightly higher
+			liftedVertex[j] = triangle.vertices[j].pos + GameRender::DEBUG_RENDER_OFFSET;
+			centroid += glm::vec3(triangle.vertices[j].pos.x, triangle.vertices[j].pos.y, 0);
+		}
+
+		centroid = centroid / 3.0f;
+
+
+		glm::vec4 color = colors[i % colors.size()];
+		GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, GameRender::COLOR_WHITE, liftedVertex, thickness, false);
+		// GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, color, liftedVertex, thickness, false);
+		// GameRender::PushTriangle(gameRenderCommands, group, bitmap, color, liftedVertex, false);
+
+		std::string s = std::to_string(triangle.id);
+
+
+		DEBUGTextLine(s.c_str(), gameRenderCommands, group, gameAssets, centroid);
+
+	}
+
+
+	for (int i = 0; i < triangulationDebug->circles.size(); i++)
+	{
+		Triangulation::Circle* circle = &triangulationDebug->circles[i];
+
+		GameRender::RenderCircle(
+			gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, circle->center, circle->radius, lineThickness);
+	}
+
+
+
+}
+
 
 
 
@@ -999,6 +1110,7 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 
 	RenderTriangulationDebug(gameRenderCommands, &group, gameAssets, world->triangulationDebug);
 	RenderVoronoiDebug(gameRenderCommands, &group, gameAssets, world->voronoiDebug);
+	RenderCDTriangulationDebug(gameRenderCommands, &group, gameAssets, world->cdTriangulationdebug);
 
 	GameRender::RenderCoordinateSystem(gameRenderCommands, &group, gameAssets);
 }
@@ -1130,167 +1242,6 @@ void RestartCollation(DebugState* debugState)
 }
 
 
-glm::vec3 PlatformMouseToScreenRenderPos(RenderSystem::GameRenderCommands* gameRenderCommands, glm::ivec2 mousePos)
-{
-	float halfWidth = gameRenderCommands->settings.dims.x / 2.0f;
-	float halfHeight = gameRenderCommands->settings.dims.y / 2.0f;
-	return glm::vec3(mousePos.x - halfWidth, mousePos.y - halfHeight, 0);
-}
-
-
-
-void DEBUGTextLine(char* s, RenderSystem::GameRenderCommands* gameRenderCommands, RenderSystem::RenderGroup* group, GameAssets* gameAssets, glm::vec3 position)
-{
-	// how big do we want char to be displayed
-	const float DEBUG_CHAR_BITMAP_SCALE = 1;
-
-	int ascent = 0;
-	int descent = 0;
-	int lineGap = 0;
-	stbtt_GetFontVMetrics(&debugLoadedFont->fontInfo, &ascent, &descent, &lineGap);
-	float scale = stbtt_ScaleForPixelHeight(&debugLoadedFont->fontInfo, FONT_SCALE);
-
-	int lineGapBetweenNextBaseline = (ascent - descent + lineGap);
-	int scaledLineGap = (int)(lineGapBetweenNextBaseline * scale);
-
-	float xPos = position.x;
-	int yBaselinePos = position.y;
-
-	// This is essentially following the example from stb library
-//	for (int i = 0; i < size; i++)
-
-	int i = 0;
-	while (s[i] != '\0')
-	{
-		int advance, leftSideBearing;
-		stbtt_GetCodepointHMetrics(&debugLoadedFont->fontInfo, s[i], &advance, &leftSideBearing);
-
-		GlyphId glyphID = GetGlyph(gameAssets, debugLoadedFont, s[i]);
-		LoadedGlyph* glyphBitmap = GetGlyph(gameAssets, glyphID);
-
-		if (s[i] == '\n')
-		{
-			xPos = position.x;
-			yBaselinePos -= scaledLineGap;
-		}
-		else
-		{
-			float height = DEBUG_CHAR_BITMAP_SCALE * glyphBitmap->bitmap.height;
-			float width = glyphBitmap->bitmap.width / (float)glyphBitmap->bitmap.height * height;
-
-			int x = xPos + glyphBitmap->bitmapXYOffsets.x;
-			int y = yBaselinePos - glyphBitmap->bitmapXYOffsets.y;
-
-			glm::vec3 leftTopPos = glm::vec3(x, y, 0.2);
-
-			GameRender::PushBitmap(
-				gameRenderCommands, 
-				group, 
-				&glyphBitmap->bitmap, 
-				GameRender::COLOR_WHITE, 
-				leftTopPos, 
-				glm::vec3(width / 2.0, height / 2.0, 0), 
-				GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Top);
-
-
-			xPos += (advance * scale);
-			xPos += scale * stbtt_GetCodepointKernAdvance(&debugLoadedFont->fontInfo, s[i], s[i + 1]);
-		}
-		i++;
-	}
-
-}
-
-void RenderProfileBars(DebugState* debugState, RenderSystem::GameRenderCommands* gameRenderCommands,
-	RenderSystem::RenderGroup* renderGroup, GameAssets* gameAssets, glm::ivec2 mousePos)
-{
-
-	// we have lanes for our threads 
-	// handmade hero day254 24:52
-	float halfWidth = gameRenderCommands->settings.dims.x / 2.0f;
-	float halfHeight = gameRenderCommands->settings.dims.y / 2.0f;
-
-	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
-	LoadedBitmap* defaultBitmap = GetBitmap(gameAssets, bitmapID);
-
-	glm::vec3 profileRectDim = glm::vec3(200, 100, 0);
-	glm::vec3 profileRectMin = glm::vec3(-halfWidth, halfHeight - profileRectDim.y, 0);
-	glm::vec3 profileRectMax = profileRectMin + profileRectDim;
-	
-	// background
-	GameRender::PushBitmap(gameRenderCommands, renderGroup, defaultBitmap, glm::vec4(0, 0, 0.25, 0.25), profileRectMin,
-		glm::vec3(profileRectDim.x / 2.0, profileRectDim.y / 2.0, 0), GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Bottom);
-
-	//cout << "RenderProfileBars " << endl;
-	if (debugState->mostRecentFrame != NULL)
-	{
-		// debugState->mostRecentFrame->PrintDebug();
-
-
-		ProfileNode* root = debugState->mostRecentFrame->rootProfileNode;
-
-		float frameSpan = root->duration;
-		float pixelSpan = profileRectDim.x;
-
-		float scale = 0.0f;
-		if (frameSpan > 0)
-		{
-			scale = pixelSpan / frameSpan;
-		}
-
-
-		uint32 numLanes = debugState->threads.size();
-		float laneHeight = 0.0f;
-		if (numLanes > 0)
-		{
-			laneHeight = profileRectDim.y / numLanes;
-		}
-
-
-
-		glm::vec4 colors[] = {
-			glm::vec4(1,0,0,1),
-			glm::vec4(0,1,0,1),
-			glm::vec4(0,0,1,1),
-
-			glm::vec4(1,1,0,1),
-			glm::vec4(0,1,1,1),
-			glm::vec4(1,0,1,1)
-		};
-
-
-		// cout << "root->children " << root->children.size() << endl;
-		// the more recent ones are at the top
-		for (uint32 i = 0; i < root->children.size(); i++)
-		{
-			ProfileNode* node = root->children[i];
-			glm::vec4 color = colors[i % ArrayCount(colors)];
-
-			glm::vec3 rectMin, rectMax;
-
-			rectMin.x = profileRectMin.x + scale * node->parentRelativeClock;
-			rectMax.x = rectMin.x + scale * node->duration;
-
-			uint32 laneIndex = 0;
-			rectMin.y = profileRectMax.y - (laneIndex + 1) * laneHeight;
-			rectMax.y = profileRectMax.y - laneIndex * laneHeight;
-
-			glm::vec3 dim = rectMax - rectMin;
-
-			float zOffset = 0.1;
-
-			GameRender::PushBitmap(gameRenderCommands, renderGroup, defaultBitmap, color, glm::vec3(rectMin.x, rectMin.y, zOffset),
-				glm::vec3(dim.x / 2.0, dim.y / 2.0, 0), GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Bottom);
-
-			// if mouse in region
-			glm::vec3 screenMousePos = PlatformMouseToScreenRenderPos(gameRenderCommands, mousePos);
-			if (Collision::IsPointInsideRect({ rectMin, rectMax }, screenMousePos))
-			{
-				DEBUGTextLine(node->element->GUID, gameRenderCommands, renderGroup, gameAssets, screenMousePos);
-			}
-		}
-	}
-}
 
 extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * gameMemory,
 	GameInputState * gameInputState,
@@ -1403,6 +1354,12 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 
 	DEBUGTextLine(buffer, gameRenderCommands, &group, transientState->assets, startPos);
 
-
-
+	/*
+	// render the points 
+	World* world = &gameState->world;
+	for (int i = 0; i < world->cdTriangulationdebug->vertices.size(); i++)
+	{
+		glm::vec3 point = 
+	}
+	*/
 }

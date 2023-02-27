@@ -111,6 +111,7 @@ namespace Voronoi
 		voronoiCells[indexB].TryAddNeighbor(a);
 	}
 
+	// Connecting the centers of the circumcircles produces the Voronoi diagram
 	void GenerateVoronoiGraph(std::vector<Triangulation::Triangle> triangles, DebugState* debugState)
 	{
 		// for ever delaunay edge, compute voronoi edge
