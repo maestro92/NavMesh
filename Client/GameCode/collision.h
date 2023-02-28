@@ -176,4 +176,77 @@ namespace Collision
 		return radius * radius > distSquared;
 	}
 
+
+	struct Plane
+	{
+		glm::vec3 normal;
+		float dist;
+	};
+
+	struct Ray
+	{
+		glm::vec3 p;
+		glm::vec3 dir;
+	};
+
+	Plane GetPlane(glm::vec3 a, glm::vec3 b, glm::vec3 c)
+	{
+		glm::vec3 ab = b - a;
+		glm::vec3 ac = c - a;
+		glm::vec3 normal = glm::cross(ab, ac);
+		float dist = glm::dot(normal, a);
+		return { normal, dist };
+	}
+
+	bool RayPlaneIntersection3D(Plane plane, Ray ray, glm::vec3& intersectionPoint)
+	{
+		// check if p is above the plane, and approaching the plane
+		// or if p is below the plane, and approaching the plane.
+		// similar to the moving sphere to plane test
+		float dist = glm::dot(plane.normal, ray.p) - plane.dist;
+
+		if (dist == 0)
+		{
+			intersectionPoint = ray.p;
+			return true;
+		}
+		else
+		{
+			float denom = glm::dot(plane.normal, ray.dir);
+			if (denom * dist >= 0.0f)
+			{
+				// no intersection
+				return 0;
+			}
+			else
+			{
+				// ray is moving towards the plane
+
+				//       distance from point to plane 
+				// t = --------------------------------------
+				//      distance covered by direction to plane
+
+				float t = -(glm::dot(ray.p, plane.normal) + plane.dist) / glm::dot(ray.dir, plane.normal);
+				intersectionPoint = ray.p + t * ray.dir;
+				return true;
+			}
+		}
+	}
+
+	bool RayTriangleIntersection3D(glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 rayOrigin, glm::vec3 rayDir, glm::vec3& intersectionPoint)
+	{
+		Plane plane = GetPlane(a, b, c);
+		Ray ray = { rayOrigin, rayDir };
+
+		// first check if ray plane intersection happens
+		if (!RayPlaneIntersection3D(plane, ray, intersectionPoint))
+		{
+			return false;
+		}
+
+		if (IsPointInsideTriangle_Barycentric(intersectionPoint, a, b, c))
+		{
+			return true;
+		}			
+	}
 }

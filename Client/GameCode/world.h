@@ -84,7 +84,12 @@ struct PlayerEntity
 	glm::vec3 zAxis;
 };
 
-
+struct WorldCameraSetup
+{
+	glm::mat4 proj;
+	glm::mat4 view;
+	glm::mat4 translation;
+};
 
 
 struct World
@@ -114,6 +119,8 @@ struct World
 	Voronoi::DebugState* voronoiDebug;
 
 	CDTriangulation::DebugState* cdTriangulationdebug;
+
+	WorldCameraSetup cameraSetup;
 };
 
 

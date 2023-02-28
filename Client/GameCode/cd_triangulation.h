@@ -102,6 +102,8 @@ namespace CDTriangulation
 		std::vector<glm::vec3> vertices;
 
 		std::vector<Triangulation::Circle> circles;
+
+		DelaunayTriangle* highlightedTriangle;
 	};
 
 	/*
@@ -530,12 +532,16 @@ namespace CDTriangulation
 		for (int i = 0; i < verticesToAdd.size(); i++)
 		{
 
-			std::cout << "i " << i << std::endl;
-			if (i == 5)
+			std::cout << "i " << i << " " << verticesToAdd[i].pos.x << " " << verticesToAdd[i].pos.y << std::endl;
+			if (i == 4)
+			{
+				int a = 1;
+			}
+
+			if (i == 2)
 			{
 				break;
 			}
-
 
 			Vertex curVertex = verticesToAdd[i];
 

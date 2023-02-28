@@ -128,8 +128,34 @@ void* PushRenderElement_(RenderSystem::GameRenderCommands* commands, RenderSyste
 }
 
 
+/*
+	mousePos
+
+  0,768					1023,768
+	  ______________________
+	 |						|
+	 |						|
+	 |			  			|
+	 |						|
+	 |						|
+	 |______________________|
+   0,0						1023,0
 
 
+
+	ScreenRenderPos: 1024 * 768
+
+  -512,384			     511,384
+	  ______________________
+	 |						|
+	 |						|
+	 |			0,0			|
+	 |						|
+	 |						|
+	 |______________________|
+  -512,-384			     511,-384
+
+*/
 glm::vec3 PlatformMouseToScreenRenderPos(RenderSystem::GameRenderCommands* gameRenderCommands, glm::ivec2 mousePos)
 {
 	float halfWidth = gameRenderCommands->settings.dims.x / 2.0f;
@@ -137,6 +163,47 @@ glm::vec3 PlatformMouseToScreenRenderPos(RenderSystem::GameRenderCommands* gameR
 	return glm::vec3(mousePos.x - halfWidth, mousePos.y - halfHeight, 0);
 }
 
+/*
+not entirely sure why this works... 
+https://antongerdelan.net/opengl/raycasting.html
+
+	mousePos
+
+  0,768					1023,768
+	  ______________________
+	 |						|
+	 |						|
+	 |			  			|
+	 |						|
+	 |						|
+	 |______________________|
+   0,0						1023,0
+
+*/
+glm::vec3 MousePosToMousePickingRay(WorldCameraSetup worldCameraSetup, RenderSystem::GameRenderCommands* gameRenderCommands, glm::ivec2 mousePos)
+{
+	float halfWidth = gameRenderCommands->settings.dims.x / 2.0f;
+	float halfHeight = gameRenderCommands->settings.dims.y / 2.0f;
+	glm::vec3 deviceCoordinate = glm::vec3(mousePos.x - halfWidth, mousePos.y - halfHeight, 0);
+
+	// noralized device coordinate
+	glm::vec3 rayNoralizedCoordinate;
+	rayNoralizedCoordinate.x = deviceCoordinate.x / halfWidth;
+	rayNoralizedCoordinate.y = deviceCoordinate.y / halfHeight;
+	rayNoralizedCoordinate.z = 1;
+
+	// we have z = -1 because we want our ray to point into the screen
+	glm::vec4 rayClip = glm::vec4(rayNoralizedCoordinate.x, rayNoralizedCoordinate.y, -1, 1);
+	
+	glm::vec4 rayEye = glm::inverse(worldCameraSetup.proj) * rayClip;
+	rayEye = glm::vec4(rayEye.x, rayEye.y, 1, 0);
+
+	glm::vec4 rayWorld4d = glm::inverse(worldCameraSetup.view) * rayEye;
+	glm::vec3 rayWorld = glm::vec3(rayWorld4d.x, rayWorld4d.y, -rayWorld4d.z);
+	rayWorld = glm::normalize(rayWorld);
+	return rayWorld;
+
+}
 
 
 
@@ -199,6 +266,27 @@ void DEBUGTextLine(const char* s, RenderSystem::GameRenderCommands* gameRenderCo
 		}
 		i++;
 	}
+
+}
+
+
+void RenderMiddle(RenderSystem::GameRenderCommands* gameRenderCommands,
+	RenderSystem::RenderGroup* renderGroup, GameAssets* gameAssets, glm::ivec2 mousePos)
+{
+
+	float halfWidth = gameRenderCommands->settings.dims.x / 2.0f;
+	float halfHeight = gameRenderCommands->settings.dims.y / 2.0f;
+
+	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
+	LoadedBitmap* defaultBitmap = GetBitmap(gameAssets, bitmapID);
+
+	glm::vec3 profileRectHalfDim = glm::vec3(1, 1, 0);
+	glm::vec3 profileRectMin = glm::vec3(-profileRectHalfDim.x, -profileRectHalfDim.y, 0);
+	glm::vec3 profileRectMax = glm::vec3(profileRectHalfDim.x, profileRectHalfDim.y, 0);
+
+	// background
+	GameRender::PushBitmap(gameRenderCommands, renderGroup, defaultBitmap, glm::vec4(1, 1, 1, 1), profileRectMin,
+		profileRectMax, GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Bottom);
 
 }
 
@@ -579,17 +667,26 @@ void RenderCDTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderComm
 
 		DEBUGTextLine(s.c_str(), gameRenderCommands, group, gameAssets, centroid);
 
+		if (triangulationDebug->highlightedTriangle != NULL && triangle.id == triangulationDebug->highlightedTriangle->id)
+		{
+
+			Triangulation::Circle circle = CDTriangulation::FindCircumCircle(triangle);
+			GameRender::RenderCircle(
+				gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, circle.center, circle.radius, lineThickness);
+		}
+
 	}
 
 
+	/*
 	for (int i = 0; i < triangulationDebug->circles.size(); i++)
-	{
+	{		
 		Triangulation::Circle* circle = &triangulationDebug->circles[i];
 
 		GameRender::RenderCircle(
 			gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, circle->center, circle->radius, lineThickness);
 	}
-
+	*/
 
 
 }
@@ -938,18 +1035,7 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 	}
 	*/
 
-	/*
-	stepSize = 0.1f;
 
-	if (gameInputState->moveForward2.endedDown){world->entities[world->startPlayerEntityId].pos.x += stepSize;}
-	if (gameInputState->moveBack2.endedDown){world->entities[world->startPlayerEntityId].pos.x += -stepSize;}
-
-	if (gameInputState->moveLeft2.endedDown){world->entities[world->startPlayerEntityId].pos.z += stepSize;}
-	if (gameInputState->moveRight2.endedDown){world->entities[world->startPlayerEntityId].pos.z += -stepSize;}
-
-	if (gameInputState->moveUp2.endedDown)	{world->entities[world->startPlayerEntityId].pos.y += stepSize;}
-	if (gameInputState->moveDown2.endedDown){world->entities[world->startPlayerEntityId].pos.y += -stepSize;}
-	*/
 
 //	if (!debugModeState->cameraDebugMode)
 	{
@@ -980,8 +1066,9 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 	float dim = 20;
 	glm::mat4 cameraProj = glm::perspective(45.0f, windowDimensions.x / (float)windowDimensions.y, 0.5f, 5000.0f);
 
-
-
+	world->cameraSetup.proj = cameraProj;
+	world->cameraSetup.view = cameraMatrix;
+	world->cameraSetup.translation = cameraTransform;
 
 
 	// We start a render setup
@@ -1110,9 +1197,39 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 
 	RenderTriangulationDebug(gameRenderCommands, &group, gameAssets, world->triangulationDebug);
 	RenderVoronoiDebug(gameRenderCommands, &group, gameAssets, world->voronoiDebug);
+	
+	
+	
+	
+	glm::vec3 rayOrigin = gameState->debugCameraEntity.pos;
+	glm::vec3 rayDir = MousePosToMousePickingRay(gameState->world.cameraSetup, gameRenderCommands, gameInputState->mousePos);
+
+	glm::vec3 point;
+
+	world->cdTriangulationdebug->highlightedTriangle = NULL;
+	for (int i = 0; i < world->cdTriangulationdebug->triangles.size(); i++)
+	{
+		CDTriangulation::DelaunayTriangle triangle = world->cdTriangulationdebug->triangles[i];
+
+		if (Collision::RayTriangleIntersection3D(
+			triangle.vertices[0].pos,
+			triangle.vertices[1].pos,
+			triangle.vertices[2].pos,
+			rayOrigin, rayDir, point))
+		{
+			world->cdTriangulationdebug->highlightedTriangle = &world->cdTriangulationdebug->triangles[i];
+			break;
+//			std::cout << "intersecting with " << triangle.id << std::endl;
+		}
+	}
+	
+	
 	RenderCDTriangulationDebug(gameRenderCommands, &group, gameAssets, world->cdTriangulationdebug);
 
 	GameRender::RenderCoordinateSystem(gameRenderCommands, &group, gameAssets);
+
+
+
 }
 
 
@@ -1161,9 +1278,24 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 
 		gameState->debugCameraEntity = {};
 		gameState->debugCameraEntity.pos = glm::vec3(0, -90, 400);
+
 		gameState->debugCameraEntity.xAxis = glm::normalize(glm::vec3(1.0, 0.0, 0.0));
 		gameState->debugCameraEntity.yAxis = glm::normalize(glm::vec3(0.0, 0.96, 0.25));
 		gameState->debugCameraEntity.zAxis = glm::normalize(glm::vec3(0.0, -0.25, 0.96));
+		
+
+		/*
+		gameState->debugCameraEntity.xAxis = glm::normalize(glm::vec3(1.0, 0.0, 0.0));
+		gameState->debugCameraEntity.yAxis = glm::normalize(glm::vec3(0.0, 1, 0));
+		gameState->debugCameraEntity.zAxis = glm::normalize(glm::vec3(0.0, 0, 1));
+		*/
+
+		/*
+		gameState->debugCameraEntity.xAxis = glm::normalize(glm::vec3(1.0, 0.0, 0.0));
+		gameState->debugCameraEntity.yAxis = glm::normalize(glm::vec3(0.0, 0, -1));
+		gameState->debugCameraEntity.zAxis = glm::normalize(glm::vec3(0.0, 1, 0));
+		*/
+
 		gameState->debugCameraEntity.min = glm::vec3(-10, -10, -10);
 		gameState->debugCameraEntity.max = glm::vec3(10, 10, 10);
 
@@ -1274,9 +1406,9 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 
 
 	float halfWidth = gameRenderCommands->settings.dims.x / 2.0f;
-	float halfheight = gameRenderCommands->settings.dims.y / 2.0f;
+	float halfHeight = gameRenderCommands->settings.dims.y / 2.0f;
 
-	glm::mat4 cameraProj = glm::ortho(-halfWidth, halfWidth, -halfheight, halfheight);
+	glm::mat4 cameraProj = glm::ortho(-halfWidth, halfWidth, -halfHeight, halfHeight);
 
 
 	// We start a render setup
@@ -1326,8 +1458,11 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 
 	RenderProfileBars(debugState, gameRenderCommands, &group, transientState->assets, gameInputState->mousePos);
 
-	glm::vec3 startPos = glm::vec3(-halfWidth, halfheight - 120, 0.2);
-	static char buffer[512];
+	RenderMiddle(gameRenderCommands, &group, transientState->assets, gameInputState->mousePos);
+
+
+	glm::vec3 startPos = glm::vec3(-halfWidth, halfHeight - 120, 0.2);
+	static char buffer[1024];
 	char* ptr = buffer;
 	int size = 0;
 
@@ -1351,6 +1486,30 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 
 	size = sprintf(ptr, "zDir is %f %f %f\n", gameState->debugCameraEntity.zAxis.x, gameState->debugCameraEntity.zAxis.y, gameState->debugCameraEntity.zAxis.z);
 	ptr += size;
+
+	size = sprintf(ptr, "viewDir is %f %f %f\n", gameState->debugCameraEntity.GetViewDirection().x, 
+		gameState->debugCameraEntity.GetViewDirection().y, 
+		gameState->debugCameraEntity.GetViewDirection().z);
+	ptr += size;
+
+
+
+
+
+	glm::vec3 rayDir = MousePosToMousePickingRay(gameState->world.cameraSetup, gameRenderCommands, glm::ivec2(halfWidth, halfHeight));
+	size = sprintf(ptr, "rayDir %f %f %f\n", rayDir.x, rayDir.y, rayDir.z);
+	ptr += size;
+
+	if (gameState->world.cdTriangulationdebug->highlightedTriangle != NULL)
+	{
+		CDTriangulation::DelaunayTriangle* trig = gameState->world.cdTriangulationdebug->highlightedTriangle;
+
+		size = sprintf(ptr, "neighbors %d %d %d\n", trig->neighbors[0], trig->neighbors[1], trig->neighbors[2]);
+
+	}
+	ptr += size;
+
+
 
 	DEBUGTextLine(buffer, gameRenderCommands, &group, transientState->assets, startPos);
 

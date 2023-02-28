@@ -263,33 +263,33 @@ struct OpenGLStuff
 void WINAPI OpenGLDebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam)
 {
 	char* ErrorMessage = (char *)message;
-	std::cout << "Type: " << type << std::endl;
+//	std::cout << "Type: " << type << std::endl;
 
 	switch (severity)
 	{
 		case DEBUG_SEVERITY_HIGH:
 		{
-			std::cout << "severity: DEBUG_SEVERITY_HIGH" << std::endl;
+	//		std::cout << "severity: DEBUG_SEVERITY_HIGH" << std::endl;
 		}
 		break;
 		case DEBUG_SEVERITY_MEDIUM:
 		{
-			std::cout << "severity: DEBUG_SEVERITY_LOW" << std::endl;
+	//		std::cout << "severity: DEBUG_SEVERITY_LOW" << std::endl;
 		}
 		break;
 		case DEBUG_SEVERITY_LOW:
 		{
-			std::cout << "severity: DEBUG_SEVERITY_LOW" << std::endl;
+	//		std::cout << "severity: DEBUG_SEVERITY_LOW" << std::endl;
 		}
 		break;
 		case DEBUG_SEVERITY_NOTIFICATION:
 		{
-			std::cout << "severity: DEBUG_SEVERITY_NOTIFICATION" << std::endl;
+	//		std::cout << "severity: DEBUG_SEVERITY_NOTIFICATION" << std::endl;
 		}
 		break;
 	}
 
-	std::cout << "ErrorMessage: " << ErrorMessage << std::endl;
+//	std::cout << "ErrorMessage: " << ErrorMessage << std::endl;
 	if (severity != DEBUG_SEVERITY_NOTIFICATION)
 	{
 		assert(!"OpenGL Error encountered");
