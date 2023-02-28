@@ -485,6 +485,17 @@ namespace CDTriangulation
 	}
 
 
+	void ReplaceNeighbor(DelaunayTriangle& triangle, int prevNeighbor, int newNeighbor)
+	{
+		for (int i = 0; i < NUM_TRIANGLE_EDGES; i++)
+		{
+			if (triangle.neighbors[i] == prevNeighbor)
+			{
+				triangle.neighbors[i] = newNeighbor;
+			}
+		}
+	}
+
 
 	// https://www.habrador.com/tutorials/math/14-constrained-delaunay/
 	// https://forum.unity.com/threads/programming-tools-constrained-delaunay-triangulation.1066148/
@@ -540,7 +551,7 @@ namespace CDTriangulation
 
 			if (i == 2)
 			{
-				break;
+		//		break;
 			}
 
 			Vertex curVertex = verticesToAdd[i];
@@ -575,10 +586,12 @@ namespace CDTriangulation
 				}
 			}
 
+			int previousContainingTriangleId = containingTriangle.id;
+
 			// Create 3 new triangles by connecting P to each of its vertices.
 			std::vector<DelaunayTriangle> newTriangles = SplitTriangleInto3NewTriangles(triangleCounter, curVertex, containingTriangle);
 
-
+			
 
 			// 6. Initalize Stack. Place all three triangles on stack (this differs from the paper)
 			// im using the method from the blog where im direclty push the triangle
@@ -587,6 +600,10 @@ namespace CDTriangulation
 			{
 				if (newTriangles[j].neighbors[1] != -1)
 				{
+					// fix up the original neighbors
+					DelaunayTriangle& neighbor = GetTriangleReference(triangles, newTriangles[j].neighbors[1]);
+					ReplaceNeighbor(neighbor, previousContainingTriangleId, newTriangles[j].id);
+
 					triangleStack.push_back(newTriangles[j].id);
 				}
 
@@ -625,7 +642,7 @@ namespace CDTriangulation
 			}
 		}
 
-		/*
+		
 		// remove all triangles that share an edge or vertices with the original super triangle
 		int curIter = 0;
 		while (curIter < triangles.size())
@@ -639,20 +656,12 @@ namespace CDTriangulation
 				curIter++;
 			}
 		}
-		*/
+		
 
 
-		for (int i = 0; i < triangles.size(); i++)
-		{
-			if (triangles[i].id == 1)
-			{
-				Triangulation::Circle circle = FindCircumCircle(triangles[i]);
-				debugCircumCircles.push_back(circle);
-			}
-		}
 
 		debugState->triangles = triangles;
-		debugState->circles = debugCircumCircles;
+
 
 	}
 }
