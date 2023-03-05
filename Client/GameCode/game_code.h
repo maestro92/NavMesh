@@ -631,6 +631,12 @@ void RenderCDTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderComm
 	}
 
 
+	for (int i = 0; i < triangulationDebug->holes.size(); i++)
+	{
+		GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, triangulationDebug->holes[i], 2);
+	}
+
+
 	std::vector<glm::vec4> colors = {
 		GameRender::COLOR_WHITE, 
 		GameRender::COLOR_YELLOW,

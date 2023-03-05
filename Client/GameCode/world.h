@@ -508,8 +508,7 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	vertices.push_back(glm::vec3(-9, 2, 0));
 
 	vertices.push_back(glm::vec3(-1, -5, 0));
-	vertices.push_back(glm::vec3(0, 0, 0));
-	
+	vertices.push_back(glm::vec3(-1, 10, 0));
 
 	min = glm::vec3(FLT_MAX, FLT_MAX, 0);
 	for (int i = 0; i < vertices.size(); i++)
@@ -533,7 +532,22 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 
 	
 
+	
+	// clockwise
+	std::vector<glm::vec3> holesVertices;
+	holesVertices.push_back(glm::vec3(2, 3, 0));
+	holesVertices.push_back(glm::vec3(-8, 6, 0));
+	holesVertices.push_back(glm::vec3(-3, 7, 0));
+	holesVertices.push_back(glm::vec3(3, 4, 0));
 
+	for (int i = 0; i < holesVertices.size(); i++)
+	{
+		holesVertices[i] = (holesVertices[i] - min) * scale;
+		std::cout << holesVertices[i].x << " " << holesVertices[i].y << std::endl;
+	}
+	
+	
+	
 	/*
 	vertices.push_back(glm::vec3(0, -10, 0));
 	vertices.push_back(glm::vec3(10, 0, 0));
@@ -553,7 +567,7 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	/*
 	// obstacle 0
 	entity = &world->entities[world->numEntities++];
-	min = glm::vec3(-80, 0, -80);
+	min = glm::vec3(-80, 0, -80); 
 	max = glm::vec3(80, 50, -70);
 	faces = CreateCubeFaceMinMax(min, max);
 	polygon = NavMesh::CreatePolygonFromMinMax(min, max);
@@ -608,7 +622,7 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 
 
 	glm::ivec2 mapSize = glm::ivec2(256, 256);
-	CDTriangulation::ConstrainedDelaunayTriangulation(groundPolygon.vertices, mapSize, world->cdTriangulationdebug);
+	CDTriangulation::ConstrainedDelaunayTriangulation(groundPolygon.vertices, holesVertices, mapSize, world->cdTriangulationdebug);
 	// 
 	/*
 	// setp 5, triangulate the whole thing
@@ -644,7 +658,7 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	world->navMeshPolygons = polygons;
 	*/
 
-	world->navMeshPolygons = { groundPolygon };
+	// world->navMeshPolygons = { groundPolygon };
 }
 
 

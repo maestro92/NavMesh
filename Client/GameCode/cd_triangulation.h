@@ -23,6 +23,12 @@ namespace CDTriangulation
 
 	struct DelaunayTriangleEdge {
 		int vertices[2];
+
+		friend bool operator==(const DelaunayTriangleEdge& l, const DelaunayTriangleEdge& r)
+		{
+			return l.vertices[0] == r.vertices[0] && l.vertices[1] == r.vertices[1] ||
+				l.vertices[0] == r.vertices[1] && l.vertices[1] == r.vertices[0];
+		}
 	};
 
 
@@ -100,6 +106,7 @@ namespace CDTriangulation
 	{
 		std::vector<DelaunayTriangle> triangles;
 		std::vector<glm::vec3> vertices;
+		std::vector<glm::vec3> holes;
 
 		std::vector<Triangulation::Circle> circles;
 
@@ -141,19 +148,17 @@ namespace CDTriangulation
 	}
 	*/
 
+
 	// assume all points are between [0, 256]
-	std::vector<Vertex> GetVerices(
-		std::vector<glm::vec3> points)
+	void AddAndCreateVertices(
+		std::vector<glm::vec3> points, std::vector<Vertex>& masterVertexArray, int& idCounter)
 	{
-		std::vector<Vertex> vertices;
 		for (int i = 0; i < points.size(); i++)
 		{
-			Vertex vertex = { i, points[i] };
-			vertices.push_back(vertex);
+			Vertex vertex = { idCounter++, points[i] };
+			masterVertexArray.push_back(vertex);
 			std::cout << vertex.pos.x << " " << vertex.pos.y << std::endl;
 		}
-
-		return vertices;
 	}
 
 	bool SharedVertex(DelaunayTriangle& a, DelaunayTriangle& b)
@@ -412,6 +417,19 @@ namespace CDTriangulation
 		return Triangulation::FindCircumCircle(a, b, c);
 	}
 
+
+	void ReplaceNeighbor(DelaunayTriangle& triangle, int prevNeighbor, int newNeighbor)
+	{
+		for (int i = 0; i < NUM_TRIANGLE_EDGES; i++)
+		{
+			if (triangle.neighbors[i] == prevNeighbor)
+			{
+				triangle.neighbors[i] = newNeighbor;
+			}
+		}
+	}
+
+
 	/*     
 		   v2                            v2
 
@@ -430,7 +448,7 @@ namespace CDTriangulation
 	
 	*/
 
-	void SwapDiagonalEdges(DelaunayTriangle& a, DelaunayTriangle& b)
+	void SwapDiagonalEdges(DelaunayTriangle& a, DelaunayTriangle& b, std::vector<DelaunayTriangle>& triangles)
 	{
 		Vertex p = a.vertices[0];
 		Vertex v1 = a.vertices[1];
@@ -482,16 +500,132 @@ namespace CDTriangulation
 
 		a = newA;
 		b = newB;
+
+		// also fix Triangle F, D neighbor info
+		if (f != -1)
+		{
+			DelaunayTriangle& trigF = GetTriangleReference(triangles, f);
+			ReplaceNeighbor(trigF, a.id, b.id);
+		}
+
+		if (d != -1)
+		{
+			DelaunayTriangle& trigD = GetTriangleReference(triangles, d);
+			ReplaceNeighbor(trigD, b.id, a.id);
+		}
 	}
 
 
-	void ReplaceNeighbor(DelaunayTriangle& triangle, int prevNeighbor, int newNeighbor)
+
+	bool ContainsEdge(DelaunayTriangleEdge edge, std::vector<DelaunayTriangle>& triangles)
 	{
-		for (int i = 0; i < NUM_TRIANGLE_EDGES; i++)
+		for (int i = 0; i < triangles.size(); i++)
 		{
-			if (triangle.neighbors[i] == prevNeighbor)
+			for (int j = 0; j < NUM_TRIANGLE_EDGES; j++)
 			{
-				triangle.neighbors[i] = newNeighbor;
+				if (triangles[i].edges[j] == edge)
+				{
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	void AddVertexToTriangulation(Vertex curVertex, 
+		std::vector<DelaunayTriangle>& triangles, 
+		int& triangleCounter, 
+		std::vector<int>& triangleStack)
+	{
+		// 5. find an existing triangle that contains the point
+		bool foundTriangle = false;
+		DelaunayTriangle containingTriangle;
+		for (int j = 0; j < triangles.size(); j++)
+		{
+			DelaunayTriangle triangleToCheck = triangles[j];
+
+			glm::vec3 pt0 = triangleToCheck.vertices[0].pos;
+			glm::vec3 pt1 = triangleToCheck.vertices[1].pos;
+			glm::vec3 pt2 = triangleToCheck.vertices[2].pos;
+
+			if (Collision::IsPointInsideTriangle_Barycentric(curVertex.pos, pt0, pt1, pt2))
+			{
+				containingTriangle = triangleToCheck;
+				foundTriangle = true;
+				break;
+			}
+		}
+
+		assert(foundTriangle);
+
+		// delete this enclosed triangle, but we are still using his Id
+		for (int j = 0; j < triangles.size(); j++)
+		{
+			if (triangles[j].id == containingTriangle.id)
+			{
+				triangles.erase(triangles.begin() + j);
+			}
+		}
+
+		int previousContainingTriangleId = containingTriangle.id;
+
+		// Create 3 new triangles by connecting P to each of its vertices.
+		std::vector<DelaunayTriangle> newTriangles = SplitTriangleInto3NewTriangles(triangleCounter, curVertex, containingTriangle);
+
+
+
+		// 6. Initalize Stack. Place all three triangles on stack (this differs from the paper)
+		// im using the method from the blog where im direclty push the triangle
+		triangleStack.clear();
+		for (int j = 0; j < newTriangles.size(); j++)
+		{
+			if (newTriangles[j].neighbors[1] != -1)
+			{
+				// fix up the original neighbors
+				DelaunayTriangle& neighbor = GetTriangleReference(triangles, newTriangles[j].neighbors[1]);
+				ReplaceNeighbor(neighbor, previousContainingTriangleId, newTriangles[j].id);
+
+				triangleStack.push_back(newTriangles[j].id);
+			}
+
+			triangles.push_back(newTriangles[j]);
+		}
+
+		/*
+		if (returnEarly)
+		{
+			return;
+		}
+		*/
+
+		// 7. while stack is not empty, execute swapping scheme
+		while (triangleStack.size() > 0)
+		{
+			int mostRecentIndex = triangleStack.size() - 1;
+			int curTriangleId = triangleStack[mostRecentIndex];
+			triangleStack.erase(triangleStack.begin() + mostRecentIndex);
+
+			DelaunayTriangle& curTriangle = GetTriangleReference(triangles, curTriangleId);
+
+			int oppositeTriangleId = curTriangle.neighbors[1];
+			if (oppositeTriangleId == -1)
+			{
+				continue;
+			}
+
+			DelaunayTriangle& oppositeNeighbor = GetTriangleReference(triangles, oppositeTriangleId);
+
+			// circum circle test
+			Triangulation::Circle circle = FindCircumCircle(oppositeNeighbor);
+			glm::vec2 center = glm::vec2(circle.center.x, circle.center.y);
+			if (Collision::IsPointInsideCircle(center, circle.radius, glm::vec2(curVertex.pos.x, curVertex.pos.y)))
+			{
+				// do the swapping
+				SwapDiagonalEdges(curTriangle, oppositeNeighbor, triangles);
+
+				// add the new triangles back on the stack
+				triangleStack.push_back(curTriangle.id);
+				triangleStack.push_back(oppositeNeighbor.id);
 			}
 		}
 	}
@@ -500,33 +634,45 @@ namespace CDTriangulation
 	// https://www.habrador.com/tutorials/math/14-constrained-delaunay/
 	// https://forum.unity.com/threads/programming-tools-constrained-delaunay-triangulation.1066148/
 	// assume all points are in [0, 256] range
-
 	void ConstrainedDelaunayTriangulation(
 		std::vector<glm::vec3> points,
+		std::vector<glm::vec3> holes,
 		glm::ivec2 mapSize,
 		DebugState* debugState)
 	{
 		debugState->vertices = points;
+		debugState->holes = holes;
 
 		int triangleCounter = 0;
 
 		// not doing the normalization yet. do it later
-		std::vector<Vertex> vertices = GetVerices(points);
+
+		std::vector<Vertex> masterVertexArray;
+		int idCounter = 0;
+		AddAndCreateVertices(points, masterVertexArray, idCounter);
 
 		// build pointBinGrid
-		std::vector<std::vector<Bin>> pointBinGrid = BuildPointBinGrid(vertices, mapSize);
+	//	std::vector<std::vector<Bin>> pointBinGrid = BuildPointBinGrid(masterVertexArray, mapSize);
 
 		// super triangle
-		DelaunayTriangle superTriangle = CreateSuperTriangle(vertices);
+		DelaunayTriangle superTriangle = CreateSuperTriangle(masterVertexArray);
 		superTriangle.id = triangleCounter++;
+
+
+		std::vector<Vertex> verticesToAdd;
+		for (int i = 0; i < masterVertexArray.size(); i++)
+		{
+			verticesToAdd.push_back(masterVertexArray[i]);
+		}
+
 
 		// first add our super triangle to invalid list
 		// we using this vector as a stack
 		std::vector<int> triangleStack;
 		for (int i = 0; i < NUM_TRIANGLE_VERTEX; i++)
 		{
-			superTriangle.vertices[i].id = vertices.size();
-			vertices.push_back(superTriangle.vertices[i]);
+			superTriangle.vertices[i].id = idCounter++;
+			masterVertexArray.push_back(superTriangle.vertices[i]);
 		}
 
 		// regenerate edges after assigning proper edges
@@ -536,111 +682,42 @@ namespace CDTriangulation
 		std::vector<DelaunayTriangle> triangles;
 		triangles.push_back(superTriangle);
 
-		std::vector<Vertex> verticesToAdd = GetVerices(points);
-		std::vector<Triangulation::Circle> debugCircumCircles;
+
 
 		// add the points one at a time
 		for (int i = 0; i < verticesToAdd.size(); i++)
 		{
-
-			std::cout << "i " << i << " " << verticesToAdd[i].pos.x << " " << verticesToAdd[i].pos.y << std::endl;
 			if (i == 4)
-			{
-				int a = 1;
-			}
-
-			if (i == 2)
 			{
 		//		break;
 			}
 
-			Vertex curVertex = verticesToAdd[i];
+			std::cout << "i " << i << " " << verticesToAdd[i].pos.x << " " << verticesToAdd[i].pos.y << std::endl;
 
-			// 5. find an existing triangle that contains the point
-			bool foundTriangle = false;
-			DelaunayTriangle containingTriangle;
-			for (int j = 0; j < triangles.size(); j++)
-			{
-				DelaunayTriangle triangleToCheck = triangles[j];
-
-				glm::vec3 pt0 = triangleToCheck.vertices[0].pos;
-				glm::vec3 pt1 = triangleToCheck.vertices[1].pos;
-				glm::vec3 pt2 = triangleToCheck.vertices[2].pos;
-
-				if (Collision::IsPointInsideTriangle_Barycentric(curVertex.pos, pt0, pt1, pt2))
-				{
-					containingTriangle = triangleToCheck;
-					foundTriangle = true;
-					break;
-				}
-			}
-
-			assert(foundTriangle);
-
-			// delete this enclosed triangle, but we are still using his Id
-			for (int j = 0; j < triangles.size(); j++)
-			{
-				if (triangles[j].id == containingTriangle.id)
-				{
-					triangles.erase(triangles.begin() + j);
-				}
-			}
-
-			int previousContainingTriangleId = containingTriangle.id;
-
-			// Create 3 new triangles by connecting P to each of its vertices.
-			std::vector<DelaunayTriangle> newTriangles = SplitTriangleInto3NewTriangles(triangleCounter, curVertex, containingTriangle);
-
-			
-
-			// 6. Initalize Stack. Place all three triangles on stack (this differs from the paper)
-			// im using the method from the blog where im direclty push the triangle
-			triangleStack.clear();
-			for (int j = 0; j < newTriangles.size(); j++)
-			{
-				if (newTriangles[j].neighbors[1] != -1)
-				{
-					// fix up the original neighbors
-					DelaunayTriangle& neighbor = GetTriangleReference(triangles, newTriangles[j].neighbors[1]);
-					ReplaceNeighbor(neighbor, previousContainingTriangleId, newTriangles[j].id);
-
-					triangleStack.push_back(newTriangles[j].id);
-				}
-
-				triangles.push_back(newTriangles[j]);
-			}
-
-			// 7. while stack is not empty, execute swapping scheme
-			while (triangleStack.size() > 0)
-			{
-				int mostRecentIndex = triangleStack.size() - 1;
-				int curTriangleId = triangleStack[mostRecentIndex];
-				triangleStack.erase(triangleStack.begin() + mostRecentIndex);
-
-				DelaunayTriangle& curTriangle = GetTriangleReference(triangles, curTriangleId);
-
-				int oppositeTriangleId = curTriangle.neighbors[1];
-				if (oppositeTriangleId == -1)
-				{
-					continue;
-				}
-
-				DelaunayTriangle& oppositeNeighbor = GetTriangleReference(triangles, oppositeTriangleId);
-
-				// circum circle test
-				Triangulation::Circle circle = FindCircumCircle(oppositeNeighbor);
-				glm::vec2 center = glm::vec2(circle.center.x, circle.center.y);
-				if (Collision::IsPointInsideCircle(center, circle.radius, glm::vec2(curVertex.pos.x, curVertex.pos.y)))
-				{
-					// do the swapping
-					SwapDiagonalEdges(curTriangle, oppositeNeighbor);
-
-					// add the new triangles back on the stack
-					triangleStack.push_back(curTriangle.id);
-					triangleStack.push_back(oppositeNeighbor.id);
-				}
-			}
+			AddVertexToTriangulation(verticesToAdd[i], triangles, triangleCounter, triangleStack);
 		}
+
+		
+
+
+
+
+		
+		// Holes creation:
+		// not doing the normalization yet. do it later
+		int holesStartingVertex = idCounter;
+		std::vector<Vertex> holeVertices;
+		AddAndCreateVertices(holes, holeVertices, idCounter);
+
+		
+		// 5.2 add the hole points, and create new triangles
+		for (int i = 0; i < holeVertices.size(); i++)
+		{
+			AddVertexToTriangulation(holeVertices[i], triangles, triangleCounter, triangleStack);
+		}
+		
+
+
 
 		
 		// remove all triangles that share an edge or vertices with the original super triangle
@@ -657,10 +734,44 @@ namespace CDTriangulation
 			}
 		}
 		
-
-
-
 		debugState->triangles = triangles;
+		
+		
+
+
+		
+
+
+
+		/*
+		for (int i = 0; i < holeVertices.size(); i++)
+		{
+			masterVertexArray.push_back(holeVertices[i]);
+		}
+
+		// 5.3 create the constrained edges
+		std::vector<DelaunayTriangleEdge> constrainedEdges;
+		for (int i = 0; i < holeVertices.size(); i++)
+		{
+			DelaunayTriangleEdge edge;
+			edge.vertices[0] = holeVertices[i].id;
+
+			if (i == holeVertices.size() - 1)
+			{
+				edge.vertices[1] = holeVertices[0].id;
+			}
+			else
+			{
+				edge.vertices[1] = holeVertices[i+1].id;
+			}
+
+			if (!ContainsEdge(edge, triangles))
+			{
+				constrainedEdges.push_back(edge);
+			}
+		}
+		*/
+		// 5.3.1 search for triangle that contains the beginning of the new edge
 
 
 	}
