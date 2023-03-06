@@ -4,8 +4,10 @@
 #include "collision.h"
 #include "triangulation.h"
 
+#include <queue>          // std::queue
 #include <iostream>
 #include <vector>
+#include <string>
 
 // constrained delaunay triangulation
 namespace CDTriangulation
@@ -13,6 +15,7 @@ namespace CDTriangulation
 	const int NUM_TRIANGLE_VERTEX = 3;
 	const int NUM_TRIANGLE_EDGES = 3;
 	const int INVALID_NEIGHBOR = -1;
+	const int INVALID_INDEX = -1;
 
 	// Just has a DebugId for conveniences
 	struct Vertex
@@ -34,10 +37,10 @@ namespace CDTriangulation
 
 	struct DelaunayTriangle {
 		int id;
-		Vertex vertices[3];
-		int neighbors[3];	// neighbor triangle id
+		Vertex vertices[NUM_TRIANGLE_VERTEX];
+		int neighbors[NUM_TRIANGLE_EDGES];	// neighbor triangle id, got a neighbor per edge, hence 3 neighbors
 
-		DelaunayTriangleEdge edges[3];
+		DelaunayTriangleEdge edges[NUM_TRIANGLE_EDGES];
 		friend bool operator==(const DelaunayTriangle& l, const DelaunayTriangle& r)
 		{
 			for (int i = 0; i < NUM_TRIANGLE_VERTEX; i++)
@@ -58,6 +61,57 @@ namespace CDTriangulation
 				}
 			}
 			return true;
+		}
+
+		bool GetTwoEdgesThatCornersVertex(int id, std::vector<DelaunayTriangleEdge>& output) const
+		{
+			for (int i = 0; i < NUM_TRIANGLE_VERTEX; i++)
+			{
+				if (vertices[i].id == id)
+				{
+					DelaunayTriangleEdge a;
+					if (i == 0)
+					{
+						a = edges[NUM_TRIANGLE_EDGES - 1];
+					}
+					else
+					{
+						a = edges[i - 1];
+					}
+					DelaunayTriangleEdge b = edges[i];
+
+					output.push_back(a);
+					output.push_back(b);
+
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		bool ContainsEdge(const DelaunayTriangleEdge& edge) const
+		{
+			for (int i = 0; i < NUM_TRIANGLE_EDGES; i++)
+			{
+				if (edges[i] == edge)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
+		bool GetEdgeIndex(const DelaunayTriangleEdge& edge) const
+		{
+			for (int i = 0; i < NUM_TRIANGLE_EDGES; i++)
+			{
+				if (edges[i] == edge)
+				{
+					return i;
+				}
+			}
+			return INVALID_INDEX;
 		}
 
 		void GenerateEdges()
@@ -90,9 +144,13 @@ namespace CDTriangulation
 					return i;
 				}
 			}
-			return -1;
+			return INVALID_INDEX;
 		}
 
+		Vertex GetVertexById(int vertexId)
+		{
+			return vertices[GetVertexIndex(vertexId)];
+		}
 	};
 
 	struct Bin
@@ -107,6 +165,8 @@ namespace CDTriangulation
 		std::vector<DelaunayTriangle> triangles;
 		std::vector<glm::vec3> vertices;
 		std::vector<glm::vec3> holes;
+		std::vector<std::vector<Vertex>> intersectingEdges;
+
 
 		std::vector<Triangulation::Circle> circles;
 
@@ -390,7 +450,7 @@ namespace CDTriangulation
 				return i;
 			}
 		}
-		return -1;
+		return INVALID_INDEX;
 	}
 
 	DelaunayTriangle& GetTriangleReference(std::vector<DelaunayTriangle>& triangles, int id)
@@ -468,11 +528,11 @@ namespace CDTriangulation
 		int f = a.neighbors[0];
 
 		int index = b.GetVertexIndex(v3.id);
-		assert(index != -1);
+		assert(index != INVALID_INDEX);
 		int d = b.neighbors[index];
 
 		index = b.GetVertexIndex(v1.id);
-		assert(index != -1);
+		assert(index != INVALID_INDEX);
 		int e = b.neighbors[index];
 
 
@@ -502,13 +562,13 @@ namespace CDTriangulation
 		b = newB;
 
 		// also fix Triangle F, D neighbor info
-		if (f != -1)
+		if (f != INVALID_NEIGHBOR)
 		{
 			DelaunayTriangle& trigF = GetTriangleReference(triangles, f);
 			ReplaceNeighbor(trigF, a.id, b.id);
 		}
 
-		if (d != -1)
+		if (d != INVALID_NEIGHBOR)
 		{
 			DelaunayTriangle& trigD = GetTriangleReference(triangles, d);
 			ReplaceNeighbor(trigD, b.id, a.id);
@@ -579,7 +639,7 @@ namespace CDTriangulation
 		triangleStack.clear();
 		for (int j = 0; j < newTriangles.size(); j++)
 		{
-			if (newTriangles[j].neighbors[1] != -1)
+			if (newTriangles[j].neighbors[1] != INVALID_NEIGHBOR)
 			{
 				// fix up the original neighbors
 				DelaunayTriangle& neighbor = GetTriangleReference(triangles, newTriangles[j].neighbors[1]);
@@ -608,7 +668,7 @@ namespace CDTriangulation
 			DelaunayTriangle& curTriangle = GetTriangleReference(triangles, curTriangleId);
 
 			int oppositeTriangleId = curTriangle.neighbors[1];
-			if (oppositeTriangleId == -1)
+			if (oppositeTriangleId == INVALID_NEIGHBOR)
 			{
 				continue;
 			}
@@ -628,6 +688,166 @@ namespace CDTriangulation
 				triangleStack.push_back(oppositeNeighbor.id);
 			}
 		}
+	}
+
+	bool IsPointOnTheLeftOfLineSegment(glm::vec3 point, glm::vec3 a, glm::vec3 b)
+	{
+		glm::vec2 point2D = glm::vec2(point.x, point.y);
+		glm::vec2 lineA = glm::vec2(a.x, a.y);
+		glm::vec2 lineB = glm::vec2(b.x, b.y);
+		return Collision::IsPointOnTheLeftOfLineSegment2D(point2D, lineA, lineB);
+	}
+
+
+	bool IsPointOnTheRightOfLineSegment(glm::vec3 point, glm::vec3 a, glm::vec3 b)
+	{
+		glm::vec2 point2D = glm::vec2(point.x, point.y);
+		glm::vec2 lineA = glm::vec2(a.x, a.y);
+		glm::vec2 lineB = glm::vec2(b.x, b.y);
+		return Collision::IsPointOnTheRightOfLineSegment2D(point2D, lineA, lineB);
+	}
+
+	struct IntersectedEdge
+	{
+		int triangleId;
+		DelaunayTriangleEdge edge;
+	};
+
+	std::vector<IntersectedEdge> GetEdgesInteserctedByEdge(
+		DelaunayTriangleEdge constrainedEdge,
+		std::vector<DelaunayTriangle>& triangles, 
+		const std::vector<Vertex>& masterVertexArray)
+	{
+		Vertex vStart = masterVertexArray[constrainedEdge.vertices[0]];
+		Vertex vEnd = masterVertexArray[constrainedEdge.vertices[1]];
+
+		// 5.3.1 search for that triangle that "Contains" the constrainedEdge
+		DelaunayTriangle containingTriangle;
+		for (int i = 0; i < triangles.size(); i++)
+		{
+			std::vector<DelaunayTriangleEdge> edges;
+			if (triangles[i].id == 21)
+			{
+				int a = 1;
+			}
+
+			if (triangles[i].GetTwoEdgesThatCornersVertex(vStart.id, edges))
+			{
+				Vertex e0v0 = masterVertexArray[edges[0].vertices[0]];
+				Vertex e0v1 = masterVertexArray[edges[0].vertices[1]];
+
+				Vertex e1v0 = masterVertexArray[edges[1].vertices[0]];
+				Vertex e1v1 = masterVertexArray[edges[1].vertices[1]];
+
+				bool b0 = IsPointOnTheLeftOfLineSegment(vEnd.pos, e0v0.pos, e0v1.pos);
+				bool b1 = IsPointOnTheLeftOfLineSegment(vEnd.pos, e1v0.pos, e1v1.pos);
+
+				if (IsPointOnTheLeftOfLineSegment(vEnd.pos, e0v0.pos, e0v1.pos) &&
+					IsPointOnTheLeftOfLineSegment(vEnd.pos, e1v0.pos, e1v1.pos)){
+						
+					containingTriangle = triangles[i];
+				//	std::cout << "containingTriangle " << containingTriangle.id << std::endl;
+					break;
+				}
+			}
+		}
+
+		// 5.3.2 get all the triangle edges that intersects by the constrainedEdge
+		DelaunayTriangle curTriangle = containingTriangle;	
+		std::vector<IntersectedEdge> intersectingEdges;
+		while (true)
+		{
+			if (Collision::IsPointInsideTriangle_Barycentric(
+				vEnd.pos,
+				curTriangle.vertices[0].pos,
+				curTriangle.vertices[1].pos,
+				curTriangle.vertices[2].pos))
+			{
+				break;
+			}
+
+			for (int i = 0; i < NUM_TRIANGLE_EDGES; i++)
+			{
+				DelaunayTriangleEdge edge = curTriangle.edges[i];
+
+				Vertex v0 = masterVertexArray[edge.vertices[0]];
+				Vertex v1 = masterVertexArray[edge.vertices[1]];
+
+				if (IsPointOnTheRightOfLineSegment(vEnd.pos, v0.pos, v1.pos)) {
+					
+					glm::vec2 intersectionPoint;
+					if (Collision::GetRayRayIntersection_CheckOnlyXY2D(vStart.pos, vEnd.pos, v0.pos, v1.pos, intersectionPoint))
+					{
+						intersectingEdges.push_back({ curTriangle.id, edge });
+					
+						int neighborTrigId = curTriangle.neighbors[i];
+
+						curTriangle = GetTriangleReference(triangles, neighborTrigId);
+						break;
+					}
+				}
+			}
+		}
+
+		return intersectingEdges;
+	}
+
+
+	void GetQuadrilateralsFromNeighbors(
+		DelaunayTriangle& a, DelaunayTriangle& b, DelaunayTriangleEdge& sharedEdge,
+		std::vector<Vertex>& vertices, std::vector<glm::vec3>& rawPoints)
+	{
+		vertices.clear();
+		rawPoints.clear();
+
+		Vertex v;	
+		int index;
+		
+		for (int i = 0; i < NUM_TRIANGLE_VERTEX; i++)
+		{
+			// find the vertex that's is not in the sharedEdge
+			if (a.vertices[i].id != sharedEdge.vertices[0] && 
+				a.vertices[i].id != sharedEdge.vertices[1])
+			{
+				v = a.vertices[i];
+				index = i;
+				break;
+			}
+		}
+		// v1
+		vertices.push_back(v);
+		rawPoints.push_back(v.pos);
+
+		// now we find the edge that starts with this guy
+		DelaunayTriangleEdge edge = a.edges[index];
+
+		// v2
+		v = a.GetVertexById(edge.vertices[1]);
+		vertices.push_back(v);
+		rawPoints.push_back(v.pos);
+
+		// v3
+		for (int i = 0; i < NUM_TRIANGLE_VERTEX; i++)
+		{
+			// find the vertex that's is not in the sharedEdge
+			if (b.vertices[i].id != sharedEdge.vertices[0] &&
+				b.vertices[i].id != sharedEdge.vertices[1])
+			{
+				v = b.vertices[i];
+				index = i;
+				break;
+			}
+		}
+		vertices.push_back(v);
+		rawPoints.push_back(v.pos);
+
+		// now we find the edge that starts with this guy
+		edge = b.edges[index];
+
+		// v4
+		v = b.GetVertexById(edge.vertices[1]);
+		vertices.push_back(v);
+		rawPoints.push_back(v.pos);
 	}
 
 
@@ -698,29 +918,160 @@ namespace CDTriangulation
 		}
 
 		
-
-
-
-
-		
 		// Holes creation:
 		// not doing the normalization yet. do it later
 		int holesStartingVertex = idCounter;
 		std::vector<Vertex> holeVertices;
 		AddAndCreateVertices(holes, holeVertices, idCounter);
 
-		
+
 		// 5.2 add the hole points, and create new triangles
 		for (int i = 0; i < holeVertices.size(); i++)
 		{
+			masterVertexArray.push_back(holeVertices[i]);
 			AddVertexToTriangulation(holeVertices[i], triangles, triangleCounter, triangleStack);
+		}
+		
+
+		// 5.3 create the constrained edges
+		std::vector<DelaunayTriangleEdge> constrainedEdges;
+		for (int i = 0; i < holeVertices.size(); i++)
+		{
+			DelaunayTriangleEdge edge;
+			edge.vertices[0] = holeVertices[i].id;
+
+			if (i == holeVertices.size() - 1)
+			{
+				edge.vertices[1] = holeVertices[0].id;
+			}
+			else
+			{
+				edge.vertices[1] = holeVertices[i + 1].id;
+			}
+
+			if (!ContainsEdge(edge, triangles))
+			{
+				constrainedEdges.push_back(edge);
+			}
+
+			// if we only have one edge, we just return after creating the first edge
+			if (holeVertices.size() == 2)
+			{
+				break;
+			}
+		}
+
+
+		// 5.3.1 search for triangle that contains the beginning of the new edge
+		for (int i = 0; i < constrainedEdges.size(); i++)
+		{
+			Vertex constrainedEdgeStart = masterVertexArray[constrainedEdges[i].vertices[0]];
+			Vertex constrainedEdgeEnd = masterVertexArray[constrainedEdges[i].vertices[1]];
+
+
+			std::queue<IntersectedEdge> intersectedEdgesQueue;
+
+			{
+				// 5.3.2 get all the edges that intersects
+				std::vector<IntersectedEdge> intersectedEdges = GetEdgesInteserctedByEdge(constrainedEdges[i], triangles, masterVertexArray);
+				std::string debugString;
+				for (int j = 0; j < intersectedEdges.size(); j++)
+				{
+					debugString += std::to_string(intersectedEdges[j].triangleId) + " ";
+
+					Vertex v0 = masterVertexArray[intersectedEdges[j].edge.vertices[0]];
+					Vertex v1 = masterVertexArray[intersectedEdges[j].edge.vertices[1]];
+
+					std::vector<Vertex> debugEdge = { v0, v1 };
+					debugState->intersectingEdges.push_back(debugEdge);
+
+					intersectedEdgesQueue.push(intersectedEdges[j]);
+				}
+				std::cout << "intersecting " << debugString << std::endl;
+			}
+			
+			continue;
+			std::vector<DelaunayTriangleEdge> newEdges;
+
+			// 5.3.3 form quadrilaterals and swap intersected edges
+			while (!intersectedEdgesQueue.empty())
+			{
+				IntersectedEdge intersectedEdge = intersectedEdgesQueue.front();
+				intersectedEdgesQueue.pop();
+
+				for (int j = 0; j < triangles.size(); j++)
+				{
+					DelaunayTriangle& triangle = triangles[j];
+					if (triangle.ContainsEdge(intersectedEdge.edge))
+					{
+						int edgeIndex = triangle.GetEdgeIndex(intersectedEdge.edge);
+						assert(edgeIndex != INVALID_INDEX);
+
+						int neighborTrigId = triangle.neighbors[edgeIndex];
+
+						DelaunayTriangle& neighborTriangle = GetTriangleReference(triangles, neighborTrigId);
+
+						std::vector<Vertex> polygonVertices;
+						std::vector<glm::vec3> polygonPoints;
+						GetQuadrilateralsFromNeighbors(triangle, neighborTriangle, intersectedEdge.edge, polygonVertices, polygonPoints);
+
+						// check if its convex
+						if (Collision::IsConvex(polygonPoints))
+						{
+							std::cout << "swapping triangle " << triangle.id << " and " << neighborTriangle.id << std::endl;
+
+							// index 0 and 2 are hardcoded
+							DelaunayTriangleEdge newEdge;
+							newEdge.vertices[0] = polygonVertices[0].id;
+							newEdge.vertices[1] = polygonVertices[2].id;
+
+
+
+							// we check if the swapped edge still intersects the constraied edge
+							// we first check if the edge share any vertex. if so we don't count them as intersecting
+							bool shareVertices = polygonVertices[0].id == constrainedEdgeStart.id ||
+								polygonVertices[1].id == constrainedEdgeStart.id ||
+								polygonVertices[0].id == constrainedEdgeEnd.id ||
+								polygonVertices[1].id == constrainedEdgeEnd.id;
+
+							// now check the actual intersection
+							glm::vec2 intersectionPoint;
+							if (!shareVertices && Collision::GetRayRayIntersection_CheckOnlyXY2D(
+								polygonPoints[0], 
+								polygonPoints[2], 
+								constrainedEdgeStart.pos, 
+								constrainedEdgeEnd.pos, intersectionPoint))
+							{
+								// we intersecting! We put it back
+								intersectedEdgesQueue.push(intersectedEdge);
+							}
+							else
+							{
+								newEdges.push_back(newEdge);
+							}
+						}
+						else
+						{
+							// put it back
+							intersectedEdgesQueue.push(intersectedEdge);
+						}
+
+						break;
+					}
+				}
+			}
+
+
+			// 5.3.4 checking Delaunay constraint
+
+		
 		}
 		
 
 
 
-		
-		// remove all triangles that share an edge or vertices with the original super triangle
+
+		// 6.0 remove all triangles that share an edge or vertices with the original super triangle
 		int curIter = 0;
 		while (curIter < triangles.size())
 		{
@@ -748,30 +1099,7 @@ namespace CDTriangulation
 		{
 			masterVertexArray.push_back(holeVertices[i]);
 		}
-
-		// 5.3 create the constrained edges
-		std::vector<DelaunayTriangleEdge> constrainedEdges;
-		for (int i = 0; i < holeVertices.size(); i++)
-		{
-			DelaunayTriangleEdge edge;
-			edge.vertices[0] = holeVertices[i].id;
-
-			if (i == holeVertices.size() - 1)
-			{
-				edge.vertices[1] = holeVertices[0].id;
-			}
-			else
-			{
-				edge.vertices[1] = holeVertices[i+1].id;
-			}
-
-			if (!ContainsEdge(edge, triangles))
-			{
-				constrainedEdges.push_back(edge);
-			}
-		}
 		*/
-		// 5.3.1 search for triangle that contains the beginning of the new edge
 
 
 	}

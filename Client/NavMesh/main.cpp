@@ -233,7 +233,7 @@ void SDLProcessKeyboardEvent(GameButtonState* buttonState, bool isDown)
 		++buttonState->halfTransitionCount;
 	}
 
-	std::cout << "ended down " << buttonState->endedDown << ", halftransition count" << buttonState->halfTransitionCount << std::endl;
+//	std::cout << "ended down " << buttonState->endedDown << ", halftransition count" << buttonState->halfTransitionCount << std::endl;
 
 }
 
@@ -372,7 +372,7 @@ void SDLProcessPendingEvents(GameInputState* game_input_state)
 
 					case SDL_WINDOWEVENT_FOCUS_GAINED:
 					{
-						std::cout << "SDL_WINDOW_EVENT_FOCUSED_GAINED" << std::endl;
+					//	std::cout << "SDL_WINDOW_EVENT_FOCUSED_GAINED" << std::endl;
 					}	break;
 				}
 			}

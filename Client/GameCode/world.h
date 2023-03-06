@@ -484,7 +484,7 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	*/
 
 
-	float scale = 10;
+	float scale = 20;
 	/*
 	vertices.push_back(glm::vec3(5, -4, 0));
 	vertices.push_back(glm::vec3(9, 3, 0));
@@ -537,8 +537,8 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 	std::vector<glm::vec3> holesVertices;
 	holesVertices.push_back(glm::vec3(2, 3, 0));
 	holesVertices.push_back(glm::vec3(-8, 6, 0));
-	holesVertices.push_back(glm::vec3(-3, 7, 0));
-	holesVertices.push_back(glm::vec3(3, 4, 0));
+//	holesVertices.push_back(glm::vec3(-3, 7, 0));
+//	holesVertices.push_back(glm::vec3(3, 4, 0));
 
 	for (int i = 0; i < holesVertices.size(); i++)
 	{

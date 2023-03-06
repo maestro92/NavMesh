@@ -2,6 +2,7 @@
 
 #include "../PlatformShared/platform_shared.h"
 #include "math.h"
+#include <vector>
 
 namespace Collision
 {
@@ -169,6 +170,64 @@ namespace Collision
 		return true;
 	}
 
+
+	bool GetRayRayIntersection_CheckOnlyXY2D(glm::vec3 p0_3d, glm::vec3 d0_3d, glm::vec3 p1_3d, glm::vec3 d1_3d, glm::vec2& intersectionPoint)
+	{
+		glm::vec2 p0 = glm::vec2(p0_3d.x, p0_3d.y);
+		glm::vec2 d0 = glm::vec2(d0_3d.x, d0_3d.y);
+		glm::vec2 p1 = glm::vec2(p1_3d.x, p1_3d.y);
+		glm::vec2 d1 = glm::vec2(d1_3d.x, d1_3d.y);
+
+		float dx = p1.x - p0.x;
+		float dy = p1.y - p0.y;
+
+		float det = d1.x * d0.y - d1.y * d0.x;
+		if (det == 0)
+		{
+			return false;
+		}
+
+		float u = (dy * d1.x - dx * d1.y) / det;
+		float v = (dy * d0.x - dx * d0.y) / det;
+
+		intersectionPoint = p0 + u * d0;
+		return true;
+	}
+
+	bool IsConvex(const std::vector<glm::vec3>& polygon)
+	{
+		int v0 = 0;
+		int v1 = 0;
+		int v2 = 0;
+
+		for (int i = 0; i < polygon.size(); i++)
+		{
+			v0 = i - 1;
+			v1 = i;
+			v2 = i + 1;
+
+			if (i == 0)
+			{
+				v0 = polygon.size() - 1;
+			}
+			else if (i == polygon.size() - 1)
+			{
+				v2 = 0;
+			}
+
+			float angle2 = Math::CalculateInteriorAngle(polygon[v0], polygon[v1], polygon[v2]);
+
+			// not a convex vertex
+			if (angle2 >= 180)
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+
 	bool IsPointInsideCircle(glm::vec2 center, float radius, glm::vec2 point)
 	{
 		glm::vec2 dx = center - point;
@@ -248,5 +307,27 @@ namespace Collision
 		{
 			return true;
 		}			
+	}
+
+	float GetDeterminant(glm::vec2 a, glm::vec2 b)
+	{
+		return a.x * b.y - a.y * b.x;
+	}
+
+
+	//Where is p in relation to a-b
+	// < 0 -> to the right
+	// = 0 -> on the line
+	// > 0 -> to the left
+	// a 2D cross product
+	bool IsPointOnTheLeftOfLineSegment2D(glm::vec2 point, glm::vec2 a, glm::vec2 b)
+	{
+//		float determinant = (a.x - point.x) * (b.y - point.y) - (a.y - point.y) * (b.x - point.x);
+		return GetDeterminant(a-point, b-point) > 0;
+	}
+
+	bool IsPointOnTheRightOfLineSegment2D(glm::vec2 point, glm::vec2 a, glm::vec2 b)
+	{
+		return GetDeterminant(a - point, b - point) < 0;
 	}
 }

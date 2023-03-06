@@ -676,6 +676,8 @@ void RenderCDTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderComm
 		if (triangulationDebug->highlightedTriangle != NULL && triangle.id == triangulationDebug->highlightedTriangle->id)
 		{
 
+			GameRender::PushTriangle(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, liftedVertex, false);
+
 			Triangulation::Circle circle = CDTriangulation::FindCircumCircle(triangle);
 			GameRender::RenderCircle(
 				gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, circle.center, circle.radius, lineThickness);
@@ -684,15 +686,15 @@ void RenderCDTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderComm
 	}
 
 
-	/*
-	for (int i = 0; i < triangulationDebug->circles.size(); i++)
+	
+	for (int i = 0; i < triangulationDebug->intersectingEdges.size(); i++)
 	{		
-		Triangulation::Circle* circle = &triangulationDebug->circles[i];
+		std::vector<CDTriangulation::Vertex> edge = triangulationDebug->intersectingEdges[i];
 
-		GameRender::RenderCircle(
-			gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, circle->center, circle->radius, lineThickness);
+		GameRender::RenderLine(
+			gameRenderCommands, group, gameAssets, GameRender::COLOR_YELLOW, edge[0].pos, edge[1].pos, lineThickness);
 	}
-	*/
+	
 
 
 }
@@ -1510,7 +1512,7 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 	{
 		CDTriangulation::DelaunayTriangle* trig = gameState->world.cdTriangulationdebug->highlightedTriangle;
 
-		size = sprintf(ptr, "neighbors %d %d %d\n", trig->neighbors[0], trig->neighbors[1], trig->neighbors[2]);
+		size = sprintf(ptr, "trig %d neighbors %d %d %d\n", trig->id, trig->neighbors[0], trig->neighbors[1], trig->neighbors[2]);
 
 	}
 	ptr += size;

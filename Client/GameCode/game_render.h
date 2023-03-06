@@ -649,7 +649,7 @@ namespace GameRender
 		LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
 
 		float cubeThickness = 0.5f;
-		PushLine(gameRenderCommands, renderGroup, bitmap, COLOR_RED, p0, p1, cubeThickness);
+		PushLine(gameRenderCommands, renderGroup, bitmap, color, p0, p1, cubeThickness);
 	}
 
 	void RenderCoordinateSystem(
