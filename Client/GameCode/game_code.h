@@ -686,7 +686,7 @@ void RenderCDTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderComm
 	}
 
 
-	
+	/*
 	for (int i = 0; i < triangulationDebug->intersectingEdges.size(); i++)
 	{		
 		std::vector<CDTriangulation::Vertex> edge = triangulationDebug->intersectingEdges[i];
@@ -694,8 +694,15 @@ void RenderCDTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderComm
 		GameRender::RenderLine(
 			gameRenderCommands, group, gameAssets, GameRender::COLOR_YELLOW, edge[0].pos, edge[1].pos, lineThickness);
 	}
-	
+	*/
 
+	for (int i = 0; i < triangulationDebug->constraiedEdges.size(); i++)
+	{
+		std::vector<CDTriangulation::Vertex> edge = triangulationDebug->constraiedEdges[i];
+
+		GameRender::RenderLine(
+			gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, edge[0].pos, edge[1].pos, lineThickness);
+	}
 
 }
 

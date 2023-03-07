@@ -132,6 +132,8 @@ namespace Collision
 		return (a.x - c.x) * (b.y - c.y) - (a.y - c.y) * (b.x - c.x);
 	}
 
+
+
 	bool GetLineLineIntersectionPoint(glm::vec2 p0, glm::vec2 p1, glm::vec2 p2, glm::vec2 p3, glm::vec2& intersectionPoint)
 	{
 		float a1 = Signed2DTrigArea(p0, p1, p3);
@@ -152,32 +154,19 @@ namespace Collision
 		return false;
 	}
 
-	bool GetRayRayIntersection2D(glm::vec2 p0, glm::vec2 d0, glm::vec2 p1, glm::vec2 d1, glm::vec2& intersectionPoint)
+
+	bool GetLineLineIntersectionPoint_CheckOnlyXY2D(glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 d, glm::vec2& intersectionPoint)
 	{
-		float dx = p1.x - p0.x;
-		float dy = p1.y - p0.y;
+		glm::vec2 a2 = glm::vec2(a.x, a.y);
+		glm::vec2 b2 = glm::vec2(b.x, b.y);
+		glm::vec2 c2 = glm::vec2(c.x, c.y);
+		glm::vec2 d2 = glm::vec2(d.x, d.y);
 
-		float det = d1.x * d0.y - d1.y * d0.x;
-		if (det == 0)
-		{
-			return false;
-		}
-
-		float u = (dy * d1.x - dx * d1.y) / det;
-		float v = (dy * d0.x - dx * d0.y) / det;
-
-		intersectionPoint = p0 + u * d0;
-		return true;
+		return GetLineLineIntersectionPoint(a2, b2, c2, d2, intersectionPoint);
 	}
 
-
-	bool GetRayRayIntersection_CheckOnlyXY2D(glm::vec3 p0_3d, glm::vec3 d0_3d, glm::vec3 p1_3d, glm::vec3 d1_3d, glm::vec2& intersectionPoint)
+	bool GetRayRayIntersection2D(glm::vec2 p0, glm::vec2 d0, glm::vec2 p1, glm::vec2 d1, glm::vec2& intersectionPoint)
 	{
-		glm::vec2 p0 = glm::vec2(p0_3d.x, p0_3d.y);
-		glm::vec2 d0 = glm::vec2(d0_3d.x, d0_3d.y);
-		glm::vec2 p1 = glm::vec2(p1_3d.x, p1_3d.y);
-		glm::vec2 d1 = glm::vec2(d1_3d.x, d1_3d.y);
-
 		float dx = p1.x - p0.x;
 		float dy = p1.y - p0.y;
 

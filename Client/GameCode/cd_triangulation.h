@@ -63,6 +63,42 @@ namespace CDTriangulation
 			return true;
 		}
 
+		void ReorganizeVertices(int diff)
+		{
+			assert(-2 <= diff && diff <= 2);
+
+			// cycle the vertices
+			if (diff < 0)
+			{
+				for (int iter = 0; iter < -diff; iter++)
+				{
+					Vertex tempV = vertices[0];
+					DelaunayTriangleEdge tempE = edges[0];
+					int tempNeighbor = neighbors[0];
+
+					for (int i = 0; i < NUM_TRIANGLE_VERTEX; i++)
+					{
+						if (i == NUM_TRIANGLE_VERTEX - 1)
+						{
+							vertices[i] = tempV;
+							edges[i] = tempE;
+							neighbors[i] = tempNeighbor;
+						}
+						else
+						{
+							vertices[i] = vertices[i + 1];
+							edges[i] = edges[i+1];
+							neighbors[i] = neighbors[i+1];
+						}
+					}
+				}
+			}
+			else if (diff > 0)
+			{
+				assert(false);
+			}
+		}
+
 		bool GetTwoEdgesThatCornersVertex(int id, std::vector<DelaunayTriangleEdge>& output) const
 		{
 			for (int i = 0; i < NUM_TRIANGLE_VERTEX; i++)
@@ -102,7 +138,7 @@ namespace CDTriangulation
 			return false;
 		}
 
-		bool GetEdgeIndex(const DelaunayTriangleEdge& edge) const
+		int GetEdgeIndex(const DelaunayTriangleEdge& edge) const
 		{
 			for (int i = 0; i < NUM_TRIANGLE_EDGES; i++)
 			{
@@ -151,6 +187,11 @@ namespace CDTriangulation
 		{
 			return vertices[GetVertexIndex(vertexId)];
 		}
+
+		bool ContainsVertex(int vertexId)
+		{
+			return GetVertexIndex(vertexId) != INVALID_INDEX;
+		}
 	};
 
 	struct Bin
@@ -166,7 +207,7 @@ namespace CDTriangulation
 		std::vector<glm::vec3> vertices;
 		std::vector<glm::vec3> holes;
 		std::vector<std::vector<Vertex>> intersectingEdges;
-
+		std::vector<std::vector<Vertex>> constraiedEdges;
 
 		std::vector<Triangulation::Circle> circles;
 
@@ -505,18 +546,38 @@ namespace CDTriangulation
 		   v1                            v1
 	
 	C,D,F,E are neighbor triangles
-	
+
+	this is assuming v1, v2 is the shared edge	
 	*/
 
 	void SwapDiagonalEdges(DelaunayTriangle& a, DelaunayTriangle& b, std::vector<DelaunayTriangle>& triangles)
 	{
+		// reorient a and b so that it fits the convention
+		
+		int index = 0;		
+		for (int i = 0; i < NUM_TRIANGLE_VERTEX; i++)
+		{
+			if (!b.ContainsVertex(a.vertices[i].id))
+			{
+				index = i;
+				break;
+			}
+		}
+
+		// we want to move the non-shared vertex to [0]
+		int diff = 0 - index;
+		a.ReorganizeVertices(diff);
+
+
 		Vertex p = a.vertices[0];
 		Vertex v1 = a.vertices[1];
 		Vertex v2 = a.vertices[2];
 		Vertex v3;
 		for (int i = 0; i < NUM_TRIANGLE_VERTEX; i++)
 		{
-			if (b.vertices[i].id != v1.id && b.vertices[i].id != v2.id)
+			// if (b.vertices[i].id != v1.id && b.vertices[i].id != v2.id)
+			
+			if(!a.ContainsVertex(b.vertices[i].id))
 			{
 				v3 = b.vertices[i];
 				break;
@@ -527,7 +588,7 @@ namespace CDTriangulation
 		int c = a.neighbors[2];
 		int f = a.neighbors[0];
 
-		int index = b.GetVertexIndex(v3.id);
+		index = b.GetVertexIndex(v3.id);
 		assert(index != INVALID_INDEX);
 		int d = b.neighbors[index];
 
@@ -667,6 +728,7 @@ namespace CDTriangulation
 
 			DelaunayTriangle& curTriangle = GetTriangleReference(triangles, curTriangleId);
 
+			DelaunayTriangleEdge sharedEdge = curTriangle.edges[1];
 			int oppositeTriangleId = curTriangle.neighbors[1];
 			if (oppositeTriangleId == INVALID_NEIGHBOR)
 			{
@@ -709,7 +771,7 @@ namespace CDTriangulation
 
 	struct IntersectedEdge
 	{
-		int triangleId;
+		int triangleId;	// this is for debugging only, dont use it for any computation
 		DelaunayTriangleEdge edge;
 	};
 
@@ -776,7 +838,7 @@ namespace CDTriangulation
 				if (IsPointOnTheRightOfLineSegment(vEnd.pos, v0.pos, v1.pos)) {
 					
 					glm::vec2 intersectionPoint;
-					if (Collision::GetRayRayIntersection_CheckOnlyXY2D(vStart.pos, vEnd.pos, v0.pos, v1.pos, intersectionPoint))
+					if (Collision::GetLineLineIntersectionPoint_CheckOnlyXY2D(vStart.pos, vEnd.pos, v0.pos, v1.pos, intersectionPoint))
 					{
 						intersectingEdges.push_back({ curTriangle.id, edge });
 					
@@ -848,6 +910,66 @@ namespace CDTriangulation
 		v = b.GetVertexById(edge.vertices[1]);
 		vertices.push_back(v);
 		rawPoints.push_back(v.pos);
+	}
+
+	Vertex GetVertexANotInTriangleB(DelaunayTriangle& a, DelaunayTriangle& b)
+	{
+		for (int i = 0; i < NUM_TRIANGLE_VERTEX; i++)
+		{
+			if (!b.ContainsVertex(a.vertices[i].id))
+			{
+				return a.vertices[i];
+			}
+		}
+		assert(false);
+		return a.vertices[0];
+	}
+
+
+	// step 4.1 ~ 4.3 from the paper
+	void CheckDelaunayCriteriaInNewlyCreatedEdges(
+		DelaunayTriangleEdge constrainedEdge, 
+		std::vector<DelaunayTriangleEdge>& newEdges,
+		std::vector<DelaunayTriangle>& triangles)
+	{
+		for (int i = 0; i < newEdges.size(); i++)
+		{
+			if (newEdges[i] == constrainedEdge)
+			{
+				continue;
+			}
+
+			std::vector<DelaunayTriangle*> sharedEdgeTriangles;
+			for (int j = 0; j < triangles.size(); j++)
+			{
+				if (triangles[j].ContainsEdge(newEdges[i]))
+				{
+					sharedEdgeTriangles.push_back(&triangles[j]);
+				}
+			}
+
+			assert(sharedEdgeTriangles.size() == 2);
+
+			DelaunayTriangle& a = *sharedEdgeTriangles[0];
+			DelaunayTriangle& b = *sharedEdgeTriangles[1];
+
+			Vertex vertexA = GetVertexANotInTriangleB(a, b);
+			Vertex vertexB = GetVertexANotInTriangleB(b, a);
+
+			Triangulation::Circle circleA = FindCircumCircle(a);
+			glm::vec2 centerA = glm::vec2(circleA.center.x, circleA.center.y);
+
+			Triangulation::Circle circleB = FindCircumCircle(b);
+			glm::vec2 centerB = glm::vec2(circleB.center.x, circleB.center.y);
+
+			if (Collision::IsPointInsideCircle(centerA, circleA.radius, glm::vec2(vertexB.pos.x, vertexB.pos.y))||
+				Collision::IsPointInsideCircle(centerB, circleB.radius, glm::vec2(vertexA.pos.x, vertexA.pos.y)))
+			{
+				SwapDiagonalEdges(a, b, triangles);
+			}
+
+
+		}
 	}
 
 
@@ -949,6 +1071,15 @@ namespace CDTriangulation
 				edge.vertices[1] = holeVertices[i + 1].id;
 			}
 
+			Vertex constrainedEdgeStart = masterVertexArray[edge.vertices[0]];
+			Vertex constrainedEdgeEnd = masterVertexArray[edge.vertices[1]];
+
+			std::vector<Vertex> constrainedVertices;
+			constrainedVertices.push_back(constrainedEdgeStart);
+			constrainedVertices.push_back(constrainedEdgeEnd);
+
+			debugState->constraiedEdges.push_back(constrainedVertices);
+
 			if (!ContainsEdge(edge, triangles))
 			{
 				constrainedEdges.push_back(edge);
@@ -968,9 +1099,7 @@ namespace CDTriangulation
 			Vertex constrainedEdgeStart = masterVertexArray[constrainedEdges[i].vertices[0]];
 			Vertex constrainedEdgeEnd = masterVertexArray[constrainedEdges[i].vertices[1]];
 
-
 			std::queue<IntersectedEdge> intersectedEdgesQueue;
-
 			{
 				// 5.3.2 get all the edges that intersects
 				std::vector<IntersectedEdge> intersectedEdges = GetEdgesInteserctedByEdge(constrainedEdges[i], triangles, masterVertexArray);
@@ -990,7 +1119,7 @@ namespace CDTriangulation
 				std::cout << "intersecting " << debugString << std::endl;
 			}
 			
-			continue;
+
 			std::vector<DelaunayTriangleEdge> newEdges;
 
 			// 5.3.3 form quadrilaterals and swap intersected edges
@@ -1018,7 +1147,6 @@ namespace CDTriangulation
 						// check if its convex
 						if (Collision::IsConvex(polygonPoints))
 						{
-							std::cout << "swapping triangle " << triangle.id << " and " << neighborTriangle.id << std::endl;
 
 							// index 0 and 2 are hardcoded
 							DelaunayTriangleEdge newEdge;
@@ -1036,7 +1164,7 @@ namespace CDTriangulation
 
 							// now check the actual intersection
 							glm::vec2 intersectionPoint;
-							if (!shareVertices && Collision::GetRayRayIntersection_CheckOnlyXY2D(
+							if (!shareVertices && Collision::GetLineLineIntersectionPoint_CheckOnlyXY2D(
 								polygonPoints[0], 
 								polygonPoints[2], 
 								constrainedEdgeStart.pos, 
@@ -1047,6 +1175,9 @@ namespace CDTriangulation
 							}
 							else
 							{
+								std::cout << "swapping triangle " << triangle.id << " and " << neighborTriangle.id << std::endl;
+
+								SwapDiagonalEdges(triangle, neighborTriangle, triangles);
 								newEdges.push_back(newEdge);
 							}
 						}
@@ -1059,11 +1190,13 @@ namespace CDTriangulation
 						break;
 					}
 				}
+			
+				
 			}
 
 
 			// 5.3.4 checking Delaunay constraint
-
+			CheckDelaunayCriteriaInNewlyCreatedEdges(constrainedEdges[i], newEdges, triangles);
 		
 		}
 		
