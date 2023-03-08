@@ -30,9 +30,6 @@
     <ClInclude Include="math.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="bsp_tree.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="game_render.h">
       <Filter>Header Files</Filter>
     </ClInclude>

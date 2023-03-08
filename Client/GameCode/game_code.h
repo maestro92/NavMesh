@@ -681,6 +681,13 @@ void RenderCDTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderComm
 			Triangulation::Circle circle = CDTriangulation::FindCircumCircle(triangle);
 			GameRender::RenderCircle(
 				gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, circle.center, circle.radius, lineThickness);
+
+
+			float thickness = 3;
+			GameRender::RenderPoint(gameRenderCommands, group, gameAssets, GameRender::COLOR_GREEN, liftedVertex[0], thickness);
+			GameRender::RenderPoint(gameRenderCommands, group, gameAssets, GameRender::COLOR_BLUE, liftedVertex[1], thickness);
+			GameRender::RenderPoint(gameRenderCommands, group, gameAssets, GameRender::COLOR_ORANGE, liftedVertex[2], thickness);
+
 		}
 
 	}
@@ -750,179 +757,12 @@ void RenderNavMeshPolygon(
 	*/
 }
 
-void CatagorizePosition(World* world, Entity* entity)
-{
-	glm::vec3 end = entity->pos;
-	end[1] -= 0.25;
-
-	TraceResult result = BoxTrace(entity->pos, end, entity->min, entity->max, world->tree);
-//	cout << "result.timeFraction " << result.timeFraction << endl;
-
-	if(result.plane == NULL_PLANE && result.outputStartsOut)
-	{
-//		cout << "	has no ground entity ";
-
-		entity->groundEntity = NULL;
-		entity->groundPlane = NULL_PLANE;
-	}
-	else 
-	{
-//		cout << "	has ground entity ";
-		entity->groundEntity = (Entity*)1;
-		entity->groundPlane = result.plane;
-	}
-}
 
 
 struct PlayerMoveData
 {
-//	glm::vec3 position;
 	glm::vec3 velocity;
 };
-
-void PerformMove(World* world, Entity* entity, PlayerMoveData* move)
-{
-	glm::vec3 origin = entity->pos;
-	glm::vec3 velocity = move->velocity;
-
-	int numClippingPlaces = 0;
-	float timeLeft = 0.1f;// FIXED_UPDATE_TIME_S;
-	for (int i = 0; i < 1; i++)
-	{
-		glm::vec3 end = origin + timeLeft * velocity;
-
-		cout << "origin " << origin << endl;
-		cout << "end " << end << endl;
-
-		TraceResult result = BoxTrace(origin, end, entity->min, entity->max, world->tree);
-
-		if (result.outputAllSolid)
-		{
-			move->velocity = glm::vec3(0);
-			return;
-		}
-	
-		if (result.timeFraction > 0)
-		{
-			entity->pos = result.endPos;
-			numClippingPlaces = 0;
-		}
-		else if (result.timeFraction == 0)
-		{
-
-		}
-		else if (result.timeFraction == 1)
-		{
-			break;
-		}
-
-		timeLeft -= timeLeft * result.timeFraction;
-
-
-		numClippingPlaces++;
-	}
-
-
-
-}
-
-
-
-void PerformMove2(World* world, Entity* entity, PlayerMoveData* move)
-{
-	glm::vec3 origin = entity->pos;
-	glm::vec3 velocity = move->velocity;
-
-	int numClippingPlaces = 0;
-	float timeLeft = 0.1f;// FIXED_UPDATE_TIME_S;
-	for (int i = 0; i < 1; i++)
-	{
-		glm::vec3 end = origin + timeLeft * velocity;
-
-		if (origin.y == 10.5)
-		{
-			int a = 1;
-		}
-
-	//	cout << "origin " << origin << endl;
-	//	cout << "end " << end << endl;
-
-		TraceResult result = BoxTrace(origin, end, entity->min, entity->max, world->tree, true);
-
-	//	cout << "result time fraction " << result.timeFraction << endl;
-
-		if (result.outputAllSolid)
-		{
-			move->velocity = glm::vec3(0);
-			return;
-		}
-
-		if (result.timeFraction > 0)
-		{
-			entity->pos = result.endPos;
-			numClippingPlaces = 0;
-		}
-		else if (result.timeFraction == 0)
-		{
-
-		}
-		else if (result.timeFraction == 1)
-		{
-			break;
-		}
-
-		timeLeft -= timeLeft * result.timeFraction;
-
-
-		numClippingPlaces++;
-	}
-
-
-
-}
-
-
-
-void EntityMoveTick(World* world, Entity* entity, PlayerMoveData* move, bool applyGravity)
-{
-	if (entity->groundEntity != NULL)
-	{
-
-		if (move->velocity.x != 0 || move->velocity.z != 0)
-		{
-			std::cout << "ground entity" << std::endl;
-
-			PerformMove2(world, entity, move);
-		}
-	}
-	else
-	{
-	//	std::cout << "in air" << std::endl;
-		if (applyGravity)
-		{
-			static glm::vec3 GRAVITY = glm::vec3(0, -5, 0);
-			move->velocity += GRAVITY;
-		}
-
-		if (move->velocity.x != 0 || move->velocity.y != 0 || move->velocity.z != 0)
-		{
-			PerformMove2(world, entity, move);
-		}
-	}
-}
-
-
-void PlayerMove(World* world, Entity* entity, PlayerMoveData* move, bool applyGravity)
-{
-	// categorize current position
-	CatagorizePosition(world, entity);
-
-	// slide move
-	EntityMoveTick(world, entity, move, applyGravity);
-
-	// categoize current position 2
-	CatagorizePosition(world, entity);
-}
 
 
 glm::vec3 UpdateEntityViewDirection(Entity* entity, GameInputState* gameInputState, glm::ivec2 windowDimensions)
@@ -1028,38 +868,11 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 			pmove.velocity += stepSize * -newViewDir;
 		}
 	}
-	/*
-	else
-	{
-		if (gameInputState->moveForward.endedDown) {
-			newWalkDir = glm::vec3(1, 0, 0);
-			pmove.velocity += stepSize * newWalkDir;
-		}
-		if (gameInputState->moveLeft.endedDown) {
-			newWalkDir = glm::vec3(0, 0, 1);
-			pmove.velocity += stepSize * newWalkDir;
-		}
-		if (gameInputState->moveRight.endedDown) {
-			newWalkDir = glm::vec3(0, 0, 1);
-			pmove.velocity += -stepSize * newWalkDir;
-		}
-		if (gameInputState->moveBack.endedDown) {
-			newWalkDir = glm::vec3(1, 0, 0);
-			pmove.velocity += -stepSize * newWalkDir;
-		}
-	}
-	*/
 
 
+	float dt = 0.1f;// FIXED_UPDATE_TIME_S;
+	controlledEntity->pos += pmove.velocity * dt;
 
-//	if (!debugModeState->cameraDebugMode)
-	{
-		// Update Player movement
-	//	cout << "cur position " << world->entities[world->startPlayerEntityId].pos << endl;
-		PlayerMove(world, controlledEntity, &pmove, !debugModeState->cameraDebugMode);
-	}
-
-	// world->entities[world->startPlayerEntityId].pos = pmove.position;
 	world->entities[world->startPlayerEntityId].velocity = pmove.velocity;
 
 

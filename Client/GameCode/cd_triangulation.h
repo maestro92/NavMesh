@@ -1201,6 +1201,7 @@ namespace CDTriangulation
 		}
 		
 
+		// 5.4 identify all the triangles in the constraint
 
 
 

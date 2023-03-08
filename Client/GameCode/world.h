@@ -9,7 +9,6 @@
 #include "cd_triangulation.h"
 #include "voronoi.h"
 #include "pathfinding.h"
-#include "bsp_tree.h"
 
 #define	DIST_EPSILON	(0.03125)
 
@@ -22,8 +21,6 @@ struct Face
 };
 
 
-
-Plane NULL_PLANE;
 
 enum EntityFlag
 {
@@ -68,7 +65,6 @@ struct Entity
 	}
 
 	Entity* groundEntity;
-	Plane groundPlane;
 	// For Rendering
 	// TODO: change this model index
 	std::vector<Face> model;
@@ -95,8 +91,6 @@ struct WorldCameraSetup
 struct World
 {
 	MemoryArena memoryArena;
-
-	BSPNode* tree;
 
 	Entity entities[1024];
 	int numEntities;
@@ -347,59 +341,6 @@ std::vector<Face> CreateCubeFaceCentered(glm::vec3 pos, glm::vec3 dim)
 }
 
 
-void AddPolygonToBrush(Brush* brush, std::vector<glm::vec3> verticesIn)
-{
-	const int arraySize = verticesIn.size();
-	glm::vec3* vertices = new glm::vec3[arraySize];
-
-	for (int i = 0; i < arraySize; i++)
-	{
-		vertices[i] = verticesIn[i];
-	}
-
-	assert(arraySize == 4);
-	// attemp to build normal in all dimensions
-	glm::vec3 normal;
-	for (int i = 0; i < 2; i++)
-	{
-		glm::vec3 v0 = vertices[i+1] - vertices[i];
-		glm::vec3 v1 = vertices[i+2] - vertices[i+1];
-		normal = glm::normalize(glm::cross(v0, v1));
-
-		if (!isnan(normal.x) && !isnan(normal.y) && !isnan(normal.z))
-		{
-			break;
-		}
-	}
-
-
-	if (!isnan(normal.x) && !isnan(normal.y) && !isnan(normal.z))
-	{
-		std::cout << "normal " << normal << std::endl;
-		BspPolygon polygon(vertices, 4);
-		float dist = glm::dot(normal, vertices[0]);
-		polygon.plane = { normal, dist };
-		std::cout << "	dist " << dist << std::endl;
-		brush->polygons.push_back(polygon);
-		brush->used.push_back(false);
-	}
-
-
-}
-
-
-Brush ConvertFaceToBrush(std::vector<Face> faces)
-{
-	Brush brush;
-
-	for (int i = 0; i < faces.size(); i++)
-	{
-		AddPolygonToBrush(&brush, faces[i].vertices);
-	}
-	std::cout << std::endl;
-	return brush;
-}
-
 /*
 NavMesh::NavMeshPolygon CreateTestGround(World* world)
 {
@@ -435,7 +376,7 @@ NavMesh::NavMeshPolygon CreateTestGround(World* world)
 }
 */
 
-void CreateAreaA(World* world, std::vector<Brush>& brushes)
+void CreateAreaA(World* world)
 {
 	Entity* entity = NULL;
 	std::vector<Face> faces;
@@ -663,440 +604,6 @@ void CreateAreaA(World* world, std::vector<Brush>& brushes)
 
 
 
-
-
-
-// this contains the result when a box is swept through the world
-struct TraceResult
-{
-	float timeFraction; // 0 ~ 1;
-	glm::vec3 endPos;
-	bool outputStartsOut;	// True if the line segment starts outside of a solid volume.
-	bool outputAllSolid;	// True if the line segment is completely enclosed in a solid volume.
-							// meaning both start and end are inside a brush
-
-	Plane plane;			// surface normal at impact;
-	Entity* entity;			// ground entity
-};
-
-
-struct TraceSetupInfo
-{
-	glm::vec3 mins;
-	glm::vec3 maxs;
-	glm::vec3 traceExtends;
-	bool isTraceBoxAPoint;	// does min == max;
-};
-
-
-void CheckBrush(Brush* brush, glm::vec3 start, glm::vec3 end, TraceResult* result, TraceSetupInfo* setupInfo)
-{
-	if (brush->polygons.size() == 0)
-	{
-		return;
-	}
-
-	float startFraction = -1;
-	float endFraction = 1;
-	bool startsOut = false;
-	bool endsOut = false;
-	Plane* clipPlane = NULL;
-
-	glm::vec3 offsets;
-//	std::cout << ">>>>>>> CheckBrush" << std::endl;
-	for (int i = 0; i < brush->polygons.size(); i++)
-	{
-		BspPolygon polygon = brush->polygons[i];
-		Plane plane = polygon.plane;
-
-		float startToPlaneDist = 0;
-		float endToPlaneDist = 0;
-
-		//std::cout << "plane normal " << plane.normal << " dist " << plane.distance << std::endl;
-		if (plane.normal.x == 0 && plane.normal.y == 0 && plane.normal.z == -1)
-		{
-	//		std::cout << "plane dist " << plane.distance << std::endl;
-		}
-		
-		for (int j = 0; j < 3; j++)
-		{
-			if (plane.normal[j] < 0)
-			{
-				offsets[j] = setupInfo->maxs[j];
-			}
-			else
-			{
-				offsets[j] = setupInfo->mins[j];
-			}
-		}
-
-		startToPlaneDist = (start[0] + offsets[0]) * plane.normal[0] +
-					(start[1] + offsets[1]) * plane.normal[1] +
-					(start[2] + offsets[2]) * plane.normal[2] - plane.distance;
-
-		endToPlaneDist = (end[0] + offsets[0]) * plane.normal[0] +
-					(end[1] + offsets[1]) * plane.normal[1] +
-					(end[2] + offsets[2]) * plane.normal[2] - plane.distance;
-
-	//	std::cout << "	startToPlaneDist " << startToPlaneDist << std::endl;
-	//	std::cout << "	endToPlaneDist " << endToPlaneDist << std::endl;
-
-
-		if (startToPlaneDist > 0)
-		{
-			startsOut = true;
-		}
-		if (endToPlaneDist > 0)
-		{
-			endsOut = true;
-		}
-
-		/*
-		if its completely in front, we return
-				 _______
-				|		|
-				|		|
- ---->		<---|		|
-				|		|
-				|_______|
-		
-		*/
-
-		// makesure the trace isn't completely 
-		if (startToPlaneDist > 0 && endToPlaneDist > 0)
-		{
-			return;
-		}
-
-
-		/*
-		both are behind this plane, it will get clipped by another one
-				 _______
-				|		|
-				|		|
-			<---|  ------->
-				|		|
-				|_______|
-		*/
-		if (startToPlaneDist <= 0 && endToPlaneDist <= 0)
-		{
-			continue;
-		}
-
-		// crosses face
-
-		/*
-		startDist > endDist means line is entering into the brush. See graph below
-		startDist is > endDist cuz its further along the plane normal direction
-				 _______
-				|		|
-	 	----------->	|
-      		<---|		|
-				|		|
-				|_______|
-
-
-		startDist > endDist means line is entering into the brush. See graph below
-		startDist is > endDist cuz its further along the plane normal direction
-				 _______
-				|		|
-	 			|	----------->	
-      			|		|--->
-				|		|
-				|_______|
-		*/
-		if (startToPlaneDist > endToPlaneDist)
-		{
-			// line is entering into the brush
-			float fraction = (startToPlaneDist - DIST_EPSILON) / (startToPlaneDist - endToPlaneDist);
-			if (fraction > startFraction)
-			{
-				startFraction = fraction;
-				clipPlane = &plane;
-			}
-		}
-		else
-		{
-			// line is leaving the brush
-			float fraction = (startToPlaneDist + DIST_EPSILON) / (startToPlaneDist - endToPlaneDist);
-			if (fraction < endFraction)
-			{
-				endFraction = fraction;
-			}
-		}
-	}
-
-	if (startsOut == false)
-	{
-		result->outputStartsOut = false;
-		if (endsOut == false)
-		{
-			result->outputAllSolid = true;
-		}
-		return;
-	}
-
-	if (startFraction < endFraction)
-	{
-		// -1 is just the default value. we just want to check if startFraction
-		// has been set a proper value.
-		if (startFraction > -1 && startFraction < result->timeFraction)
-		{
-			if (startFraction < 0)
-				startFraction = 0;
-			result->timeFraction = startFraction;
-			result->plane = *clipPlane;
-		}
-	}
-
-
-}
-
-void TraceToLeafNode(BSPNode* node, glm::vec3 start, glm::vec3 end, TraceResult* result, TraceSetupInfo* setupInfo)
-{
-	if (node->brushes.size() == 0)
-	{
-		return;
-	}
-
-	if (node->IsLeafNode())
-	{
-		for (int i = 0; i < node->brushes.size(); i++)
-		{
-			CheckBrush(&node->brushes[i], start, end, result, setupInfo);
-		
-			if (result->timeFraction == 0)
-				return;
-		}
-	}
-}
-
-
-
-
-
-void RecursiveHullCheck(BSPNode* node, float startFraction, float endFraction,
-	glm::vec3 start, glm::vec3 end,
-	glm::vec3 traceStart, glm::vec3 traceEnd,
-	TraceResult* result, TraceSetupInfo* setupInfo, bool print = false)
-{
-
-	/*
-	if (print)
-	{
-		std::cout << "visiting node " << node->id << std::endl;
-	}
-	*/
-
-	// already hit something nearer
-	if (result->timeFraction <= startFraction)
-	{
-		return;
-	}
-
-//	std::cout << "visiting node " << node->id << std::endl;
-//	std::cout << "startFraction " << startFraction << ", endFraction " << endFraction << std::endl;
-
-	if (node->IsLeafNode())
-	{
-		TraceToLeafNode(node, traceStart, traceEnd, result, setupInfo);
-		return;
-	}
-
-	Plane plane = node->splitPlane;
-//	std::cout << "		plane " << plane.normal << std::endl;
-
-	float startDist, endDist, offset;
-	if (IsAxialPlane(plane))
-	{
-		// optimize this
-		startDist = glm::dot(start, plane.normal) - plane.distance;
-		endDist = glm::dot(end, plane.normal) - plane.distance;
-		offset = fabs(setupInfo->traceExtends[0] * plane.normal[0]) +
-			fabs(setupInfo->traceExtends[1] * plane.normal[1]) +
-			fabs(setupInfo->traceExtends[2] * plane.normal[2]);
-	}
-	else
-	{
-		// optimize this
-		startDist = glm::dot(start, plane.normal) - plane.distance;
-		endDist = glm::dot(end, plane.normal) - plane.distance;
-		offset = glm::dot(plane.normal, setupInfo->traceExtends);
-		
-		if (setupInfo->isTraceBoxAPoint)
-		{
-			offset = 0;
-		}
-		else
-		{
-			// similar to 5.2.3 Testing Box Against Plane
-			offset = fabs(setupInfo->traceExtends[0] * plane.normal[0]) +
-				fabs(setupInfo->traceExtends[1] * plane.normal[1]) +
-				fabs(setupInfo->traceExtends[2] * plane.normal[2]);
-		}
-	}
-
-	if (print && node->id == 7)
-	{
-		std::cout << "visiting node " << node->id << std::endl;
-	}
-
-	if (startDist >= offset && endDist >= offset)
-	{
-		RecursiveHullCheck(node->children[0], startFraction, endFraction, start, end, 
-			traceStart, traceEnd, result, setupInfo, print);
-		return;
-	}
-	if (startDist < -offset && endDist < -offset)
-	{
-		RecursiveHullCheck(node->children[1], startFraction, endFraction, start, end, 
-			traceStart, traceEnd, result, setupInfo, print);
-		return;
-	}
-
-	// the side that the start is on. 
-	int side;
-	float fraction1, fraction2, middleFraction;
-	glm::vec3 middlePoint;
-	// 1/32 epsilon to keep floating point happy
-
-
-	/*
-	the case where endDist > startDist
-
-				      plane
-						
-			front side	|  back side
-						|
-				end		|    start
-			<-----------|
-						|
-						|
-
-
-	the case where startDist > endDist
-
-					  plane
-
-			front side	|  back side
-						|
-				start	|    end
-			<-----------|
-						|
-						|
-
-	*/
-	if (startDist < endDist)
-	{
-		side = 1;	// start is on the back of the plane
-		float inverseDistance = 1.0f / (startDist - endDist);
-		fraction1 = (startDist - offset + DIST_EPSILON) * inverseDistance;
-		fraction2 = (startDist + offset + DIST_EPSILON) * inverseDistance;
-	}
-	else if (startDist > endDist)
-	{
-		side = 0;	// start is on the front side of the plane
-		float inverseDistance = 1.0f / (startDist - endDist);
-		fraction1 = (startDist + offset + DIST_EPSILON) * inverseDistance;
-		fraction2 = (startDist - offset - DIST_EPSILON) * inverseDistance;
-
-	//	std::cout << "fraction1 " << fraction1 << std::endl;
-	//	std::cout << "fraction2 " << fraction2 << std::endl;
-	}
-	else
-	{
-		side = 0;
-		fraction1 = 1.0f;
-		fraction2 = 0.0f;
-	}
-
-	// examine [start  middle]
-	if (fraction1 < 0) { fraction1 = 0;	}
-	else if (fraction1 > 1) { fraction1 = 1; }
-
-	middleFraction = startFraction + (endFraction - startFraction) * fraction1;
-	middlePoint = start + fraction1 * (end - start);
-
-	RecursiveHullCheck(node->children[side], startFraction, middleFraction, 
-												start, middlePoint, traceStart, traceEnd, 
-												result, setupInfo, print);
-
-	// examine [middle	end]
-	if (fraction2 < 0) { fraction2 = 0; }
-	else if (fraction2 > 1) { fraction2 = 1; }
-
-	middleFraction = startFraction + (endFraction - startFraction) * fraction2;
-	middlePoint = start + fraction2 * (end - start);
-
-	RecursiveHullCheck(node->children[!side], middleFraction, endFraction, 
-												middlePoint, end, traceStart, 
-												traceEnd, result, setupInfo, print);
-}
-
-
-
-
-// Cloning cmodel.c
-TraceResult BoxTrace(glm::vec3 start, glm::vec3 end, glm::vec3 mins, glm::vec3 maxs, BSPNode* tree, bool print = false)
-{
-	TraceResult result = {};
-	result.outputStartsOut = true;
-	result.outputAllSolid = false;
-	result.plane = NULL_PLANE;
-
-	TraceSetupInfo setup = {};
-
-	result.timeFraction = 1;
-
-	setup.mins = mins;
-	setup.maxs = maxs;
-
-	if (start == end)
-	{
-
-	}
-
-	if (mins == maxs)
-	{
-		setup.isTraceBoxAPoint = true;
-	}
-	else
-	{
-		setup.isTraceBoxAPoint = false;
-
-		// getting the largest dimension in of min or max
-		// essentially we are comparing -min[i] and max[i]
-		setup.traceExtends[0] = -mins[0] > maxs[0] ? -mins[0] : maxs[0];
-		setup.traceExtends[1] = -mins[1] > maxs[1] ? -mins[1] : maxs[1];
-		setup.traceExtends[2] = -mins[2] > maxs[2] ? -mins[2] : maxs[2];
-	}
-
-	RecursiveHullCheck(tree, 0, 1, start, end, start, end, &result, &setup, print);
-
-	if (result.timeFraction == 1)
-	{
-		result.endPos = end;
-	}
-	else
-	{
-		for (int i = 0; i < 3; i++)
-		{
-			result.endPos[i] = start[i] + result.timeFraction * (end[i] - start[i]);
-		}
-	}
-
-	return result;
-}
-
-
-
-
-
-
-
-
-
-
 // Essentially recreating a simplified version of dust2
 void initWorld(World* world)
 {
@@ -1115,28 +622,18 @@ void initWorld(World* world)
 	world->voronoiDebug = new Voronoi::DebugState();
 	world->cdTriangulationdebug = new CDTriangulation::DebugState();
 
-	NULL_PLANE = Plane();
-	NULL_PLANE.normal = glm::vec3(0);
 
-	std::vector<Brush> brushes;
+
 
 
 	float wallHeight = 50;
 
-	CreateAreaA(world, brushes);
+	CreateAreaA(world);
 	// CreateAreaC(world, brushes);
 
 	// glm::vec3 siteBSize = glm::vec3(200, wallHeight, 200);
 	//CreateAreaB(world, glm::vec3(500, 0, 0), siteBSize, brushes);
 	
-
-
-	std::cout << "############# BuildBSPTree" << std::endl;
-	world->tree = BuildBSPTree(brushes, 0);
-
-	std::cout << "############# PrintBSPTree" << std::endl;
-	PrintBSPTree(world->tree, 0);
-
 
 
 
