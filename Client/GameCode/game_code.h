@@ -6,12 +6,13 @@
 //#include "debug_interface.h"
 #include "memory.h"
 #include "world.h"
+#include "game_state.h"
 #include "../NavMesh/asset.h"
 #include "debug.h"
 #include "game_render.h"
 
 #include <iostream>
-
+#include "editor/editor.h"
 
 
 // define memory for Push style stuff
@@ -73,28 +74,6 @@ struct CameraEntity
 
 
 
-
-// This is mirroring the sim_region struct in handmade_sim_region.h
-struct GameState
-{
-	bool isInitalized;
-
-	World world;
-
-	Entity debugCameraEntity;
-
-	bool mouseIsDebugMode;
-
-	MemoryArena memoryArena;
-};
-
-struct TransientState
-{
-	bool isInitalized;
-	MemoryArena memoryArena;
-	GameAssets* assets;
-
-};
 
 
 
@@ -274,19 +253,16 @@ void RenderMiddle(RenderSystem::GameRenderCommands* gameRenderCommands,
 	RenderSystem::RenderGroup* renderGroup, GameAssets* gameAssets, glm::ivec2 mousePos)
 {
 
-	float halfWidth = gameRenderCommands->settings.dims.x / 2.0f;
-	float halfHeight = gameRenderCommands->settings.dims.y / 2.0f;
-
 	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
 	LoadedBitmap* defaultBitmap = GetBitmap(gameAssets, bitmapID);
 
-	glm::vec3 profileRectHalfDim = glm::vec3(1, 1, 0);
-	glm::vec3 profileRectMin = glm::vec3(-profileRectHalfDim.x, -profileRectHalfDim.y, 0);
-	glm::vec3 profileRectMax = glm::vec3(profileRectHalfDim.x, profileRectHalfDim.y, 0);
+	glm::vec3 halfDim = glm::vec3(1, 1, 0);
+	glm::vec3 rectMin = glm::vec3(-halfDim.x, -halfDim.y, 0);
+	glm::vec3 rectMax = glm::vec3(halfDim.x, halfDim.y, 0);
 
 	// background
-	GameRender::PushBitmap(gameRenderCommands, renderGroup, defaultBitmap, glm::vec4(1, 1, 1, 1), profileRectMin,
-		profileRectMax, GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Bottom);
+	GameRender::PushBitmap(gameRenderCommands, renderGroup, defaultBitmap, glm::vec4(1, 1, 1, 1), rectMin,
+		rectMax, GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Bottom);
 
 }
 
@@ -1055,10 +1031,11 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 	RenderCDTriangulationDebug(gameRenderCommands, &group, gameAssets, world->cdTriangulationdebug);
 
 	GameRender::RenderCoordinateSystem(gameRenderCommands, &group, gameAssets);
-
-
-
 }
+
+
+
+
 
 
 extern DebugTable* globalDebugTable;
@@ -1165,6 +1142,32 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 	*/
 
 	WorldTickAndRender(gameState, transientState->assets, gameInputState, gameRenderCommands, windowDimensions, debugModeState);
+
+
+
+
+
+
+
+	float halfWidth = gameRenderCommands->settings.dims.x / 2.0f;
+	float halfHeight = gameRenderCommands->settings.dims.y / 2.0f;
+
+	glm::mat4 cameraProj = glm::ortho(-halfWidth, halfWidth, -halfHeight, halfHeight);
+
+
+	// We start a render setup
+	RenderSystem::RenderGroup group = {};
+
+	RenderSystem::RenderSetup renderSetup = {};
+	renderSetup.transformMatrix = cameraProj;
+
+	group.quads = PushRenderElement(gameRenderCommands, TexturedQuads);
+	*group.quads = {};
+	group.quads->masterVertexArrayOffset = gameRenderCommands->numVertex;
+	group.quads->masterBitmapArrayOffset = gameRenderCommands->numBitmaps;
+	group.quads->renderSetup = renderSetup;
+
+	Editor::RenderEditorMenu(gameMemory, transientState->assets, &group, gameInputState, gameRenderCommands, windowDimensions, debugModeState);
 }
 
 

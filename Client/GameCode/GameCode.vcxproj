@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -151,8 +151,10 @@
     <ClInclude Include="collision.h" />
     <ClInclude Include="debug.h" />
     <ClInclude Include="cd_triangulation.h" />
+    <ClInclude Include="editor\editor.h" />
     <ClInclude Include="game_code.h" />
     <ClInclude Include="game_render.h" />
+    <ClInclude Include="game_state.h" />
     <ClInclude Include="math.h" />
     <ClInclude Include="pathfinding.h" />
     <ClInclude Include="stdafx.h" />
