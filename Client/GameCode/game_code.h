@@ -1009,6 +1009,13 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 
 	RenderCDTriangulationDebug(&gameRenderState, world->cdTriangulationdebug);
 
+	EditorState* editor = &gameState->editorState;
+	if (editor->selected != NULL)
+	{
+
+	}
+
+
 	GameRender::RenderCoordinateSystem(gameRenderCommands, &group, gameAssets);
 }
 
@@ -1048,10 +1055,6 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		//	cout << "move back" << endl;
 	}
 
-	if (gameInputState->mouseButtons[(int)GameInputMouseButton::PlatformMouseButton_Left].endedDown)
-	{
-		std::cout << "mouse butotn down" << std::endl;
-	}
 
 	globalDebugTable = gameMemory->debugTable;
 
@@ -1142,6 +1145,13 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 	group.quads->masterVertexArrayOffset = gameRenderCommands->numVertex;
 	group.quads->masterBitmapArrayOffset = gameRenderCommands->numBitmaps;
 	group.quads->renderSetup = renderSetup;
+
+	/*
+	if (gameInputState->mouseButtons[(int)PlatformMouseButton_Left].changed)
+	{
+		std::cout << "changed " << std::endl;
+	}
+	*/	
 
 
 	GameRender::GameRenderState gameRenderState = {};

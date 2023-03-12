@@ -230,6 +230,7 @@ void SDLProcessKeyboardEvent(GameButtonState* buttonState, bool isDown)
 	if (buttonState->endedDown != isDown)
 	{
 		buttonState->endedDown = isDown;
+		buttonState->changed = true;
 		++buttonState->halfTransitionCount;
 	}
 
@@ -596,8 +597,10 @@ int main(int argc, char *argv[])
 			
 			for (int i = 0; i < PlatformMouseButton_Count; i++)
 			{
-			//	newInput->mouseButtons[i] = oldInput->mouseButtons[i];
-			//	newInput->mouseButtons[i].halfTransitionCount = 0;
+				newInput->mouseButtons[i] = oldInput->mouseButtons[i];
+				newInput->mouseButtons[i].halfTransitionCount = 0;
+				newInput->mouseButtons[i].changed = false;
+
 				SDLProcessKeyboardEvent(&newInput->mouseButtons[i],
 					mouseState & SDLButtonID[i]);
 			}
@@ -658,7 +661,7 @@ int main(int argc, char *argv[])
 			
 //			GameInputState* temp = newInput;
 //			*newInput = *oldInput;
-//			oldInput = temp;
+			*oldInput = *newInput;
 			
 
 		//	END_BLOCK();

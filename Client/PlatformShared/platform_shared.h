@@ -103,6 +103,7 @@ enum GameInputMouseButton
 struct GameButtonState
 {
 	int halfTransitionCount;
+	bool changed;	// example: 
 	bool endedDown;
 };
 

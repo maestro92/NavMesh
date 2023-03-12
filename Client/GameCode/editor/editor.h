@@ -110,9 +110,22 @@ namespace Editor
 
 		if (Collision::IsPointInsideRect({ profileRectMin, profileRectMax }, screenMousePos))
 		{
-			if (gameInputState->mouseButtons[(int)PlatformMouseButton_Left].endedDown)
+			if (gameInputState->mouseButtons[(int)PlatformMouseButton_Left].endedDown && 
+				gameInputState->mouseButtons[(int)PlatformMouseButton_Left].changed)
 			{
-				editorState->selected = entityOption;
+//				std::cout << "inside here" << std::endl;
+
+				if(gameInputState->mouseButtons)
+
+				if (editorState->selected != NULL && entityOption == editorState->selected)
+				{
+					editorState->selected = NULL;
+				}
+				else
+				{
+					editorState->selected = entityOption;
+				}
+
 			}
 			else
 			{
@@ -176,6 +189,8 @@ namespace Editor
 		int curY = startY;
 
 		editor->highlighted = NULL;
+
+		// std::cout << ">>>>>	TickAndRenderEditorMenu" << std::endl;
 
 		int entityOptionIndex = 0;
 		for (int y = 0; y < numCol; y++)
