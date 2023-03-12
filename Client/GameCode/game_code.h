@@ -556,6 +556,69 @@ void RenderVoronoiDebug(RenderSystem::GameRenderCommands* gameRenderCommands,
 	}
 }
 
+void RenderEntityOption(
+	EditorState* editor,
+	GameRender::GameRenderState* gameRenderState,
+	GameInputState* gameInputState,
+	GameState* gameState)
+{
+	if (editor->selected != NULL)
+	{
+
+		RenderSystem::GameRenderCommands* gameRenderCommands = gameRenderState->gameRenderCommands;
+		GameAssets* gameAssets = gameRenderState->gameAssets;
+		RenderSystem::RenderGroup* group = gameRenderState->renderGroup;
+
+
+		glm::vec3 rayOrigin = gameState->debugCameraEntity.pos;
+		glm::vec3 rayDir = MousePosToMousePickingRay(gameState->world.cameraSetup, gameRenderCommands, gameInputState->mousePos);
+
+		glm::vec3 point;
+
+		Collision::Plane plane;
+		plane.dist = 0;
+		plane.normal = glm::vec3(0, 0, 1);
+
+		Collision::Ray ray = { rayOrigin, rayDir };
+
+		if (Collision::RayPlaneIntersection3D(
+			plane, ray, point))
+		{
+
+			BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
+			LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
+			float lineThickness = 2;
+
+			EntityOption* option = editor->selected;
+			for (int i = 0; i < option->vertices.size(); i++)
+			{
+				GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, option->vertices[i], 2);
+
+				glm::vec3 pos0 = option->vertices[i];
+				glm::vec3 pos1;
+				if (i == option->vertices.size() - 1)
+				{
+					pos1 = option->vertices[0];
+				}
+				else
+				{
+					pos1 = option->vertices[i + 1];
+				}
+					
+				pos0 += point;
+				pos1 += point;
+
+
+				GameRender::RenderLine(
+					gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, pos0, pos1, lineThickness);
+
+			}
+		}
+
+
+	}
+
+}
 
 
 void RenderCDTriangulationDebug(
@@ -623,7 +686,7 @@ void RenderCDTriangulationDebug(
 		if (triangulationDebug->highlightedTriangle != NULL && triangle.id == triangulationDebug->highlightedTriangle->id)
 		{
 
-			GameRender::PushTriangle(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, liftedVertex, false);
+			GameRender::PushTriangle(gameRenderCommands, group, bitmap, GameRender::COLOR_YELLOW, liftedVertex, false);
 
 			Triangulation::Circle circle = CDTriangulation::FindCircumCircle(triangle);
 			GameRender::RenderCircle(
@@ -1010,11 +1073,31 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 	RenderCDTriangulationDebug(&gameRenderState, world->cdTriangulationdebug);
 
 	EditorState* editor = &gameState->editorState;
+	RenderEntityOption(editor, &gameRenderState, gameInputState, gameState);
+
+	/*
+	EditorState* editor = &gameState->editorState;
 	if (editor->selected != NULL)
 	{
+		glm::vec3 rayOrigin = gameState->debugCameraEntity.pos;
+		glm::vec3 rayDir = MousePosToMousePickingRay(gameState->world.cameraSetup, gameRenderCommands, gameInputState->mousePos);
 
+		glm::vec3 point;
+
+		Collision::Plane plane;
+		plane.dist = 0;
+		plane.normal = glm::vec3(0, 0, 1);
+
+		Collision::Ray ray = { rayOrigin, rayDir };
+
+		if (Collision::RayPlaneIntersection3D(
+			plane, ray, point))
+		{
+
+			
+		}
 	}
-
+*/
 
 	GameRender::RenderCoordinateSystem(gameRenderCommands, &group, gameAssets);
 }

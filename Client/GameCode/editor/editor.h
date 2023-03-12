@@ -34,6 +34,8 @@ namespace Editor
 	{
 		std::vector<glm::vec3> vertices;
 
+		float scale = 10;
+
 		editorState->options = new EntityOption[10];
 		EntityOption option;
 
@@ -86,6 +88,15 @@ namespace Editor
 		editorState->options[3] = option;
 
 		editorState->numOptions = 4;
+
+		for (int i = 0; i < editorState->numOptions; i++)
+		{
+			for (int j = 0; j < editorState->options[i].vertices.size(); j++)
+			{
+				editorState->options[i].vertices[j] *= scale;
+			}
+		}
+
 	}
 
 
