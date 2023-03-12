@@ -110,7 +110,7 @@ struct GameInputState
 {
 	double dtForFrame;
 
-	GameButtonState buttons[4];
+	GameButtonState buttons[GameInputMouseButton::PlatformMouseButton_Count];
 	struct
 	{
 		GameButtonState moveUp;

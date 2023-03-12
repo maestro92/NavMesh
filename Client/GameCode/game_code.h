@@ -107,40 +107,6 @@ void* PushRenderElement_(RenderSystem::GameRenderCommands* commands, RenderSyste
 }
 
 
-/*
-	mousePos
-
-  0,768					1023,768
-	  ______________________
-	 |						|
-	 |						|
-	 |			  			|
-	 |						|
-	 |						|
-	 |______________________|
-   0,0						1023,0
-
-
-
-	ScreenRenderPos: 1024 * 768
-
-  -512,384			     511,384
-	  ______________________
-	 |						|
-	 |						|
-	 |			0,0			|
-	 |						|
-	 |						|
-	 |______________________|
-  -512,-384			     511,-384
-
-*/
-glm::vec3 PlatformMouseToScreenRenderPos(RenderSystem::GameRenderCommands* gameRenderCommands, glm::ivec2 mousePos)
-{
-	float halfWidth = gameRenderCommands->settings.dims.x / 2.0f;
-	float halfHeight = gameRenderCommands->settings.dims.y / 2.0f;
-	return glm::vec3(mousePos.x - halfWidth, mousePos.y - halfHeight, 0);
-}
 
 /*
 not entirely sure why this works... 
@@ -348,7 +314,7 @@ void RenderProfileBars(DebugState* debugState, RenderSystem::GameRenderCommands*
 				glm::vec3(dim.x / 2.0, dim.y / 2.0, 0), GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Bottom);
 
 			// if mouse in region
-			glm::vec3 screenMousePos = PlatformMouseToScreenRenderPos(gameRenderCommands, mousePos);
+			glm::vec3 screenMousePos = UIUtil::PlatformMouseToScreenRenderPos(gameRenderCommands, mousePos);
 			/*
 			if (Collision::IsPointInsideRect({ rectMin, rectMax }, screenMousePos))
 			{
@@ -1080,6 +1046,11 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 	if (gameInputState->moveDown.endedDown)
 	{
 		//	cout << "move back" << endl;
+	}
+
+	if (gameInputState->mouseButtons[(int)GameInputMouseButton::PlatformMouseButton_Left].endedDown)
+	{
+		std::cout << "mouse butotn down" << std::endl;
 	}
 
 	globalDebugTable = gameMemory->debugTable;

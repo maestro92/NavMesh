@@ -564,8 +564,10 @@ int main(int argc, char *argv[])
 		int maxNumBitmaps = 65535 >> 2;
 		void* bitmapArrayBuffer = VirtualAlloc(0, maxNumBitmaps * sizeof(LoadedBitmap*), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 
-		GameInputState inputs[1] = {};
+		GameInputState inputs[2] = {};
 		GameInputState* newInput = &inputs[0];
+		GameInputState* oldInput = &inputs[1];
+
 
 		int frame = 0;
 		while (is_game_running)
@@ -591,15 +593,15 @@ int main(int argc, char *argv[])
 			};
 
 			// didn't fully understand this part
-			/*
+			
 			for (int i = 0; i < PlatformMouseButton_Count; i++)
 			{
-				new->MouseButtons[i] = OldInput->MouseButtons[ButtonIndex];
-				NewInput->MouseButtons[ButtonIndex].HalfTransitionCount = 0;
-				SDLProcessKeyboardEvent(&NewInput->MouseButtons[ButtonIndex],
-					MouseState & SDLButtonID[ButtonIndex]);
+			//	newInput->mouseButtons[i] = oldInput->mouseButtons[i];
+			//	newInput->mouseButtons[i].halfTransitionCount = 0;
+				SDLProcessKeyboardEvent(&newInput->mouseButtons[i],
+					mouseState & SDLButtonID[i]);
 			}
-			*/
+			
 
 			/*
 			if (!debugModeState.mouseDebugMode)
@@ -652,6 +654,13 @@ int main(int argc, char *argv[])
 
 			OpenGLRenderCommands(&openGL, &gameRenderCommands, glm::ivec2(0), glm::ivec2(0), windowDimensions);
 			RendererEndFrame();
+
+			
+//			GameInputState* temp = newInput;
+//			*newInput = *oldInput;
+//			oldInput = temp;
+			
+
 		//	END_BLOCK();
 
 			uint64_t endCounter = SDLGetWallClock();

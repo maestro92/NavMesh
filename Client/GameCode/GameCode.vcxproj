@@ -160,6 +160,7 @@
     <ClInclude Include="pathfinding.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="triangulation.h" />
+    <ClInclude Include="ui_util.h" />
     <ClInclude Include="voronoi.h" />
     <ClInclude Include="world.h" />
   </ItemGroup>
