@@ -54,6 +54,9 @@
     <ClInclude Include="game_state.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="editor\editor_state.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">

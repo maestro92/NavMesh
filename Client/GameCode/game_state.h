@@ -2,6 +2,7 @@
 #include "../PlatformShared/platform_shared.h"
 #include "world.h"
 #include "../NavMesh/asset.h"
+#include "editor/editor_state.h"
 
 // This is mirroring the sim_region struct in handmade_sim_region.h
 struct GameState
@@ -15,6 +16,8 @@ struct GameState
 	bool mouseIsDebugMode;
 
 	MemoryArena memoryArena;
+
+	EditorState editorState;
 };
 
 struct TransientState
@@ -22,6 +25,7 @@ struct TransientState
 	bool isInitalized;
 	MemoryArena memoryArena;
 	GameAssets* assets;
-
+	FontId debugFontId;
+	LoadedFont* debugLoadedFont;
 };
 

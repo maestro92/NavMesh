@@ -26,8 +26,8 @@ using namespace std;
 
 static PlatformAPI platformAPI;
 
-static FontId debugFontId;
-static LoadedFont* debugLoadedFont;
+//static FontId debugFontId;
+//static LoadedFont* debugLoadedFont;
 static glm::mat4 globalDebugCameraMat;
 
 
@@ -185,7 +185,7 @@ glm::vec3 MousePosToMousePickingRay(WorldCameraSetup worldCameraSetup, RenderSys
 }
 
 
-
+/*
 void DEBUGTextLine(const char* s, RenderSystem::GameRenderCommands* gameRenderCommands, RenderSystem::RenderGroup* group, GameAssets* gameAssets, glm::vec3 position)
 {
 	// how big do we want char to be displayed
@@ -247,7 +247,7 @@ void DEBUGTextLine(const char* s, RenderSystem::GameRenderCommands* gameRenderCo
 	}
 
 }
-
+*/
 
 void RenderMiddle(RenderSystem::GameRenderCommands* gameRenderCommands,
 	RenderSystem::RenderGroup* renderGroup, GameAssets* gameAssets, glm::ivec2 mousePos)
@@ -349,10 +349,12 @@ void RenderProfileBars(DebugState* debugState, RenderSystem::GameRenderCommands*
 
 			// if mouse in region
 			glm::vec3 screenMousePos = PlatformMouseToScreenRenderPos(gameRenderCommands, mousePos);
+			/*
 			if (Collision::IsPointInsideRect({ rectMin, rectMax }, screenMousePos))
 			{
-				DEBUGTextLine(node->element->GUID, gameRenderCommands, renderGroup, gameAssets, screenMousePos);
+				GameRender::DEBUGTextLine(node->element->GUID, gameRenderCommands, renderGroup, gameAssets, screenMousePos);
 			}
+			*/
 		}
 	}
 }
@@ -590,11 +592,14 @@ void RenderVoronoiDebug(RenderSystem::GameRenderCommands* gameRenderCommands,
 
 
 
-void RenderCDTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderCommands,
-	RenderSystem::RenderGroup* group,
-	GameAssets* gameAssets,
+void RenderCDTriangulationDebug(
+	GameRender::GameRenderState* gameRenderState,
 	CDTriangulation::DebugState* triangulationDebug)
 {
+	RenderSystem::GameRenderCommands* gameRenderCommands = gameRenderState->gameRenderCommands;
+	GameAssets* gameAssets = gameRenderState->gameAssets;
+	RenderSystem::RenderGroup* group = gameRenderState->renderGroup;
+
 	float lineThickness = 0.5;
 
 	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
@@ -647,7 +652,7 @@ void RenderCDTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderComm
 		std::string s = std::to_string(triangle.id);
 
 
-		DEBUGTextLine(s.c_str(), gameRenderCommands, group, gameAssets, centroid);
+		GameRender::DEBUGTextLine(s.c_str(), gameRenderState, centroid, 0.5);
 
 		if (triangulationDebug->highlightedTriangle != NULL && triangle.id == triangulationDebug->highlightedTriangle->id)
 		{
@@ -774,7 +779,7 @@ glm::vec3 UpdateEntityViewDirection(Entity* entity, GameInputState* gameInputSta
 }
 
 
-void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
+void WorldTickAndRender(GameState* gameState, TransientState* transientState, GameAssets* gameAssets,
 	GameInputState* gameInputState, RenderSystem::GameRenderCommands* gameRenderCommands, glm::ivec2 windowDimensions, DebugModeState* debugModeState)
 {
 	Entity* controlledEntity = &gameState->debugCameraEntity;
@@ -1028,7 +1033,15 @@ void WorldTickAndRender(GameState* gameState, GameAssets* gameAssets,
 	}
 	
 	
-	RenderCDTriangulationDebug(gameRenderCommands, &group, gameAssets, world->cdTriangulationdebug);
+	GameRender::GameRenderState gameRenderState = {};
+	gameRenderState.gameRenderCommands = gameRenderCommands;
+	gameRenderState.renderGroup = &group;
+	gameRenderState.debugLoadedFont = transientState->debugLoadedFont;
+	gameRenderState.debugFontId = transientState->debugFontId;
+	gameRenderState.gameAssets = transientState->assets;
+
+
+	RenderCDTriangulationDebug(&gameRenderState, world->cdTriangulationdebug);
 
 	GameRender::RenderCoordinateSystem(gameRenderCommands, &group, gameAssets);
 }
@@ -1089,18 +1102,6 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		gameState->debugCameraEntity.zAxis = glm::normalize(glm::vec3(0.0, -0.25, 0.96));
 		
 
-		/*
-		gameState->debugCameraEntity.xAxis = glm::normalize(glm::vec3(1.0, 0.0, 0.0));
-		gameState->debugCameraEntity.yAxis = glm::normalize(glm::vec3(0.0, 1, 0));
-		gameState->debugCameraEntity.zAxis = glm::normalize(glm::vec3(0.0, 0, 1));
-		*/
-
-		/*
-		gameState->debugCameraEntity.xAxis = glm::normalize(glm::vec3(1.0, 0.0, 0.0));
-		gameState->debugCameraEntity.yAxis = glm::normalize(glm::vec3(0.0, 0, -1));
-		gameState->debugCameraEntity.zAxis = glm::normalize(glm::vec3(0.0, 1, 0));
-		*/
-
 		gameState->debugCameraEntity.min = glm::vec3(-10, -10, -10);
 		gameState->debugCameraEntity.max = glm::vec3(10, 10, 10);
 
@@ -1110,6 +1111,10 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		uint8* base = (uint8*)gameMemory->permenentStorage + sizeof(GameState);
 		MemoryIndex size = gameMemory->permenentStorageSize - sizeof(GameState);
 		gameState->memoryArena.Init(base, size);
+
+
+		Editor::InitEditorData(&gameState->editorState);
+
 
 		gameState->isInitalized = true;
 
@@ -1127,8 +1132,8 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		transientState->assets = PushStruct(&transientState->memoryArena, GameAssets);
 		AllocateGameAssets(&transientState->memoryArena, transientState->assets);
 
-		debugFontId = { GetFirstAssetIdFrom(transientState->assets, AssetFamilyType::Enum::Font) };
-		debugLoadedFont = GetFont(transientState->assets, debugFontId);
+		transientState->debugFontId = { GetFirstAssetIdFrom(transientState->assets, AssetFamilyType::Enum::Font) };
+		transientState->debugLoadedFont = GetFont(transientState->assets, transientState->debugFontId);
 
 
 		transientState->isInitalized = true;
@@ -1141,7 +1146,7 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 	}
 	*/
 
-	WorldTickAndRender(gameState, transientState->assets, gameInputState, gameRenderCommands, windowDimensions, debugModeState);
+	WorldTickAndRender(gameState, transientState, transientState->assets, gameInputState, gameRenderCommands, windowDimensions, debugModeState);
 
 
 
@@ -1167,7 +1172,14 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 	group.quads->masterBitmapArrayOffset = gameRenderCommands->numBitmaps;
 	group.quads->renderSetup = renderSetup;
 
-	Editor::RenderEditorMenu(gameMemory, transientState->assets, &group, gameInputState, gameRenderCommands, windowDimensions, debugModeState);
+
+	GameRender::GameRenderState gameRenderState = {};
+	gameRenderState.gameRenderCommands = gameRenderCommands;
+	gameRenderState.renderGroup = &group;
+	gameRenderState.debugLoadedFont = transientState->debugLoadedFont;
+	gameRenderState.debugFontId = transientState->debugFontId;
+	gameRenderState.gameAssets = transientState->assets;
+	Editor::TickAndRenderEditorMenu(gameMemory, gameInputState, &gameRenderState, windowDimensions, debugModeState);
 }
 
 
@@ -1257,6 +1269,13 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 	group.quads->renderSetup = renderSetup;
 
 
+	GameRender::GameRenderState gameRenderState = {};
+	gameRenderState.gameRenderCommands = gameRenderCommands;
+	gameRenderState.renderGroup = &group;
+	gameRenderState.debugLoadedFont = transientState->debugLoadedFont;
+	gameRenderState.debugFontId = transientState->debugFontId;
+	gameRenderState.gameAssets = transientState->assets;
+
 	uint64 arrayIndex_eventIndex = globalDebugTable->eventArrayIndex_EventIndex;
 
 	// get the top 32 bit
@@ -1342,7 +1361,7 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 
 
 
-	DEBUGTextLine(buffer, gameRenderCommands, &group, transientState->assets, startPos);
+	GameRender::DEBUGTextLine(buffer, &gameRenderState, startPos, 1);
 
 	/*
 	// render the points 

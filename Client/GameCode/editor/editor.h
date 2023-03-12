@@ -3,6 +3,7 @@
 
 #include "../game_render.h"
 #include "../game_state.h"
+#include "editor_state.h"
 
 namespace Editor
 {
@@ -22,9 +23,30 @@ namespace Editor
 	
 	*/
 
-	void RenderChoice(RenderSystem::GameRenderCommands* gameRenderCommands,
-		RenderSystem::RenderGroup* renderGroup, GameAssets* gameAssets, int x, int y, int width, int height)
+
+	void InitEditorData(EditorState* editorState)
 	{
+		editorState->options = new EntityOption[10];
+
+		editorState->options[0].name = "Square Rock";
+
+		editorState->options[1].name = "Rock 1";
+
+		editorState->options[2].name = "Rock 2";
+
+		editorState->options[3].name = "Rock 3";
+
+	}
+
+
+	void RenderChoice(
+		GameRender::GameRenderState* gameRenderState,
+		EntityOption* entityOption, int x, int y, int width, int height)
+	{
+		RenderSystem::GameRenderCommands* gameRenderCommands = gameRenderState->gameRenderCommands;
+		RenderSystem::RenderGroup* renderGroup = gameRenderState->renderGroup;
+		GameAssets* gameAssets = gameRenderState->gameAssets;
+
 		BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
 		LoadedBitmap* defaultBitmap = GetBitmap(gameAssets, bitmapID);
 
@@ -33,22 +55,28 @@ namespace Editor
 		glm::vec3 halfDim = (profileRectMax - profileRectMin) / 2.0f;
 
 		// background
-		GameRender::PushBitmap(gameRenderCommands, renderGroup, defaultBitmap, glm::vec4(1, 1, 1, 1), profileRectMin,
+		GameRender::PushBitmap(gameRenderCommands, renderGroup, defaultBitmap, glm::vec4(0, 0, 0.25, 0.25), profileRectMin,
 			halfDim, GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Top);
 
+		glm::vec3 pos = profileRectMin - glm::vec3(0, height, 0);
+		GameRender::DEBUGTextLine(entityOption->name.c_str(), gameRenderState, pos, 1);
 	}
 
 
 
-	void RenderEditorMenu(GameMemory* gameMemory,
-		GameAssets* gameAssets,
-		RenderSystem::RenderGroup* group,
+	void TickAndRenderEditorMenu(GameMemory* gameMemory,
 		GameInputState* gameInputState,
-		RenderSystem::GameRenderCommands* gameRenderCommands,
+		GameRender::GameRenderState* gameRenderState,
 		glm::ivec2 windowDimensions, DebugModeState* debugModeState)
 	{
+		GameAssets* gameAssets = gameRenderState->gameAssets;
+		RenderSystem::RenderGroup* group = gameRenderState->renderGroup;
+		RenderSystem::GameRenderCommands* gameRenderCommands = gameRenderState->gameRenderCommands;
+
 		GameState* gameState = (GameState*)gameMemory->permenentStorage;
 		TransientState* transientState = (TransientState*)gameMemory->transientStorage;
+
+		EditorState* editor = &gameState->editorState;
 
 		float halfWidth = gameRenderCommands->settings.dims.x / 2.0f;
 		float halfHeight = gameRenderCommands->settings.dims.y / 2.0f;
@@ -65,6 +93,7 @@ namespace Editor
 		int curX = startX;
 		int curY = startY;
 
+		int entityOptionIndex = 0;
 		for (int y = 0; y < numCol; y++)
 		{
 			curY = startY - optionHeight * y;
@@ -72,7 +101,11 @@ namespace Editor
 			for (int x = 0; x < numRow; x++)
 			{
 				curX = startX + optionWidth * x;
-				RenderChoice(gameRenderCommands, group, gameAssets, curX, curY, optionWidth, optionHeight);
+
+				EntityOption* entityOption = &editor->options[entityOptionIndex];
+
+				RenderChoice(gameRenderState, entityOption, curX, curY, optionWidth, optionHeight);
+				entityOptionIndex++;
 			}
 		}
 

@@ -152,6 +152,7 @@
     <ClInclude Include="debug.h" />
     <ClInclude Include="cd_triangulation.h" />
     <ClInclude Include="editor\editor.h" />
+    <ClInclude Include="editor\editor_state.h" />
     <ClInclude Include="game_code.h" />
     <ClInclude Include="game_render.h" />
     <ClInclude Include="game_state.h" />

@@ -25,6 +25,14 @@ namespace GameRender
 		Bottom
 	};
 
+	struct GameRenderState {
+		RenderSystem::GameRenderCommands* gameRenderCommands;
+		RenderSystem::RenderGroup* renderGroup;
+		FontId debugFontId;
+		LoadedFont* debugLoadedFont;
+		GameAssets* gameAssets;
+	};
+
 	// p0 p1 p2 p3 in clock wise order
 	void PushQuad_Core(
 		RenderSystem::GameRenderCommands* gameRenderCommands, 
@@ -674,6 +682,76 @@ namespace GameRender
 		PushLine(gameRenderCommands, renderGroup, bitmap, COLOR_GREEN, origin, yAxisEnd, cubeThickness);
 		PushLine(gameRenderCommands, renderGroup, bitmap, COLOR_BLUE, origin, zAxisEnd, cubeThickness);
 	}
+
+
+
+	void DEBUGTextLine(const char* s,
+		GameRenderState* gameRenderState,
+		glm::vec3 position, float bitmapScale)
+	{
+		// how big do we want char to be displayed
+		float DEBUG_CHAR_BITMAP_SCALE = bitmapScale;
+
+		LoadedFont* debugLoadedFont = gameRenderState->debugLoadedFont;
+		GameAssets* gameAssets = gameRenderState->gameAssets;
+
+		int ascent = 0;
+		int descent = 0;
+		int lineGap = 0;
+		stbtt_GetFontVMetrics(&gameRenderState->debugLoadedFont->fontInfo, &ascent, &descent, &lineGap);
+		float scale = DEBUG_CHAR_BITMAP_SCALE * stbtt_ScaleForPixelHeight(&debugLoadedFont->fontInfo, FONT_SCALE);
+
+		int lineGapBetweenNextBaseline = (ascent - descent + lineGap);
+		int scaledLineGap = (int)(lineGapBetweenNextBaseline * scale);
+
+		float xPos = position.x;
+		int yBaselinePos = position.y;
+
+		// This is essentially following the example from stb library
+	//	for (int i = 0; i < size; i++)
+
+		int i = 0;
+		while (s[i] != '\0')
+		{
+			int advance, leftSideBearing;
+			stbtt_GetCodepointHMetrics(&debugLoadedFont->fontInfo, s[i], &advance, &leftSideBearing);
+
+			GlyphId glyphID = GetGlyph(gameAssets, debugLoadedFont, s[i]);
+			LoadedGlyph* glyphBitmap = GetGlyph(gameAssets, glyphID);
+
+			if (s[i] == '\n')
+			{
+				xPos = position.x;
+				yBaselinePos -= scaledLineGap;
+			}
+			else
+			{
+				float height = DEBUG_CHAR_BITMAP_SCALE * glyphBitmap->bitmap.height;
+				float width = glyphBitmap->bitmap.width / (float)glyphBitmap->bitmap.height * height;
+
+				int x = xPos + glyphBitmap->bitmapXYOffsets.x;
+				int y = yBaselinePos - glyphBitmap->bitmapXYOffsets.y;
+
+				glm::vec3 leftTopPos = glm::vec3(x, y, 0.2);
+
+				GameRender::PushBitmap(
+					gameRenderState->gameRenderCommands,
+					gameRenderState->renderGroup,
+					&glyphBitmap->bitmap,
+					GameRender::COLOR_WHITE,
+					leftTopPos,
+					glm::vec3(width / 2.0, height / 2.0, 0),
+					GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Top);
+
+
+				xPos += (advance * scale);
+				xPos += scale * stbtt_GetCodepointKernAdvance(&debugLoadedFont->fontInfo, s[i], s[i + 1]);
+			}
+			i++;
+		}
+
+	}
+
 
 
 
