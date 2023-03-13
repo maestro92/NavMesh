@@ -34,10 +34,11 @@ namespace Editor
 	{
 		std::vector<glm::vec3> vertices;
 
-		float scale = 10;
+		float scale = 5;
 
 		editorState->options = new EntityOption[10];
 		EntityOption option;
+		int numOptions = 0;
 
 		option.name = "Square";		
 		vertices.clear();
@@ -46,7 +47,7 @@ namespace Editor
 		vertices.push_back(glm::vec3(1.0, 1.0, 0.0));
 		vertices.push_back(glm::vec3(-1.0, 1.0, 0.0));
 		option.vertices = vertices;
-		editorState->options[0] = option;
+		editorState->options[numOptions++] = option;
 
 
 		option.name = "Concave";
@@ -59,7 +60,7 @@ namespace Editor
 		vertices.push_back(glm::vec3(2.0, -9.0, 0.0));
 		vertices.push_back(glm::vec3(1.0, -3.0, 0.0));
 		option.vertices = vertices;
-		editorState->options[1] = option;
+		editorState->options[numOptions++] = option;
 
 
 		option.name = "4 point star";
@@ -73,7 +74,7 @@ namespace Editor
 		vertices.push_back(glm::vec3(0.0, -5.0, 0.0));
 		vertices.push_back(glm::vec3(1.0, -1.0, 0.0));
 		option.vertices = vertices;
-		editorState->options[2] = option;
+		editorState->options[numOptions++] = option;
 
 
 		option.name = "Hexagon";
@@ -85,9 +86,39 @@ namespace Editor
 		vertices.push_back(glm::vec3(-8.0, 0.0, 0.0));
 		vertices.push_back(glm::vec3(0.0, -4.0, 0.0));
 		option.vertices = vertices;
-		editorState->options[3] = option;
+		editorState->options[numOptions++] = option;
 
-		editorState->numOptions = 4;
+		
+		option.name = "Mineral";
+		vertices.clear();
+		vertices.push_back(glm::vec3(-1.0, -0.5, 0.0));
+		vertices.push_back(glm::vec3(1.0, -0.5, 0.0));
+		vertices.push_back(glm::vec3(1.0, 0.5, 0.0));
+		vertices.push_back(glm::vec3(-1.0, 0.5, 0.0));
+		option.vertices = vertices;
+		editorState->options[numOptions++] = option;
+		
+
+		option.name = "long wall";
+		vertices.clear();
+		vertices.push_back(glm::vec3(-10.0, -1.0, 0.0));
+		vertices.push_back(glm::vec3(10.0, -1.0, 0.0));
+		vertices.push_back(glm::vec3(10.0, 1.0, 0.0));
+		vertices.push_back(glm::vec3(-10.0, 1.0, 0.0));
+		option.vertices = vertices;
+		editorState->options[numOptions++] = option;
+
+
+		option.name = "tall wall";
+		vertices.clear();
+		vertices.push_back(glm::vec3(-1.0, -10.0, 0.0));
+		vertices.push_back(glm::vec3(1.0, -10.0, 0.0));
+		vertices.push_back(glm::vec3(1.0, 10.0, 0.0));
+		vertices.push_back(glm::vec3(-1.0, 10.0, 0.0));
+		option.vertices = vertices;
+		editorState->options[numOptions++] = option;
+
+		editorState->numOptions = numOptions;
 
 		for (int i = 0; i < editorState->numOptions; i++)
 		{
@@ -97,8 +128,67 @@ namespace Editor
 			}
 		}
 
+
+		// do a special initalization, becuz im doing memset(0), so lots of inialization is messedup
+		editorState->coreData = new EditorStateData();
 	}
 
+
+	void RenderSpecialButton(EditorState* editorState,
+		GameInputState* gameInputState,
+		GameRender::GameRenderState* gameRenderState,
+		glm::vec3 screenMousePos,
+		int x, int y,
+		int width, int height,
+		std::string s, EditorEvent editorEventToPublish)
+	{
+		RenderSystem::GameRenderCommands* gameRenderCommands = gameRenderState->gameRenderCommands;
+		RenderSystem::RenderGroup* renderGroup = gameRenderState->renderGroup;
+		GameAssets* gameAssets = gameRenderState->gameAssets;
+
+		BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
+		LoadedBitmap* defaultBitmap = GetBitmap(gameAssets, bitmapID);
+
+		glm::vec3 profileRectMin = glm::vec3(x, y, 0);
+		glm::vec3 profileRectMax = glm::vec3(x + width, y + height, 0);
+		glm::vec3 halfDim = (profileRectMax - profileRectMin) / 2.0f;
+
+		bool isHighlighted = false;
+		bool isPressed = false;
+		if (Collision::IsPointInsideRect({ profileRectMin, profileRectMax }, screenMousePos))
+		{
+			editorState->consumingMouse = true;
+			isHighlighted = true;
+			if (gameInputState->mouseButtons[(int)PlatformMouseButton_Left].endedDown)
+			{
+				isPressed = true;
+				
+				if (gameInputState->mouseButtons[(int)PlatformMouseButton_Left].changed)
+				{
+					editorState->coreData->editorEvents.push(editorEventToPublish);
+				}
+			}
+		}
+
+		if (isPressed)
+		{
+			GameRender::PushBitmap(gameRenderCommands, renderGroup, defaultBitmap, SELECTED, profileRectMin,
+				halfDim, GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Bottom);
+		}
+		else if (isHighlighted)
+		{
+			GameRender::PushBitmap(gameRenderCommands, renderGroup, defaultBitmap, HIGHLIGHTED, profileRectMin,
+				halfDim, GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Bottom);
+		}
+		else
+		{
+			GameRender::PushBitmap(gameRenderCommands, renderGroup, defaultBitmap, REGULAR, profileRectMin,
+				halfDim, GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Bottom);
+		}
+
+		glm::vec3 pos = profileRectMin;
+		GameRender::DEBUGTextLine(s.c_str(), gameRenderState, pos, 1);
+	}
 
 	void RenderChoice(
 		EditorState* editorState,
@@ -118,16 +208,12 @@ namespace Editor
 		glm::vec3 profileRectMax = glm::vec3(x + width, y + height, 0);
 		glm::vec3 halfDim = (profileRectMax - profileRectMin) / 2.0f;
 
-
 		if (Collision::IsPointInsideRect({ profileRectMin, profileRectMax }, screenMousePos))
 		{
+			editorState->consumingMouse = true;
 			if (gameInputState->mouseButtons[(int)PlatformMouseButton_Left].endedDown && 
 				gameInputState->mouseButtons[(int)PlatformMouseButton_Left].changed)
 			{
-//				std::cout << "inside here" << std::endl;
-
-				if(gameInputState->mouseButtons)
-
 				if (editorState->selected != NULL && entityOption == editorState->selected)
 				{
 					editorState->selected = NULL;
@@ -136,7 +222,6 @@ namespace Editor
 				{
 					editorState->selected = entityOption;
 				}
-
 			}
 			else
 			{
@@ -165,7 +250,15 @@ namespace Editor
 		GameRender::DEBUGTextLine(entityOption->name.c_str(), gameRenderState, pos, 1);
 	}
 
-
+	void IncrementButtonIndex(int& indexX, int& indexY, int numCol)
+	{
+		indexX++;
+		if (indexX == numCol)
+		{
+			indexY++;
+			indexX = 0;
+		}
+	}
 
 	void TickAndRenderEditorMenu(GameMemory* gameMemory,
 		GameInputState* gameInputState,
@@ -187,13 +280,16 @@ namespace Editor
 
 		glm::vec3 screenMousePos = UIUtil::PlatformMouseToScreenRenderPos(gameRenderCommands, gameInputState->mousePos);
 
-		int numCol = 2;
-		int numRow = (editor->numOptions + (numCol - 1)) / numCol;		
-		
-		int optionWidth = 200;
-		int optionHeight = 50;
+		// triangulate and save 
+		int numSpecialButtons = 2; 
 
-		int startX = halfWidth - numCol * optionWidth;
+		int numCol = 2;
+		int numRow = (editor->numOptions + numSpecialButtons + (numCol - 1)) / numCol;
+		
+		int btnWidth = 200;
+		int btnHeight = 50;
+
+		int startX = halfWidth - numCol * btnWidth;
 		int startY = halfHeight;
 
 		int curX = startX;
@@ -201,40 +297,66 @@ namespace Editor
 
 		editor->highlighted = NULL;
 
-		// std::cout << ">>>>>	TickAndRenderEditorMenu" << std::endl;
-
 		int entityOptionIndex = 0;
-		for (int y = 0; y < numCol; y++)
-		{
-			curY = startY - optionHeight * y;
+		editor->consumingMouse = false;
 
-			for (int x = 0; x < numRow; x++)
+		/*
+		for (int y = 0; y < numRow; y++)
+		{
+			curY = startY - btnHeight * y;
+
+			for (int x = 0; x < numCol; x++)
 			{
 				if (entityOptionIndex >= editor->numOptions)
 				{
 					break;
 				}
 
-				curX = startX + optionWidth * x;
+				curX = startX + btnWidth * x;
 
 				EntityOption* entityOption = &editor->options[entityOptionIndex];
 
 				// in UI render space, y starts from bottom
 				int minX = curX;
-				int minY = curY - optionHeight;
-				RenderChoice(editor, gameInputState, gameRenderSetup, screenMousePos, entityOption, curX, minY, optionWidth, optionHeight);
+				int minY = curY - btnHeight;
+				RenderChoice(editor, gameInputState, gameRenderSetup, screenMousePos, entityOption, curX, minY, btnWidth, btnHeight);
 				entityOptionIndex++;
 			}
 		}
+		*/
+		int indexX = 0, indexY = 0;
+		for (int i = 0; i < editor->numOptions; i++)
+		{
+			curX = startX + btnWidth * indexX;
+			curY = startY - btnHeight * (indexY + 1);
+
+			EntityOption* entityOption = &editor->options[i];
+			RenderChoice(editor, gameInputState, gameRenderSetup, screenMousePos, entityOption, curX, curY, btnWidth, btnHeight);
+
+			IncrementButtonIndex(indexX, indexY, numCol);
+		}
+
+		curX = startX + btnWidth * indexX;
+		curY = startY - btnHeight * (indexY + 1);
+		RenderSpecialButton(editor, gameInputState, gameRenderSetup, screenMousePos, 
+			curX, curY, btnWidth, btnHeight, "Save", EditorEvent::SAVE);
+		IncrementButtonIndex(indexX, indexY, numCol);
+
+		curX = startX + btnWidth * indexX;
+		curY = startY - btnHeight * (indexY + 1);
+		RenderSpecialButton(editor, gameInputState, gameRenderSetup, screenMousePos, 
+			curX, curY, btnWidth, btnHeight, "Triangulate", EditorEvent::TRIANGULATE);
+		IncrementButtonIndex(indexX, indexY, numCol);
+
 
 		float thickness = 10;
 		curX = startX;
 		curY = startY;
-		float lineHeight = numRow * optionHeight;
+		float lineHeight = numRow * btnHeight;
 
 		for (int x = 0; x < numCol; x++)
 		{
-			curX = startX + optionWidth * x;
+			curX = startX + btnWidth * x;
 
 			glm::vec3 pos = glm::vec3(curX, curY, 0);
 			glm::vec3 end = pos;
@@ -246,10 +368,10 @@ namespace Editor
 		
 		curX = startX;
 		curY = startY;
-		float lineWidth = numCol * optionWidth;
+		float lineWidth = numCol * btnWidth;
 		for (int y = 0; y < numRow; y++)
 		{
-			curY = startY - optionHeight * y;
+			curY = startY - btnHeight * y;
 
 			glm::vec3 pos = glm::vec3(curX, curY, 0);
 			glm::vec3 end = pos;
@@ -257,7 +379,7 @@ namespace Editor
 
 			GameRender::RenderLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_BLUE, pos, end, thickness);
 		}
-		
+
 	}
 
 };

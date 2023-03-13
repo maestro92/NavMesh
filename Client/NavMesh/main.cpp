@@ -276,6 +276,7 @@ void SDLProcessPendingEvents(GameInputState* game_input_state)
 
 				bool altKeyIsDown = (event.key.keysym.mod & KMOD_ALT);
 				bool shiftKeyIsDown = (event.key.keysym.mod & KMOD_SHIFT);
+				bool ctrlKeyIsDown = (event.key.keysym.mod & KMOD_CTRL);
 				bool isDown = (event.key.state == SDL_PRESSED);
 
 				if (event.key.repeat == 0)
@@ -290,7 +291,18 @@ void SDLProcessPendingEvents(GameInputState* game_input_state)
 					}
 					else if (keyCode == SDLK_s)
 					{
-						SDLProcessKeyboardEvent(&game_input_state->moveDown, isDown);
+						if (ctrlKeyIsDown)
+						{
+							std::cout << "save is down before " << game_input_state->save.endedDown << " " << game_input_state->save.changed << std::endl;
+							SDLProcessKeyboardEvent(&game_input_state->save, isDown);
+
+							std::cout << "save is down after " << game_input_state->save.endedDown << " " << game_input_state->save.changed << std::endl;
+
+						}
+						else
+						{
+							SDLProcessKeyboardEvent(&game_input_state->moveDown, isDown);
+						}
 					}
 					else if (keyCode == SDLK_d)
 					{
@@ -575,6 +587,8 @@ int main(int argc, char *argv[])
 		{
 			newInput->dtForFrame = targetSecondsPerFrame;
 			
+			newInput->save = oldInput->save;
+			newInput->save.changed = false;
 
 			// process keyboard events
 			SDLProcessPendingEvents(newInput);
@@ -593,7 +607,7 @@ int main(int argc, char *argv[])
 				SDL_BUTTON_X2MASK,
 			};
 
-			// didn't fully understand this part
+			// didn't fully understand the halfTransitionCount part
 			
 			for (int i = 0; i < PlatformMouseButton_Count; i++)
 			{

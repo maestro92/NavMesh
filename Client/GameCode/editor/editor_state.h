@@ -2,7 +2,8 @@
 
 #include "../../PlatformShared/platform_shared.h"
 #include <string>
-#include <vector>
+// #include <vector>
+#include <queue>
 
 struct EntityOption
 {
@@ -10,6 +11,15 @@ struct EntityOption
 	std::vector<glm::vec3> vertices;
 };
 
+enum EditorEvent {
+	SAVE,
+	TRIANGULATE
+};
+
+struct EditorStateData
+{
+	std::queue<EditorEvent> editorEvents;
+};
 
 struct EditorState {
 	EntityOption* options;
@@ -17,5 +27,9 @@ struct EditorState {
 
 	EntityOption* selected;
 	EntityOption* highlighted;
+	bool consumingMouse;
+
+	// get rid of this indirection
+	EditorStateData* coreData;
 };
 

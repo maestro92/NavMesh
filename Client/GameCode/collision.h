@@ -18,6 +18,11 @@ namespace Collision
 		return rect.min.x <= point.x && point.x < rect.max.x&& rect.min.y <= point.y && point.y < rect.max.y;
 	}
 
+	bool IsPointInsidePolygon(std::vector<glm::vec3> polygon, glm::vec3 point)
+	{
+		return false;
+	}
+
 	/*
 	// triangle is counter clockswise
 	bool IsPointInsideTriangle2(glm::vec3 testPoint, glm::vec3 p0, glm::vec3 p1, glm::vec3 p2)

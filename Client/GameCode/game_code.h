@@ -10,6 +10,7 @@
 #include "../NavMesh/asset.h"
 #include "debug.h"
 #include "game_render.h"
+#include "game_io.h"
 
 #include <iostream>
 #include "editor/editor.h"
@@ -443,6 +444,30 @@ void RenderEntityStaticModel(
 	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Wall);
 	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
 
+	float lineThickness = 2;
+	glm::vec3 translate = entity->pos;
+	for (int i = 0; i < entity->vertices.size(); i++)
+	{
+		glm::vec3 pos0 = entity->vertices[i];
+		glm::vec3 pos1;
+		if (i == entity->vertices.size() - 1)
+		{
+			pos1 = entity->vertices[0];
+		}
+		else
+		{
+			pos1 = entity->vertices[i + 1];
+		}
+
+		pos0 += translate;
+		pos1 += translate;
+
+		GameRender::RenderLine(
+			gameRenderCommands, renderGroup, gameAssets, GameRender::COLOR_RED, pos0, pos1, lineThickness);
+	}
+
+
+	/*
 	for (int i = 0; i < entity->model.size(); i++)
 	{
 		GameRender::PushQuad(gameRenderCommands, renderGroup, bitmap,
@@ -451,6 +476,7 @@ void RenderEntityStaticModel(
 			entity->model[i].vertices[2],
 			entity->model[i].vertices[3], GameRender::COLOR_WHITE);
 	}
+	*/
 }
 
 void RenderEntityGroundModel(
@@ -556,12 +582,56 @@ void RenderVoronoiDebug(RenderSystem::GameRenderCommands* gameRenderCommands,
 	}
 }
 
-void RenderEntityOption(
+void RenderWorldBorders(
+	GameRender::GameRenderState* gameRenderState,
+	World* world)
+{
+	RenderSystem::GameRenderCommands* gameRenderCommands = gameRenderState->gameRenderCommands;
+	GameAssets* gameAssets = gameRenderState->gameAssets;
+	RenderSystem::RenderGroup* group = gameRenderState->renderGroup;
+	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
+	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
+
+	std::vector<glm::vec3> worldBorders;
+
+	worldBorders.push_back(glm::vec3(world->min.x, world->min.y, 0));
+	worldBorders.push_back(glm::vec3(world->max.x, world->min.y, 0));
+	worldBorders.push_back(glm::vec3(world->max.x, world->max.y, 0));
+	worldBorders.push_back(glm::vec3(world->min.x, world->max.y, 0));
+
+	float lineThickness = 2;
+	for (int i = 0; i < worldBorders.size(); i++)
+	{
+		GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_WHITE, worldBorders[i], lineThickness);
+
+		glm::vec3 pos0 = worldBorders[i];
+		glm::vec3 pos1;
+		if (i == worldBorders.size() - 1)
+		{
+			pos1 = worldBorders[0];
+		}
+		else
+		{
+			pos1 = worldBorders[i + 1];
+		}
+
+		GameRender::RenderLine(
+			gameRenderCommands, group, gameAssets, GameRender::COLOR_WHITE, pos0, pos1, lineThickness);
+	}
+}
+
+
+void RenderSelectedEntityOption(
 	EditorState* editor,
 	GameRender::GameRenderState* gameRenderState,
 	GameInputState* gameInputState,
 	GameState* gameState)
 {
+	if (editor->consumingMouse)
+	{
+		return;
+	}
+
 	if (editor->selected != NULL)
 	{
 
@@ -592,8 +662,6 @@ void RenderEntityOption(
 			EntityOption* option = editor->selected;
 			for (int i = 0; i < option->vertices.size(); i++)
 			{
-				GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, option->vertices[i], 2);
-
 				glm::vec3 pos0 = option->vertices[i];
 				glm::vec3 pos1;
 				if (i == option->vertices.size() - 1)
@@ -612,6 +680,12 @@ void RenderEntityOption(
 				GameRender::RenderLine(
 					gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, pos0, pos1, lineThickness);
 
+			}
+
+			if (gameInputState->mouseButtons[(int)PlatformMouseButton_Left].endedDown &&
+				gameInputState->mouseButtons[(int)PlatformMouseButton_Left].changed)
+			{
+				WorldManager::AddObstacle(&gameState->world, point, option->vertices);
 			}
 		}
 
@@ -807,6 +881,26 @@ glm::vec3 UpdateEntityViewDirection(Entity* entity, GameInputState* gameInputSta
 	return newViewDir;
 }
 
+void InteractWithWorldEntities(GameInputState* gameInputState, World* world)
+{
+	for (int i = 0; i < world->numEntities; i++)
+	{
+		Entity* entity = &world->entities[i];
+		switch (entity->flag)
+		{
+			case EntityFlag::OBSTACLE:
+	/*
+				if ()
+				{
+
+				}
+	*/
+				break;
+		}
+	}
+
+}
+
 
 void WorldTickAndRender(GameState* gameState, TransientState* transientState, GameAssets* gameAssets,
 	GameInputState* gameInputState, RenderSystem::GameRenderCommands* gameRenderCommands, glm::ivec2 windowDimensions, DebugModeState* debugModeState)
@@ -901,7 +995,6 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 	globalDebugCameraMat = cameraMatrix;
 
 	glm::mat4 cameraTransform = glm::translate(controlledEntity->pos);// *cameraRot;
-	float dim = 20;
 	glm::mat4 cameraProj = glm::perspective(45.0f, windowDimensions.x / (float)windowDimensions.y, 0.5f, 5000.0f);
 
 	world->cameraSetup.proj = cameraProj;
@@ -929,12 +1022,15 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 		Entity* entity = &world->entities[i];
 		switch (entity->flag)
 		{
-			case EntityFlag::STATIC:
-				// RenderEntityStaticModel(gameRenderCommands, &group, gameAssets, entity);
+			case EntityFlag::STATIC:				
 				break;
 
 			case EntityFlag::GROUND:
 				RenderEntityGroundModel(gameRenderCommands, &group, gameAssets, entity);
+				break;
+
+			case EntityFlag::OBSTACLE:
+				RenderEntityStaticModel(gameRenderCommands, &group, gameAssets, entity);
 				break;
 
 			case EntityFlag::PLAYER:
@@ -947,6 +1043,10 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 				break;
 		}	
 	}
+
+
+
+
 
 	
 	for (int i = 0; i < world->navMeshPolygons.size(); i++)
@@ -1073,36 +1173,43 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 	RenderCDTriangulationDebug(&gameRenderState, world->cdTriangulationdebug);
 
 	EditorState* editor = &gameState->editorState;
-	RenderEntityOption(editor, &gameRenderState, gameInputState, gameState);
+	RenderSelectedEntityOption(editor, &gameRenderState, gameInputState, gameState);
 
-	/*
-	EditorState* editor = &gameState->editorState;
-	if (editor->selected != NULL)
-	{
-		glm::vec3 rayOrigin = gameState->debugCameraEntity.pos;
-		glm::vec3 rayDir = MousePosToMousePickingRay(gameState->world.cameraSetup, gameRenderCommands, gameInputState->mousePos);
+	// render world borders
+	
+	InteractWithWorldEntities(gameInputState, world);
 
-		glm::vec3 point;
 
-		Collision::Plane plane;
-		plane.dist = 0;
-		plane.normal = glm::vec3(0, 0, 1);
-
-		Collision::Ray ray = { rayOrigin, rayDir };
-
-		if (Collision::RayPlaneIntersection3D(
-			plane, ray, point))
-		{
-
-			
-		}
-	}
-*/
+	RenderWorldBorders(&gameRenderState, world);
 
 	GameRender::RenderCoordinateSystem(gameRenderCommands, &group, gameAssets);
 }
 
 
+
+void SaveMap(World* world)
+{
+
+	std::cout << "saving the map " << std::endl;
+	/*
+	ofstream myfile;
+	myfile.open("data.txt");
+
+	Object graphObj;
+
+	Array inputPointsArray;
+	for (int i = 0; i < inputPoints.size(); i++)
+	{
+		Object vObj = serializePoints(inputPoints[i]);
+		inputPointsArray.push_back(vObj);
+	}
+
+	graphObj.push_back(Pair("inputPoints", inputPointsArray));
+
+	write(graphObj, myfile, pretty_print);
+	myfile.close();
+	*/
+}
 
 
 
@@ -1203,6 +1310,24 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 	}
 	*/
 
+
+	EditorState* editor = &gameState->editorState;
+
+	while (!editor->coreData->editorEvents.empty())
+	{
+		EditorEvent editorEvent = editor->coreData->editorEvents.front();
+		editor->coreData->editorEvents.pop();
+		if (editorEvent == EditorEvent::SAVE)
+		{
+			SaveMap(&gameState->world);
+		}
+		else if (editorEvent == EditorEvent::TRIANGULATE)
+		{
+
+		}
+	}
+
+
 	WorldTickAndRender(gameState, transientState, transientState->assets, gameInputState, gameRenderCommands, windowDimensions, debugModeState);
 
 
@@ -1279,6 +1404,12 @@ void RestartCollation(DebugState* debugState)
 	debugState->numFrames = 0;
 	debugState->collationFrame = 0;
 }
+
+void LoadMap(char* filename)
+{
+
+}
+
 
 
 
@@ -1426,6 +1557,11 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 
 
 	GameRender::DEBUGTextLine(buffer, &gameRenderState, startPos, 1);
+
+	if (gameInputState->save.endedDown && gameInputState->save.changed)
+	{
+		SaveMap(&gameState->world);
+	}
 
 	/*
 	// render the points 

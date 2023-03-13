@@ -26,16 +26,20 @@ enum EntityFlag
 {
 	STATIC,
 	GROUND,
-	PLAYER
+	PLAYER,
+	OBSTACLE
 };
 
 struct Entity
 {
 	EntityFlag flag;
-
+	
+	int id;
 	glm::vec3 pos;
 	glm::vec3 dim;
 	glm::vec3 velocity;
+
+	std::vector<glm::vec3> vertices;
 
 	// For AABB physics, in object space
 	glm::vec3 min;
@@ -87,15 +91,25 @@ struct WorldCameraSetup
 	glm::mat4 translation;
 };
 
+struct WorldSafeData
+{
+	std::vector<std::vector<glm::vec3>> obstacles;
+};
 
 struct World
 {
 	MemoryArena memoryArena;
 
+	glm::vec3 min;
+	glm::vec3 max;
+
 	Entity entities[1024];
 	int numEntities;
 	int maxEntityCount;
 
+//	std::vector<std::vector<glm::vec3>> obstacles;
+	WorldSafeData* data;
+//	std::vector<int> obstacles2;
 
 	int startPlayerEntityId;
 	int maxPlayerEntity;
@@ -117,13 +131,21 @@ struct World
 	WorldCameraSetup cameraSetup;
 };
 
+void initEntity(Entity* entity, glm::vec3 pos, EntityFlag entityFlag, std::vector<glm::vec3> vertices)
+{
+	entity->pos = pos;
+	entity->vertices = vertices;
+	entity->flag = entityFlag;
+}
 
+/*
 void initEntity(Entity* entity, glm::vec3 pos, EntityFlag entityFlag, std::vector<Face> faces)
 {
 	entity->pos = pos;
 	entity->model = faces;
 	entity->flag = entityFlag;
 }
+*/
 
 void initPlayerEntity(Entity* entity, glm::vec3 pos)
 {
@@ -381,15 +403,16 @@ void CreateAreaA(World* world)
 	Entity* entity = NULL;
 	std::vector<Face> faces;
 
+	
 	// lower level
 	// Box
-	entity = &world->entities[world->numEntities++];
+	// entity = &world->entities[world->numEntities++];
 	glm::vec3 pos;
 	glm::vec3 dim;
 	glm::vec3 min;
 	glm::vec3 max;
 
-
+	/*
 	std::vector<NavMesh::NavMeshPolygon> holes;
 	NavMesh::NavMeshPolygon polygon;
 	NavMesh::NavMeshPolygon groundPolygon;
@@ -406,6 +429,7 @@ void CreateAreaA(World* world)
 	glm::vec3 polyMeshMin = glm::vec3(-100, -100, 0);
 
 // groundPolygon = NavMesh::CreatePolygonFromMinMax(polyMeshMin, max);
+*/
 
 	// https://technology.cpm.org/general/3dgraph/
 	// https://oercommons.s3.amazonaws.com/media/courseware/relatedresource/file/imth-6-1-9-6-1-coordinate_plane_plotter/index.html
@@ -424,14 +448,15 @@ void CreateAreaA(World* world)
 	vertices.push_back(glm::vec3(2, 3, 0));
 	*/
 
-
-	float scale = 20;
 	/*
 	vertices.push_back(glm::vec3(5, -4, 0));
 	vertices.push_back(glm::vec3(9, 3, 0));
 	vertices.push_back(glm::vec3(4, 9, 0));
 	*/
 	
+	
+	float scale = 10;
+
 	vertices.push_back(glm::vec3(2, 4, 0));
 	vertices.push_back(glm::vec3(-4, 6, 0));
 	vertices.push_back(glm::vec3(-9, 8, 0));
@@ -497,7 +522,7 @@ void CreateAreaA(World* world)
 	*/
 
 
-	groundPolygon.vertices = vertices;
+	// groundPolygon.vertices = vertices;
 
 
 //	initEntity(entity, pos, GROUND, faces);
@@ -563,7 +588,11 @@ void CreateAreaA(World* world)
 
 
 	glm::ivec2 mapSize = glm::ivec2(256, 256);
-	CDTriangulation::ConstrainedDelaunayTriangulation(groundPolygon.vertices, holesVertices, mapSize, world->cdTriangulationdebug);
+	CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holesVertices, mapSize, world->cdTriangulationdebug);
+
+	world->min = glm::vec3(0);
+	world->max = glm::vec3(mapSize.x, mapSize.y, 0);
+
 	// 
 	/*
 	// setp 5, triangulate the whole thing
@@ -602,6 +631,27 @@ void CreateAreaA(World* world)
 	// world->navMeshPolygons = { groundPolygon };
 }
 
+namespace WorldManager
+{
+	void AddObstacle(World* world, glm::vec3 pos, std::vector<glm::vec3> vertices)
+	{
+		
+		// std::cout << "adding obstacle" << std::endl;
+		int id = world->numEntities++;
+		// std::cout << "id " << id << std::endl;
+		Entity* entity = &world->entities[id];
+		entity->id = id;
+		initEntity(entity, pos, OBSTACLE, vertices);
+		world->data->obstacles.push_back(vertices);
+
+
+
+		// std::cout << "made it to the end" << std::endl;
+		
+	}
+};
+
+
 
 
 // Essentially recreating a simplified version of dust2
@@ -623,7 +673,7 @@ void initWorld(World* world)
 	world->cdTriangulationdebug = new CDTriangulation::DebugState();
 
 
-
+	world->data = new WorldSafeData();
 
 
 	float wallHeight = 50;
@@ -638,7 +688,9 @@ void initWorld(World* world)
 
 
 	world->startPlayerEntityId = world->numEntities;
-	Entity* entity = &world->entities[world->numEntities++];
+	int index = world->numEntities++;
+	Entity* entity = &world->entities[index];
+	entity->id = index;
 	glm::vec3 pos = glm::vec3(-50, 11, -12);
 //	glm::vec3 pos = glm::vec3(-50, 1, -50);
 	initPlayerEntity(entity, pos);

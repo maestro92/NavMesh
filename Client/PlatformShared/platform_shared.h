@@ -130,7 +130,7 @@ struct GameInputState
 		GameButtonState moveUp2;
 		GameButtonState moveDown2;
 	*/
-
+		GameButtonState save;
 		bool drawingShapeMode;
 	};
 
