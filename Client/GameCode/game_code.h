@@ -881,15 +881,46 @@ glm::vec3 UpdateEntityViewDirection(Entity* entity, GameInputState* gameInputSta
 	return newViewDir;
 }
 
-void InteractWithWorldEntities(GameInputState* gameInputState, World* world)
+void InteractWithWorldEntities(GameState* gameState, GameInputState* gameInputState, RenderSystem::GameRenderCommands* gameRenderCommands, World* world)
 {
+	glm::vec3 rayOrigin = gameState->debugCameraEntity.pos;
+	glm::vec3 rayDir = MousePosToMousePickingRay(gameState->world.cameraSetup, gameRenderCommands, gameInputState->mousePos);
+
+
+
+	Collision::Plane plane;
+	plane.dist = 0;
+	plane.normal = glm::vec3(0, 0, 1);
+
+	Collision::Ray ray = { rayOrigin, rayDir };
+	glm::vec3 intersectionPoint;
+
+	if (!Collision::RayPlaneIntersection3D(
+		plane, ray, intersectionPoint))
+	{
+		return;
+	}
+
 	for (int i = 0; i < world->numEntities; i++)
 	{
 		Entity* entity = &world->entities[i];
 		switch (entity->flag)
 		{
 			case EntityFlag::OBSTACLE:
-	/*
+	
+
+				std::vector<glm::vec3> absolutePos;
+
+				for (int j = 0; j < entity->vertices.size(); j++)
+				{
+					absolutePos.push_back(entity->pos + entity->vertices[j]);
+				}
+
+				if (Collision::IsPointInsidePolygon2D(intersectionPoint, absolutePos))
+				{
+					std::cout << "entity id " << entity->id << std::endl;
+				}
+		/*
 				if ()
 				{
 
@@ -1177,7 +1208,7 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 
 	// render world borders
 	
-	InteractWithWorldEntities(gameInputState, world);
+	InteractWithWorldEntities(gameState, gameInputState, gameRenderCommands, world);
 
 
 	RenderWorldBorders(&gameRenderState, world);
@@ -1323,7 +1354,7 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		}
 		else if (editorEvent == EditorEvent::TRIANGULATE)
 		{
-
+			std::cout << "Triangulate" << std::endl;
 		}
 	}
 

@@ -324,4 +324,54 @@ namespace Collision
 	{
 		return GetDeterminant(a - point, b - point) < 0;
 	}
+
+
+	// https://erich.realtimerendering.com/ptinpoly/
+	// assume polygon is counter clockwise
+	bool IsPointInsidePolygon2D(glm::vec3 point, std::vector<glm::vec3> polygon)
+	{
+		int windingNumber = 0;
+		glm::vec2 point2D = glm::vec2(point.x, point.y);
+
+		for (int i = 0; i < polygon.size(); i++)
+		{
+			glm::vec2 v0 = glm::vec2(polygon[i].x, polygon[i].y);
+			glm::vec2 v1;
+			if (i == polygon.size() - 1)
+			{
+				v1 = glm::vec2(polygon[0].x, polygon[0].y);
+			}
+			else
+			{
+				v1 = glm::vec2(polygon[i+1].x, polygon[i+1].y);
+			}
+
+
+			// an upward crossing
+			if (v0.y <= point2D.y)
+			{
+				if (v1.y > point2D.y)
+				{
+					if (IsPointOnTheLeftOfLineSegment2D(point2D, v0, v1) > 0)
+					{
+						windingNumber++;
+					}
+				}
+			}
+			else
+			{
+				if (v1.y <= point2D.y)
+				{
+					if (IsPointOnTheLeftOfLineSegment2D(point2D, v0, v1) < 0)
+					{
+						windingNumber--;
+					}
+				}
+			}
+		}
+
+
+		return windingNumber;
+	}
+
 }
