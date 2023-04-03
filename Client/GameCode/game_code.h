@@ -938,6 +938,7 @@ void InteractWithWorldEntities(GameState* gameState, GameInputState* gameInputSt
 						{
 							std::cout << "dragged entity " << std::endl;
 							editorState->draggedEntity = entity;
+							editorState->draggedPivot = intersectionPoint - editorState->draggedEntity->pos;
 						}
 
 					}					
@@ -949,7 +950,7 @@ void InteractWithWorldEntities(GameState* gameState, GameInputState* gameInputSt
 
 	if (editorState->draggedEntity != NULL)
 	{
-		editorState->draggedEntity->pos = intersectionPoint;
+		editorState->draggedEntity->pos = intersectionPoint - editorState->draggedPivot;
 	}
 
 

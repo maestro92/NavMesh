@@ -34,6 +34,7 @@ struct EditorState {
 	EditorStateData* coreData;
 
 	Entity* draggedEntity;
+	glm::vec3 draggedPivot;
 
 	bool IsInSelectionMode()
 	{
