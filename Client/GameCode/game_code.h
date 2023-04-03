@@ -886,7 +886,7 @@ void InteractWithWorldEntities(GameState* gameState, GameInputState* gameInputSt
 	glm::vec3 rayOrigin = gameState->debugCameraEntity.pos;
 	glm::vec3 rayDir = MousePosToMousePickingRay(gameState->world.cameraSetup, gameRenderCommands, gameInputState->mousePos);
 
-
+	EditorState* editorState = &gameState->editorState;
 
 	Collision::Plane plane;
 	plane.dist = 0;
@@ -895,11 +895,19 @@ void InteractWithWorldEntities(GameState* gameState, GameInputState* gameInputSt
 	Collision::Ray ray = { rayOrigin, rayDir };
 	glm::vec3 intersectionPoint;
 
+	if (editorState->IsInSelectionMode())
+	{
+		return;
+	}
+
+
 	if (!Collision::RayPlaneIntersection3D(
 		plane, ray, intersectionPoint))
 	{
 		return;
 	}
+
+//	std::cout << "intersectionPoint " << intersectionPoint.x << " " << intersectionPoint.y << " " << intersectionPoint.z << std::endl;
 
 	for (int i = 0; i < world->numEntities; i++)
 	{
@@ -908,7 +916,6 @@ void InteractWithWorldEntities(GameState* gameState, GameInputState* gameInputSt
 		{
 			case EntityFlag::OBSTACLE:
 	
-
 				std::vector<glm::vec3> absolutePos;
 
 				for (int j = 0; j < entity->vertices.size(); j++)
@@ -918,17 +925,33 @@ void InteractWithWorldEntities(GameState* gameState, GameInputState* gameInputSt
 
 				if (Collision::IsPointInsidePolygon2D(intersectionPoint, absolutePos))
 				{
-					std::cout << "entity id " << entity->id << std::endl;
-				}
-		/*
-				if ()
-				{
+				//	std::cout << "entity id " << entity->id << std::endl;
 
+					if (gameInputState->DidMouseLeftButtonClicked())
+					{
+						if (editorState->draggedEntity == entity)
+						{
+							std::cout << "NULL " << std::endl;
+							editorState->draggedEntity = NULL;
+						}
+						else
+						{
+							std::cout << "dragged entity " << std::endl;
+							editorState->draggedEntity = entity;
+						}
+
+					}					
 				}
-	*/
+
 				break;
 		}
 	}
+
+	if (editorState->draggedEntity != NULL)
+	{
+		editorState->draggedEntity->pos = intersectionPoint;
+	}
+
 
 }
 
@@ -1570,8 +1593,6 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 
 
 
-
-
 	glm::vec3 rayDir = MousePosToMousePickingRay(gameState->world.cameraSetup, gameRenderCommands, glm::ivec2(halfWidth, halfHeight));
 	size = sprintf(ptr, "rayDir %f %f %f\n", rayDir.x, rayDir.y, rayDir.z);
 	ptr += size;
@@ -1581,9 +1602,21 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 		CDTriangulation::DelaunayTriangle* trig = gameState->world.cdTriangulationdebug->highlightedTriangle;
 
 		size = sprintf(ptr, "trig %d neighbors %d %d %d\n", trig->id, trig->neighbors[0], trig->neighbors[1], trig->neighbors[2]);
+		ptr += size;
+	}
+	
 
+
+	if (gameState->editorState.draggedEntity != NULL)
+	{
+		size = sprintf(ptr, "dragging entity %d\n", gameState->editorState.draggedEntity->id);
+	}
+	else
+	{
+		size = sprintf(ptr, "Not dragging entity\n");
 	}
 	ptr += size;
+
 
 
 

@@ -137,6 +137,18 @@ struct GameInputState
 	GameButtonState mouseButtons[PlatformMouseButton_Count];
 	glm::ivec2 mousePos;
 
+	bool IsMouseLeftButtonDown() 
+	{
+		return mouseButtons[GameInputMouseButton::PlatformMouseButton_Left].endedDown;
+	}
+
+	bool DidMouseLeftButtonClicked() {
+		return !mouseButtons[GameInputMouseButton::PlatformMouseButton_Left].endedDown && 
+			mouseButtons[GameInputMouseButton::PlatformMouseButton_Left].changed;
+	}
+
+
+
 	/*
 	// For debugging only;
 	double mouseX, mouseY, mouseZ;

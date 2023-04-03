@@ -159,15 +159,16 @@ namespace Editor
 		{
 			editorState->consumingMouse = true;
 			isHighlighted = true;
+			
 			if (gameInputState->mouseButtons[(int)PlatformMouseButton_Left].endedDown)
 			{
 				isPressed = true;
-				
-				if (gameInputState->mouseButtons[(int)PlatformMouseButton_Left].changed)
-				{
-					editorState->coreData->editorEvents.push(editorEventToPublish);
-				}
 			}
+
+			if (gameInputState->DidMouseLeftButtonClicked())
+			{
+				editorState->coreData->editorEvents.push(editorEventToPublish);
+			}			
 		}
 
 		if (isPressed)

@@ -316,13 +316,12 @@ namespace Collision
 	// a 2D cross product
 	bool IsPointOnTheLeftOfLineSegment2D(glm::vec2 point, glm::vec2 a, glm::vec2 b)
 	{
-//		float determinant = (a.x - point.x) * (b.y - point.y) - (a.y - point.y) * (b.x - point.x);
-		return GetDeterminant(a-point, b-point) > 0;
+		return GetDeterminant(b-a, point-a) > 0;
 	}
 
 	bool IsPointOnTheRightOfLineSegment2D(glm::vec2 point, glm::vec2 a, glm::vec2 b)
 	{
-		return GetDeterminant(a - point, b - point) < 0;
+		return GetDeterminant(b-a, point-a) < 0;
 	}
 
 
@@ -352,7 +351,7 @@ namespace Collision
 			{
 				if (v1.y > point2D.y)
 				{
-					if (IsPointOnTheLeftOfLineSegment2D(point2D, v0, v1) > 0)
+					if (IsPointOnTheLeftOfLineSegment2D(point2D, v0, v1))
 					{
 						windingNumber++;
 					}
@@ -362,7 +361,7 @@ namespace Collision
 			{
 				if (v1.y <= point2D.y)
 				{
-					if (IsPointOnTheLeftOfLineSegment2D(point2D, v0, v1) < 0)
+					if (IsPointOnTheRightOfLineSegment2D(point2D, v0, v1))
 					{
 						windingNumber--;
 					}

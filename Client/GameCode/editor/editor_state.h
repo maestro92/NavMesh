@@ -4,6 +4,7 @@
 #include <string>
 // #include <vector>
 #include <queue>
+#include "../world.h"
 
 struct EntityOption
 {
@@ -31,5 +32,12 @@ struct EditorState {
 
 	// get rid of this indirection
 	EditorStateData* coreData;
+
+	Entity* draggedEntity;
+
+	bool IsInSelectionMode()
+	{
+		return selected != NULL;
+	}
 };
 
