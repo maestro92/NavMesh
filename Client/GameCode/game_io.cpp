@@ -2,9 +2,12 @@
 
 #include "game_io.h"
 
+using namespace std;
+
 namespace GameIO
 {
-	mValue GameIO::readJsonFileToMap(char* filename)
+/*
+	mValue GameIO::ReadJsonFileToMap(const char* filename)
 	{
 		ifstream is(filename);
 
@@ -27,8 +30,8 @@ namespace GameIO
 		}
 		return content;
 	}
-
-	Value GameIO::readJsonFileToVector(char* filename)
+	
+	Value GameIO::ReadJsonFileToVector(char* filename)
 	{
 		ifstream is(filename);
 
@@ -52,7 +55,7 @@ namespace GameIO
 		return content;
 	}
 
-	const mValue& GameIO::findValue(const mObject& obj, const std::string& name)
+	const mValue& GameIO::FindValue(const mObject& obj, const std::string& name)
 	{
 		mObject::const_iterator it = obj.find(name);
 
@@ -71,28 +74,66 @@ namespace GameIO
 		return it->second;
 	}
 
-	glm::vec3 GameIO::findVec3(const mObject& obj, const std::string& name)
+	glm::vec2 GameIO::FindVec2(const mObject& obj, const std::string& name)
 	{
-		const mObject vec3Obj = findValue(obj, name).get_obj();
+		const mObject vec3Obj = FindValue(obj, name).get_obj();
 
-		float x = findValue(vec3Obj, "x").get_real();
-		float y = findValue(vec3Obj, "y").get_real();
-		float z = findValue(vec3Obj, "z").get_real();
+		float x = FindValue(vec3Obj, "x").get_real();
+		float y = FindValue(vec3Obj, "y").get_real();
+
+		glm::vec2 vec2Value(x, y);
+
+		return vec2Value;
+	}
+
+	glm::vec3 GameIO::FindVec3(const mObject& obj, const std::string& name)
+	{
+		const mObject vec3Obj = FindValue(obj, name).get_obj();
+
+		float x = FindValue(vec3Obj, "x").get_real();
+		float y = FindValue(vec3Obj, "y").get_real();
+		float z = FindValue(vec3Obj, "z").get_real();
 
 		glm::vec3 vec3Value(x, y, z);
 
 		return vec3Value;
 	}
 
-	glm::vec2 GameIO::findVec2(const mObject& obj, const std::string& name)
+	Object GameIO::SerializePoint(glm::vec2 p)
 	{
-		const mObject vec3Obj = findValue(obj, name).get_obj();
+		Object pointObj;
 
-		float x = findValue(vec3Obj, "x").get_real();
-		float y = findValue(vec3Obj, "y").get_real();
+		pointObj.push_back(Pair("x", p.x));
+		pointObj.push_back(Pair("y", p.y));
 
-		glm::vec2 vec2Value(x, y);
-
-		return vec2Value;
+		return pointObj;
 	}
+
+	Object GameIO::SerializePoint3D(glm::vec3 p)
+	{
+		Object pointObj;
+
+		pointObj.push_back(Pair("x", p.x));
+		pointObj.push_back(Pair("y", p.y));
+		pointObj.push_back(Pair("z", p.z));
+		return pointObj;
+	}
+
+	glm::vec2 GameIO::DeserializePoint2D(const mObject& obj)
+	{
+		glm::vec2 point;
+		point.x = GameIO::FindValue(obj, "x").get_real();
+		point.y = GameIO::FindValue(obj, "y").get_real();
+		return point;
+	}
+
+	glm::vec3 GameIO::DeserializePoint3D(const mObject& obj)
+	{
+		glm::vec3 point;
+		point.x = GameIO::FindValue(obj, "x").get_real();
+		point.y = GameIO::FindValue(obj, "y").get_real();
+		point.z = GameIO::FindValue(obj, "z").get_real();
+		return point;
+	}
+	*/
 }

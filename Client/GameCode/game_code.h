@@ -11,15 +11,23 @@
 #include "debug.h"
 #include "game_render.h"
 #include "game_io.h"
-
 #include <iostream>
 #include "editor/editor.h"
 
 
+
+#include "json_spirit\json_spirit.h"
+#include "json_spirit\json_spirit_reader_template.h"
+#include "json_spirit\json_spirit_writer_template.h"
+
+
 // define memory for Push style stuff
+#ifndef JSON_SPIRIT_MVALUE_ENABLED
+#error Please define JSON_SPIRIT_MVALUE_ENABLED for the mValue type to be enabled 
+#endif
 
 using namespace std;
-
+using namespace json_spirit;
 
 // typedef void(*PlatformLoadTexture)(GameAssets* gameAssets, BitmapId bitmapId);
 
@@ -1240,37 +1248,105 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 	GameRender::RenderCoordinateSystem(gameRenderCommands, &group, gameAssets);
 }
 
+Object SerializeEntity(Entity* entity)
+{
+	Object entityObj;
+	entityObj.push_back(Pair("Id", entity->id));
 
+	entityObj.push_back(Pair("x", entity->pos.x));
+	entityObj.push_back(Pair("y", entity->pos.y));
+
+	Array verticesArray;
+	for (int i = 0; i < entity->vertices.size(); i++)
+	{
+		glm::vec3 pos = entity->vertices[i];
+		Object pointObj;
+
+		pointObj.push_back(Pair("x", pos.x));
+		pointObj.push_back(Pair("y", pos.y));
+		pointObj.push_back(Pair("z", pos.z));
+
+		verticesArray.push_back(pointObj);
+	}
+	entityObj.push_back(Pair("vertices", verticesArray));
+
+	return entityObj;
+}
+
+void DeserializeEntity(Entity* entity, const mObject& obj)
+{
+	int id = GameIO::FindValue(obj, "Id").get_int();
+
+	{
+		float x = GameIO::FindValue(obj, "x").get_real();
+		float y = GameIO::FindValue(obj, "y").get_real();
+
+		entity->id = id;
+		entity->pos = glm::vec3(x, y, 0);
+	}
+
+	const mArray& vertices = GameIO::FindValue(obj, "vertices").get_array();
+	
+	for (int i = 0; i < vertices.size(); i++)
+	{
+		const mObject vertexObj = vertices[i].get_obj();
+
+		float x = GameIO::FindValue(obj, "x").get_real();
+		float y = GameIO::FindValue(obj, "y").get_real();
+		float z = GameIO::FindValue(obj, "z").get_real();
+
+		glm::vec3 pos = glm::vec3(x, y, z);
+
+		entity->vertices.push_back(pos);
+	}
+}
+
+void LoadMap(World* world, string fileName)
+{
+	
+	std::cout << "Loading the map " << std::endl;
+
+	mValue content = GameIO::ReadJsonFileToMap(fileName.c_str());
+	const mObject& obj = content.get_obj();
+
+	const mArray& addr_array = GameIO::FindValue(obj, "entities").get_array();
+
+	for (int i = 0; i < addr_array.size(); i++)
+	{
+		const mObject entityObj = addr_array[i].get_obj();
+	
+		Entity* entity = &world->entities[i];
+		DeserializeEntity(entity, entityObj);
+	}
+}
 
 void SaveMap(World* world)
 {
-
 	std::cout << "saving the map " << std::endl;
-	/*
+	
 	ofstream myfile;
 	myfile.open("data.txt");
 
-	Object graphObj;
+	Object worldObj;
 
-	Array inputPointsArray;
-	for (int i = 0; i < inputPoints.size(); i++)
+	Array entityArray;
+	for (int i = 0; i < world->numEntities; i++)
 	{
-		Object vObj = serializePoints(inputPoints[i]);
-		inputPointsArray.push_back(vObj);
+		Entity* entity = &world->entities[i];
+
+		Object entityObj = SerializeEntity(entity);
+		entityArray.push_back(entityObj);
 	}
 
-	graphObj.push_back(Pair("inputPoints", inputPointsArray));
+	worldObj.push_back(Pair("entities", entityArray));
 
-	write(graphObj, myfile, pretty_print);
+	write(worldObj, myfile, pretty_print);
 	myfile.close();
-	*/
+	
 }
 
 
-
-
 extern DebugTable* globalDebugTable;
-
 
 extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemory, GameInputState * gameInputState, RenderSystem::GameRenderCommands * gameRenderCommands,
 	glm::ivec2 windowDimensions, DebugModeState* debugModeState)

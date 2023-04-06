@@ -57,13 +57,13 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>./;glm;include/SDL2;include/SDL2_image;include/json_spirit;D:\Projects\boost\boost_1_72_0\boost_1_72_0</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./;glm;include/SDL2;include/SDL2_image;D:\Projects\boost\boost_1_72_0\boost_1_72_0;include\json_spirit</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>opengl32.lib;glu32.lib;ws2_32.lib;SDL2.lib;SDL2_image.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>lib\SDL2;lib\SDL2_image\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib\SDL2;lib\SDL2_image\x86;include\json_spirit;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <StackReserveSize>
       </StackReserveSize>
       <Profile>true</Profile>
@@ -92,12 +92,25 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="asset.cpp" />
+    <ClCompile Include="include\json_spirit\json_spirit_reader.cpp" />
+    <ClCompile Include="include\json_spirit\json_spirit_value.cpp" />
+    <ClCompile Include="include\json_spirit\json_spirit_writer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="test_asset_builder.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="asset.h" />
     <ClInclude Include="debug_interface.h" />
+    <ClInclude Include="include\json_spirit\json_spirit.h" />
+    <ClInclude Include="include\json_spirit\json_spirit_error_position.h" />
+    <ClInclude Include="include\json_spirit\json_spirit_reader.h" />
+    <ClInclude Include="include\json_spirit\json_spirit_reader_template.h" />
+    <ClInclude Include="include\json_spirit\json_spirit_stream_reader.h" />
+    <ClInclude Include="include\json_spirit\json_spirit_utils.h" />
+    <ClInclude Include="include\json_spirit\json_spirit_value.h" />
+    <ClInclude Include="include\json_spirit\json_spirit_writer.h" />
+    <ClInclude Include="include\json_spirit\json_spirit_writer_options.h" />
+    <ClInclude Include="include\json_spirit\json_spirit_writer_template.h" />
     <ClInclude Include="memory.h" />
     <ClInclude Include="sdl_api_opengl.h" />
     <ClInclude Include="sdl_handmade.h" />

@@ -362,42 +362,6 @@ std::vector<Face> CreateCubeFaceCentered(glm::vec3 pos, glm::vec3 dim)
 	return CreateCubeFaceMinMax(min, max);
 }
 
-
-/*
-NavMesh::NavMeshPolygon CreateTestGround(World* world)
-{
-	Entity* entity = NULL;
-	glm::vec3 pos;
-	glm::vec3 min;
-	glm::vec3 max;
-	std::vector<Face> faces;
-
-	// ground
-	entity = &world->entities[world->numEntities++];
-	min = glm::vec3(-100, -20, -100);
-	max = glm::vec3(100, 0, 100);
-	faces = CreateCubeFaceMinMax(min, max);
-
-	NavMesh::NavMeshPolygon groundPolygon;
-	
-	std::vector<glm::vec3> vertices;
-	
-	vertices.push_back(glm::vec3(-40, 50, 0));
-	vertices.push_back(glm::vec3(30, 90, 0));
-	vertices.push_back(glm::vec3(90, 40, 0));
-	vertices.push_back(glm::vec3(60, -30, 0));	
-	vertices.push_back(glm::vec3(110, -80, 0));
-	vertices.push_back(glm::vec3(70, -100, 0));
-	vertices.push_back(glm::vec3(10, -60, 0));
-	vertices.push_back(glm::vec3(30, 20, 0));
-
-	groundPolygon.vertices = vertices;
-
-	initEntity(entity, pos, GROUND, faces);
-	return groundPolygon;
-}
-*/
-
 void CreateAreaA(World* world)
 {
 	Entity* entity = NULL;
@@ -412,49 +376,14 @@ void CreateAreaA(World* world)
 	glm::vec3 min;
 	glm::vec3 max;
 
-	/*
-	std::vector<NavMesh::NavMeshPolygon> holes;
-	NavMesh::NavMeshPolygon polygon;
-	NavMesh::NavMeshPolygon groundPolygon;
-
-
-	
-	// ground
-	entity = &world->entities[world->numEntities++];
-	min = glm::vec3(-100, -100, -20);
-	max = glm::vec3(100, 100, 0);
-	faces = CreateCubeFaceMinMax(min, max);
-
-//	glm::vec3 polyMeshMin = glm::vec3(-100, -100, 0);
-	glm::vec3 polyMeshMin = glm::vec3(-100, -100, 0);
-
-// groundPolygon = NavMesh::CreatePolygonFromMinMax(polyMeshMin, max);
-*/
 
 	// https://technology.cpm.org/general/3dgraph/
 	// https://oercommons.s3.amazonaws.com/media/courseware/relatedresource/file/imth-6-1-9-6-1-coordinate_plane_plotter/index.html
 	// use this online plotter to as online visualization of your points before running the game
 	// lines are plotted counter-clockswise so it's consistent with the right hand rule
 	std::vector<glm::vec3> vertices;
-	
-/*
-	vertices.push_back(glm::vec3(5, -4, 0));
-	vertices.push_back(glm::vec3(9, 3, 0));
-	vertices.push_back(glm::vec3(4, 9, 0));
-	vertices.push_back(glm::vec3(-3, 6, 0));
-	vertices.push_back(glm::vec3(-8, 11, 0));
-	vertices.push_back(glm::vec3(-10, 7, 0));
-	vertices.push_back(glm::vec3(-6, 1, 0));
-	vertices.push_back(glm::vec3(2, 3, 0));
-	*/
 
 	/*
-	vertices.push_back(glm::vec3(5, -4, 0));
-	vertices.push_back(glm::vec3(9, 3, 0));
-	vertices.push_back(glm::vec3(4, 9, 0));
-	*/
-	
-	
 	float scale = 10;
 
 	vertices.push_back(glm::vec3(2, 4, 0));
@@ -495,12 +424,12 @@ void CreateAreaA(World* world)
 		vertices[i] = (vertices[i] - min) * scale;
 		std::cout << vertices[i].x << " " << vertices[i].y << std::endl;
 	}
-
+	*/
 	
-
 	
 	// clockwise
 	std::vector<glm::vec3> holesVertices;
+	/*
 	holesVertices.push_back(glm::vec3(2, 3, 0));
 	holesVertices.push_back(glm::vec3(-8, 6, 0));
 	holesVertices.push_back(glm::vec3(-3, 7, 0));
@@ -511,124 +440,13 @@ void CreateAreaA(World* world)
 		holesVertices[i] = (holesVertices[i] - min) * scale;
 		std::cout << holesVertices[i].x << " " << holesVertices[i].y << std::endl;
 	}
-	
-	
-	
-	/*
-	vertices.push_back(glm::vec3(0, -10, 0));
-	vertices.push_back(glm::vec3(10, 0, 0));
-	vertices.push_back(glm::vec3(-10, 0, 0));
-	vertices.push_back(glm::vec3(0, 10, 0));
 	*/
-
-
-	// groundPolygon.vertices = vertices;
-
-
-//	initEntity(entity, pos, GROUND, faces);
-	
-
-	// groundPolygon = CreateTestGround(world);
-
-	/*
-	// obstacle 0
-	entity = &world->entities[world->numEntities++];
-	min = glm::vec3(-80, 0, -80); 
-	max = glm::vec3(80, 50, -70);
-	faces = CreateCubeFaceMinMax(min, max);
-	polygon = NavMesh::CreatePolygonFromMinMax(min, max);
-
-	initEntity(entity, pos, STATIC, faces);
-	holes.push_back(polygon);
-
-	// obstacle 1
-	entity = &world->entities[world->numEntities++];
-	min = glm::vec3(-30, 0, -90);
-	max = glm::vec3(10, 50, 60);
-	faces = CreateCubeFaceMinMax(min, max);
-	polygon = NavMesh::CreatePolygonFromMinMax(min, max);
-
-	initEntity(entity, pos, STATIC, faces);
-	holes.push_back(polygon);
-
-
-	// obstacle 2
-	entity = &world->entities[world->numEntities++];
-	min = glm::vec3(-50, 0, -20);
-	max = glm::vec3(20, 50, 30);
-	faces = CreateCubeFaceMinMax(min, max);
-	polygon = NavMesh::CreatePolygonFromMinMax(min, max);
-
-	initEntity(entity, pos, STATIC, faces);
-	holes.push_back(polygon);
-
-	// obstacle 3
-	entity = &world->entities[world->numEntities++];
-	min = glm::vec3(30, 0, 20);
-	max = glm::vec3(70, 50, 40);
-	faces = CreateCubeFaceMinMax(min, max);
-	polygon = NavMesh::CreatePolygonFromMinMax(min, max);
-
-	initEntity(entity, pos, STATIC, faces);
-	holes.push_back(polygon);
-	*/
-
-	/* 
-	// step 3, we unionize the obstacle polygons (holes)
-	TryUnionizePolygons(holes);
-	
-	// step 4, combine the boundary polgyon with ostacle polygons (holes),
-	// so we are representing the world as a single polygon
-	ConnectHoles(groundPolygon, holes);
-	*/
-
-
-	// Triangulation::DelaunayTraingulation_bowyer_watson(groundPolygon.vertices, world->triangulationDebug);
-	// Voronoi::GenerateVoronoiGraph(world->triangulationDebug->triangles, world->voronoiDebug);
-
 
 	glm::ivec2 mapSize = glm::ivec2(256, 256);
 	CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holesVertices, mapSize, world->cdTriangulationdebug);
 
 	world->min = glm::vec3(0);
 	world->max = glm::vec3(mapSize.x, mapSize.y, 0);
-
-	// 
-	/*
-	// setp 5, triangulate the whole thing
-	std::vector<Triangulation::Triangle> triangles = Triangulation::EarClippingTriangulation(groundPolygon.vertices);
-	std::vector<NavMesh::NavMeshPolygon> polygons;
-
-	for (int i = 0; i < triangles.size(); i++)
-	{
-		NavMesh::NavMeshPolygon polygon;
-		polygon.vertices.push_back(triangles[i].vertices[0]);
-		polygon.vertices.push_back(triangles[i].vertices[1]);
-		polygon.vertices.push_back(triangles[i].vertices[2]);
-		polygons.push_back(polygon);
-	}
-	
-
-	// world->navMeshPolygons = holes;
-	world->navMeshPolygons = polygons;
-
-	world->dualGraph = new NavMesh::DualGraph(polygons);
-
-//	world->start = glm::vec3(90, 0, -80);
-//	world->destination = glm::vec3(-30, 0, 50);
-
-
-	world->start = glm::vec3(90, 0, 90);
-	world->destination = glm::vec3(-90, 0, -90);
-
-	PathFinding::PathfindingResult pathingResult = PathFinding::FindPath(world->dualGraph, world->start, world->destination);
-	world->portals = pathingResult.portals;
-	world->waypoints = pathingResult.waypoints;
-	
-	world->navMeshPolygons = polygons;
-	*/
-
-	// world->navMeshPolygons = { groundPolygon };
 }
 
 namespace WorldManager
@@ -651,7 +469,10 @@ namespace WorldManager
 	}
 };
 
+void LoadWorldData(World* world)
+{
 
+}
 
 
 // Essentially recreating a simplified version of dust2
@@ -660,38 +481,18 @@ void initWorld(World* world)
 	// initlaize the game state  
 	world->numEntities = 0;
 	world->maxEntityCount = 1024;
-	/*
-	for (int i = 0; i < world->entityCount; i++)
-	{
-		world->entities[i].pos = glm::vec3(5 - i, 5 - i, 5 - i);
-		world->entities[i].dim = glm::vec3(1);
-		//			cout << i << ": " << gameState->entities[i].pos << std::endl;
-	}
-	*/
 	world->triangulationDebug = new Triangulation::DebugState();
 	world->voronoiDebug = new Voronoi::DebugState();
 	world->cdTriangulationdebug = new CDTriangulation::DebugState();
-
-
 	world->data = new WorldSafeData();
-
-
-	float wallHeight = 50;
-
-	CreateAreaA(world);
-	// CreateAreaC(world, brushes);
-
-	// glm::vec3 siteBSize = glm::vec3(200, wallHeight, 200);
-	//CreateAreaB(world, glm::vec3(500, 0, 0), siteBSize, brushes);
-	
-
-
 
 	world->startPlayerEntityId = world->numEntities;
 	int index = world->numEntities++;
 	Entity* entity = &world->entities[index];
 	entity->id = index;
 	glm::vec3 pos = glm::vec3(-50, 11, -12);
-//	glm::vec3 pos = glm::vec3(-50, 1, -50);
 	initPlayerEntity(entity, pos);
+
+	CreateAreaA(world);
+
 }
