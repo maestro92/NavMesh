@@ -3,6 +3,7 @@
 #include "../PlatformShared/platform_shared.h"
 #include "collision.h"
 #include "triangulation.h"
+#include "geometry_core.h"
 
 #include <queue>          // std::queue
 #include <iostream>
@@ -34,6 +35,15 @@ namespace CDTriangulation
 		}
 	};
 
+	struct DebugConstrainedEdge
+	{
+		std::vector<Vertex> vertices;
+	};
+
+	struct DebugConstrainedEdgePolygon
+	{
+		std::vector<DebugConstrainedEdge> Edges;
+	};
 
 	struct DelaunayTriangle {
 		int id;
@@ -205,9 +215,9 @@ namespace CDTriangulation
 	{
 		std::vector<DelaunayTriangle> triangles;
 		std::vector<glm::vec3> vertices;
-		std::vector<glm::vec3> holes;
+		std::vector<GeoCore::Polygon> holes;
 		std::vector<std::vector<Vertex>> intersectingEdges;
-		std::vector<std::vector<Vertex>> constraiedEdges;
+		std::vector<DebugConstrainedEdgePolygon> debugConstrainedEdgePolygons;
 
 		std::vector<Triangulation::Circle> circles;
 
@@ -251,16 +261,24 @@ namespace CDTriangulation
 
 
 	// assume all points are between [0, 256]
-	void AddAndCreateVertices(
-		std::vector<glm::vec3> points, std::vector<Vertex>& masterVertexArray, int& idCounter)
+	void CreateAndAddVertices(
+		std::vector<glm::vec3> points, std::vector<Vertex>& vertexArray, int& idCounter)
 	{
 		for (int i = 0; i < points.size(); i++)
 		{
 			Vertex vertex = { idCounter++, points[i] };
-			masterVertexArray.push_back(vertex);
+			vertexArray.push_back(vertex);
 			std::cout << vertex.pos.x << " " << vertex.pos.y << std::endl;
 		}
 	}
+
+	// assume all points are between [0, 256]
+	void CreateAndAddVerticesForHole(
+		GeoCore::Polygon& hole, std::vector<Vertex>& vertexArray, int& idCounter)
+	{
+		CreateAndAddVertices(hole.vertices, vertexArray, idCounter);
+	}
+
 
 	bool SharedVertex(DelaunayTriangle& a, DelaunayTriangle& b)
 	{
@@ -978,7 +996,7 @@ namespace CDTriangulation
 	// assume all points are in [0, 256] range
 	void ConstrainedDelaunayTriangulation(
 		std::vector<glm::vec3> points,
-		std::vector<glm::vec3> holes,
+		std::vector<GeoCore::Polygon> holes,
 		glm::ivec2 mapSize,
 		DebugState* debugState)
 	{
@@ -991,7 +1009,7 @@ namespace CDTriangulation
 
 		std::vector<Vertex> masterVertexArray;
 		int idCounter = 0;
-		AddAndCreateVertices(points, masterVertexArray, idCounter);
+		CreateAndAddVertices(points, masterVertexArray, idCounter);
 
 		// build pointBinGrid
 	//	std::vector<std::vector<Bin>> pointBinGrid = BuildPointBinGrid(masterVertexArray, mapSize);
@@ -1043,161 +1061,176 @@ namespace CDTriangulation
 		// Holes creation:
 		// not doing the normalization yet. do it later
 		int holesStartingVertex = idCounter;
-		std::vector<Vertex> holeVertices;
-		AddAndCreateVertices(holes, holeVertices, idCounter);
 
+		std::vector<std::vector<Vertex>> masterHoleVertices;
 
 		// 5.2 add the hole points, and create new triangles
-		for (int i = 0; i < holeVertices.size(); i++)
+		for (int j = 0; j < holes.size(); j++)
 		{
-			masterVertexArray.push_back(holeVertices[i]);
-			AddVertexToTriangulation(holeVertices[i], triangles, triangleCounter, triangleStack);
+			std::vector<Vertex> tempVertexList;
+			CreateAndAddVerticesForHole(holes[j], tempVertexList, idCounter);
+
+			for (int i = 0; i < tempVertexList.size(); i++)
+			{
+				masterVertexArray.push_back(tempVertexList[i]);
+				AddVertexToTriangulation(tempVertexList[i], triangles, triangleCounter, triangleStack);
+			}
+			masterHoleVertices.push_back(tempVertexList);
 		}
-		
 
 		// 5.3 create the constrained edges
-		std::vector<DelaunayTriangleEdge> constrainedEdges;
-		for (int i = 0; i < holeVertices.size(); i++)
+		for (int j = 0; j < holes.size(); j++)
 		{
-			DelaunayTriangleEdge edge;
-			edge.vertices[0] = holeVertices[i].id;
+			std::vector<Vertex> holeVertices = masterHoleVertices[j];
 
-			if (i == holeVertices.size() - 1)
+			std::vector<DelaunayTriangleEdge> constrainedEdges;
+			DebugConstrainedEdgePolygon debugConstrainedEdgePolygon;
+
+			for (int i = 0; i < holeVertices.size(); i++)
 			{
-				edge.vertices[1] = holeVertices[0].id;
-			}
-			else
-			{
-				edge.vertices[1] = holeVertices[i + 1].id;
-			}
+				DebugConstrainedEdge debugConstrainedEdge;
+				DelaunayTriangleEdge edge;
+				edge.vertices[0] = holeVertices[i].id;
 
-			Vertex constrainedEdgeStart = masterVertexArray[edge.vertices[0]];
-			Vertex constrainedEdgeEnd = masterVertexArray[edge.vertices[1]];
-
-			std::vector<Vertex> constrainedVertices;
-			constrainedVertices.push_back(constrainedEdgeStart);
-			constrainedVertices.push_back(constrainedEdgeEnd);
-
-			debugState->constraiedEdges.push_back(constrainedVertices);
-
-			if (!ContainsEdge(edge, triangles))
-			{
-				constrainedEdges.push_back(edge);
-			}
-
-			// if we only have one edge, we just return after creating the first edge
-			if (holeVertices.size() == 2)
-			{
-				break;
-			}
-		}
-
-
-		// 5.3.1 search for triangle that contains the beginning of the new edge
-		for (int i = 0; i < constrainedEdges.size(); i++)
-		{
-			Vertex constrainedEdgeStart = masterVertexArray[constrainedEdges[i].vertices[0]];
-			Vertex constrainedEdgeEnd = masterVertexArray[constrainedEdges[i].vertices[1]];
-
-			std::queue<IntersectedEdge> intersectedEdgesQueue;
-			{
-				// 5.3.2 get all the edges that intersects
-				std::vector<IntersectedEdge> intersectedEdges = GetEdgesInteserctedByEdge(constrainedEdges[i], triangles, masterVertexArray);
-				std::string debugString;
-				for (int j = 0; j < intersectedEdges.size(); j++)
+				if (i == holeVertices.size() - 1)
 				{
-					debugString += std::to_string(intersectedEdges[j].triangleId) + " ";
-
-					Vertex v0 = masterVertexArray[intersectedEdges[j].edge.vertices[0]];
-					Vertex v1 = masterVertexArray[intersectedEdges[j].edge.vertices[1]];
-
-					std::vector<Vertex> debugEdge = { v0, v1 };
-					debugState->intersectingEdges.push_back(debugEdge);
-
-					intersectedEdgesQueue.push(intersectedEdges[j]);
+					edge.vertices[1] = holeVertices[0].id;
 				}
-				std::cout << "intersecting " << debugString << std::endl;
-			}
-			
-
-			std::vector<DelaunayTriangleEdge> newEdges;
-
-			// 5.3.3 form quadrilaterals and swap intersected edges
-			while (!intersectedEdgesQueue.empty())
-			{
-				IntersectedEdge intersectedEdge = intersectedEdgesQueue.front();
-				intersectedEdgesQueue.pop();
-
-				for (int j = 0; j < triangles.size(); j++)
+				else
 				{
-					DelaunayTriangle& triangle = triangles[j];
-					if (triangle.ContainsEdge(intersectedEdge.edge))
+					edge.vertices[1] = holeVertices[i + 1].id;
+				}
+
+				Vertex constrainedEdgeStart = masterVertexArray[edge.vertices[0]];
+				Vertex constrainedEdgeEnd = masterVertexArray[edge.vertices[1]];
+
+				std::vector<Vertex> constrainedVertices;
+				constrainedVertices.push_back(constrainedEdgeStart);
+				constrainedVertices.push_back(constrainedEdgeEnd);
+
+				debugConstrainedEdge.vertices = constrainedVertices;
+				debugConstrainedEdgePolygon.Edges.push_back(debugConstrainedEdge);
+
+				if (!ContainsEdge(edge, triangles))
+				{
+					constrainedEdges.push_back(edge);
+				}
+
+				// if we only have one edge, we just return after creating the first edge
+				if (holeVertices.size() == 2)
+				{
+					break;
+				}
+			}
+			debugState->debugConstrainedEdgePolygons.push_back(debugConstrainedEdgePolygon);
+
+
+			// 5.3.1 search for triangle that contains the beginning of the new edge
+			for (int i = 0; i < constrainedEdges.size(); i++)
+			{
+				Vertex constrainedEdgeStart = masterVertexArray[constrainedEdges[i].vertices[0]];
+				Vertex constrainedEdgeEnd = masterVertexArray[constrainedEdges[i].vertices[1]];
+
+				std::queue<IntersectedEdge> intersectedEdgesQueue;
+				{
+					// 5.3.2 get all the edges that intersects
+					std::vector<IntersectedEdge> intersectedEdges = GetEdgesInteserctedByEdge(constrainedEdges[i], triangles, masterVertexArray);
+					std::string debugString;
+					for (int j = 0; j < intersectedEdges.size(); j++)
 					{
-						int edgeIndex = triangle.GetEdgeIndex(intersectedEdge.edge);
-						assert(edgeIndex != INVALID_INDEX);
+						debugString += std::to_string(intersectedEdges[j].triangleId) + " ";
 
-						int neighborTrigId = triangle.neighbors[edgeIndex];
+						Vertex v0 = masterVertexArray[intersectedEdges[j].edge.vertices[0]];
+						Vertex v1 = masterVertexArray[intersectedEdges[j].edge.vertices[1]];
 
-						DelaunayTriangle& neighborTriangle = GetTriangleReference(triangles, neighborTrigId);
+						std::vector<Vertex> debugEdge = { v0, v1 };
+						debugState->intersectingEdges.push_back(debugEdge);
 
-						std::vector<Vertex> polygonVertices;
-						std::vector<glm::vec3> polygonPoints;
-						GetQuadrilateralsFromNeighbors(triangle, neighborTriangle, intersectedEdge.edge, polygonVertices, polygonPoints);
+						intersectedEdgesQueue.push(intersectedEdges[j]);
+					}
+					std::cout << "intersecting " << debugString << std::endl;
+				}
 
-						// check if its convex
-						if (Collision::IsConvex(polygonPoints))
+
+				std::vector<DelaunayTriangleEdge> newEdges;
+
+				// 5.3.3 form quadrilaterals and swap intersected edges
+				while (!intersectedEdgesQueue.empty())
+				{
+					IntersectedEdge intersectedEdge = intersectedEdgesQueue.front();
+					intersectedEdgesQueue.pop();
+
+					for (int j = 0; j < triangles.size(); j++)
+					{
+						DelaunayTriangle& triangle = triangles[j];
+						if (triangle.ContainsEdge(intersectedEdge.edge))
 						{
+							int edgeIndex = triangle.GetEdgeIndex(intersectedEdge.edge);
+							assert(edgeIndex != INVALID_INDEX);
 
-							// index 0 and 2 are hardcoded
-							DelaunayTriangleEdge newEdge;
-							newEdge.vertices[0] = polygonVertices[0].id;
-							newEdge.vertices[1] = polygonVertices[2].id;
+							int neighborTrigId = triangle.neighbors[edgeIndex];
 
+							DelaunayTriangle& neighborTriangle = GetTriangleReference(triangles, neighborTrigId);
 
+							std::vector<Vertex> polygonVertices;
+							std::vector<glm::vec3> polygonPoints;
+							GetQuadrilateralsFromNeighbors(triangle, neighborTriangle, intersectedEdge.edge, polygonVertices, polygonPoints);
 
-							// we check if the swapped edge still intersects the constraied edge
-							// we first check if the edge share any vertex. if so we don't count them as intersecting
-							bool shareVertices = polygonVertices[0].id == constrainedEdgeStart.id ||
-								polygonVertices[1].id == constrainedEdgeStart.id ||
-								polygonVertices[0].id == constrainedEdgeEnd.id ||
-								polygonVertices[1].id == constrainedEdgeEnd.id;
-
-							// now check the actual intersection
-							glm::vec2 intersectionPoint;
-							if (!shareVertices && Collision::GetLineLineIntersectionPoint_CheckOnlyXY2D(
-								polygonPoints[0], 
-								polygonPoints[2], 
-								constrainedEdgeStart.pos, 
-								constrainedEdgeEnd.pos, intersectionPoint))
+							// check if its convex
+							if (Collision::IsConvex(polygonPoints))
 							{
-								// we intersecting! We put it back
-								intersectedEdgesQueue.push(intersectedEdge);
+
+								// index 0 and 2 are hardcoded
+								DelaunayTriangleEdge newEdge;
+								newEdge.vertices[0] = polygonVertices[0].id;
+								newEdge.vertices[1] = polygonVertices[2].id;
+
+
+
+								// we check if the swapped edge still intersects the constraied edge
+								// we first check if the edge share any vertex. if so we don't count them as intersecting
+								bool shareVertices = polygonVertices[0].id == constrainedEdgeStart.id ||
+									polygonVertices[1].id == constrainedEdgeStart.id ||
+									polygonVertices[0].id == constrainedEdgeEnd.id ||
+									polygonVertices[1].id == constrainedEdgeEnd.id;
+
+								// now check the actual intersection
+								glm::vec2 intersectionPoint;
+								if (!shareVertices && Collision::GetLineLineIntersectionPoint_CheckOnlyXY2D(
+									polygonPoints[0],
+									polygonPoints[2],
+									constrainedEdgeStart.pos,
+									constrainedEdgeEnd.pos, intersectionPoint))
+								{
+									// we intersecting! We put it back
+									intersectedEdgesQueue.push(intersectedEdge);
+								}
+								else
+								{
+									std::cout << "swapping triangle " << triangle.id << " and " << neighborTriangle.id << std::endl;
+
+									SwapDiagonalEdges(triangle, neighborTriangle, triangles);
+									newEdges.push_back(newEdge);
+								}
 							}
 							else
 							{
-								std::cout << "swapping triangle " << triangle.id << " and " << neighborTriangle.id << std::endl;
-
-								SwapDiagonalEdges(triangle, neighborTriangle, triangles);
-								newEdges.push_back(newEdge);
+								// put it back
+								intersectedEdgesQueue.push(intersectedEdge);
 							}
-						}
-						else
-						{
-							// put it back
-							intersectedEdgesQueue.push(intersectedEdge);
-						}
 
-						break;
+							break;
+						}
 					}
+
+
 				}
-			
-				
+
+
+				// 5.3.4 checking Delaunay constraint
+				CheckDelaunayCriteriaInNewlyCreatedEdges(constrainedEdges[i], newEdges, triangles);
+
 			}
-
-
-			// 5.3.4 checking Delaunay constraint
-			CheckDelaunayCriteriaInNewlyCreatedEdges(constrainedEdges[i], newEdges, triangles);
-		
 		}
 		
 

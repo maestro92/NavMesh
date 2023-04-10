@@ -4,6 +4,7 @@
 
 #include "../PlatformShared/platform_shared.h"
 #include "../NavMesh/memory.h"
+#include "geometry_core.h"
 #include "nav_mesh.h"
 #include "triangulation.h"
 #include "cd_triangulation.h"
@@ -19,8 +20,6 @@ struct Face
 	// p0 p1 p2 p3 in clock wise order
 	std::vector<glm::vec3> vertices;
 };
-
-
 
 enum EntityFlag
 {
@@ -68,10 +67,10 @@ struct Entity
 		zAxis = glm::vec3(cameraMatrix[2][0], cameraMatrix[2][1], cameraMatrix[2][2]);
 	}
 
-	Entity* groundEntity;
+//	Entity* groundEntity;
 	// For Rendering
 	// TODO: change this model index
-	std::vector<Face> model;
+//	std::vector<Face> model;
 };
 
 struct PlayerEntity
@@ -91,27 +90,23 @@ struct WorldCameraSetup
 	glm::mat4 translation;
 };
 
-struct WorldSafeData
-{
-	std::vector<std::vector<glm::vec3>> obstacles;
-};
+
 
 struct World
 {
+
+
 	MemoryArena memoryArena;
 
-	glm::vec3 min;
-	glm::vec3 max;
+	glm::ivec2 min;
+	glm::ivec2 max;
 
 	Entity entities[1024];
 	int numEntities;
 	int maxEntityCount;
 
-//	std::vector<std::vector<glm::vec3>> obstacles;
-	WorldSafeData* data;
-//	std::vector<int> obstacles2;
+//	WorldSafeData* data;
 
-	int startPlayerEntityId;
 	int maxPlayerEntity;
 	int numPlayerEntity;
 
@@ -362,6 +357,15 @@ std::vector<Face> CreateCubeFaceCentered(glm::vec3 pos, glm::vec3 dim)
 	return CreateCubeFaceMinMax(min, max);
 }
 
+void ScalingTheHole(GeoCore::Polygon& hole, float scale, glm::vec3 min)
+{
+	for (int i = 0; i < hole.vertices.size(); i++)
+	{
+		hole.vertices[i] = (hole.vertices[i] - min) * scale;
+		std::cout << hole.vertices[i].x << " " << hole.vertices[i].y << std::endl;
+	}
+}
+
 void CreateAreaA(World* world)
 {
 	Entity* entity = NULL;
@@ -383,7 +387,7 @@ void CreateAreaA(World* world)
 	// lines are plotted counter-clockswise so it's consistent with the right hand rule
 	std::vector<glm::vec3> vertices;
 
-	/*
+	
 	float scale = 10;
 
 	vertices.push_back(glm::vec3(2, 4, 0));
@@ -424,75 +428,68 @@ void CreateAreaA(World* world)
 		vertices[i] = (vertices[i] - min) * scale;
 		std::cout << vertices[i].x << " " << vertices[i].y << std::endl;
 	}
-	*/
 	
 	
+
 	// clockwise
-	std::vector<glm::vec3> holesVertices;
-	/*
-	holesVertices.push_back(glm::vec3(2, 3, 0));
-	holesVertices.push_back(glm::vec3(-8, 6, 0));
-	holesVertices.push_back(glm::vec3(-3, 7, 0));
-	holesVertices.push_back(glm::vec3(3, 4, 0));
+	std::vector<GeoCore::Polygon> holes;
+	
+	GeoCore::Polygon hole;
+	hole.vertices.push_back(glm::vec3(2, 3, 0));
+	hole.vertices.push_back(glm::vec3(-8, 6, 0));
+	hole.vertices.push_back(glm::vec3(-3, 7, 0));
+	hole.vertices.push_back(glm::vec3(3, 4, 0));
+	ScalingTheHole(hole, scale, min);
+	holes.push_back(hole);
 
-	for (int i = 0; i < holesVertices.size(); i++)
-	{
-		holesVertices[i] = (holesVertices[i] - min) * scale;
-		std::cout << holesVertices[i].x << " " << holesVertices[i].y << std::endl;
-	}
-	*/
+	GeoCore::Polygon hole2;
+	hole2.vertices.push_back(glm::vec3(4, -3, 0));
+	hole2.vertices.push_back(glm::vec3(-5, 0, 0));
+	hole2.vertices.push_back(glm::vec3(0, 1, 0));
+	hole2.vertices.push_back(glm::vec3(5, -2, 0));
+	ScalingTheHole(hole2, scale, min);
 
-	glm::ivec2 mapSize = glm::ivec2(256, 256);
-	CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holesVertices, mapSize, world->cdTriangulationdebug);
+	holes.push_back(hole2);
 
-	world->min = glm::vec3(0);
-	world->max = glm::vec3(mapSize.x, mapSize.y, 0);
+	CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->max, world->cdTriangulationdebug);
+
 }
+
+
 
 namespace WorldManager
 {
 	void AddObstacle(World* world, glm::vec3 pos, std::vector<glm::vec3> vertices)
 	{
-		
+
 		// std::cout << "adding obstacle" << std::endl;
 		int id = world->numEntities++;
 		// std::cout << "id " << id << std::endl;
 		Entity* entity = &world->entities[id];
 		entity->id = id;
 		initEntity(entity, pos, OBSTACLE, vertices);
-		world->data->obstacles.push_back(vertices);
+		//	world->data->obstacles.push_back(vertices);
 
-
-
-		// std::cout << "made it to the end" << std::endl;
-		
+			// std::cout << "made it to the end" << std::endl;	
 	}
-};
 
-void LoadWorldData(World* world)
-{
+	void InitWorldCommon(World* world)
+	{
+		// initlaize the game state  
+		world->numEntities = 0;
+		world->maxEntityCount = 1024;
+		world->triangulationDebug = new Triangulation::DebugState();
+		world->voronoiDebug = new Voronoi::DebugState();
+		world->cdTriangulationdebug = new CDTriangulation::DebugState();
 
+		world->min = glm::ivec2(0);
+		world->max = glm::ivec2(256, 256);
+	}
+
+	void InitWorld(World* world)
+	{
+		InitWorldCommon(world);
+		CreateAreaA(world);
+	}
 }
 
-
-// Essentially recreating a simplified version of dust2
-void initWorld(World* world)
-{
-	// initlaize the game state  
-	world->numEntities = 0;
-	world->maxEntityCount = 1024;
-	world->triangulationDebug = new Triangulation::DebugState();
-	world->voronoiDebug = new Voronoi::DebugState();
-	world->cdTriangulationdebug = new CDTriangulation::DebugState();
-	world->data = new WorldSafeData();
-
-	world->startPlayerEntityId = world->numEntities;
-	int index = world->numEntities++;
-	Entity* entity = &world->entities[index];
-	entity->id = index;
-	glm::vec3 pos = glm::vec3(-50, 11, -12);
-	initPlayerEntity(entity, pos);
-
-	CreateAreaA(world);
-
-}

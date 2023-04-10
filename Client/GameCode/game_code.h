@@ -487,6 +487,7 @@ void RenderEntityStaticModel(
 	*/
 }
 
+/*
 void RenderEntityGroundModel(
 	RenderSystem::GameRenderCommands* gameRenderCommands,
 	RenderSystem::RenderGroup* renderGroup,
@@ -505,7 +506,7 @@ void RenderEntityGroundModel(
 			entity->model[i].vertices[3], GameRender::COLOR_WHITE);
 	}
 }
-
+*/
 
 void RenderTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderCommands,
 	RenderSystem::RenderGroup* group,
@@ -723,9 +724,13 @@ void RenderCDTriangulationDebug(
 	}
 
 
-	for (int i = 0; i < triangulationDebug->holes.size(); i++)
+	for (int j = 0; j < triangulationDebug->holes.size(); j++)
 	{
-		GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, triangulationDebug->holes[i], 2);
+		GeoCore::Polygon polygon = triangulationDebug->holes[j];
+		for (int i = 0; i < polygon.vertices.size(); i++)
+		{
+			GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, polygon.vertices[i], 2);
+		}
 	}
 
 
@@ -795,13 +800,19 @@ void RenderCDTriangulationDebug(
 	}
 	*/
 
-	for (int i = 0; i < triangulationDebug->constraiedEdges.size(); i++)
+	for (int j = 0; j < triangulationDebug->debugConstrainedEdgePolygons.size(); j++)
 	{
-		std::vector<CDTriangulation::Vertex> edge = triangulationDebug->constraiedEdges[i];
+		CDTriangulation::DebugConstrainedEdgePolygon* debugPolygon = &(triangulationDebug->debugConstrainedEdgePolygons[j]);
 
-		GameRender::RenderLine(
-			gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, edge[0].pos, edge[1].pos, lineThickness);
+		for (int i = 0; i < debugPolygon->Edges.size(); i++)
+		{
+			CDTriangulation::DebugConstrainedEdge edge = debugPolygon->Edges[i];
+
+			GameRender::RenderLine(
+				gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, edge.vertices[0].pos, edge.vertices[1].pos, lineThickness);
+		}
 	}
+
 
 }
 
@@ -976,45 +987,11 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 
 
 	glm::vec3 newViewDir = controlledEntity->GetViewDirection();
-	/*
-	if (debugModeState->cameraDebugMode)
-	{
-		controlledEntity = &gameState->debugCameraEntity;
-	}
-	else
-	{
-		controlledEntity = &world->entities[world->startPlayerEntityId];
-	}
-
-	if (!debugModeState->mouseDebugMode)
-	{
-		newViewDir = UpdateEntityViewDirection(controlledEntity, gameInputState, windowDimensions);
-	}
-	else
-	{
-		newViewDir = controlledEntity->GetViewDirection();
-	}
-
-	glm::vec3 newWalkDir;
-	if (debugModeState->cameraDebugMode)
-	{
-		newWalkDir = newViewDir;
-	}
-	else
-	{
-		newWalkDir = newViewDir;
-		newWalkDir.y = 0;
-		newWalkDir = glm::normalize(newWalkDir);
-	}
-	*/
-
-	//	cam->SetViewDirection(newViewDir);
 
 	PlayerMoveData pmove = {};
 
 	// process input
 	float stepSize = 40.0f;
-//	if (debugModeState->cameraDebugMode)
 	{
 		if (gameInputState->moveUp.endedDown) {
 			pmove.velocity += stepSize * glm::vec3(0, 1, 0);
@@ -1039,8 +1016,6 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 
 	float dt = 0.1f;// FIXED_UPDATE_TIME_S;
 	controlledEntity->pos += pmove.velocity * dt;
-
-	world->entities[world->startPlayerEntityId].velocity = pmove.velocity;
 
 
 	// Update camera matrix
@@ -1089,7 +1064,7 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 				break;
 
 			case EntityFlag::GROUND:
-				RenderEntityGroundModel(gameRenderCommands, &group, gameAssets, entity);
+				// RenderEntityGroundModel(gameRenderCommands, &group, gameAssets, entity);
 				break;
 
 			case EntityFlag::OBSTACLE:
@@ -1252,7 +1227,7 @@ Object SerializeEntity(Entity* entity)
 {
 	Object entityObj;
 	entityObj.push_back(Pair("Id", entity->id));
-
+	entityObj.push_back(Pair("Flag", (int)entity->flag));
 	entityObj.push_back(Pair("x", entity->pos.x));
 	entityObj.push_back(Pair("y", entity->pos.y));
 
@@ -1277,11 +1252,14 @@ void DeserializeEntity(Entity* entity, const mObject& obj)
 {
 	int id = GameIO::FindValue(obj, "Id").get_int();
 
+	EntityFlag entityFlag = (EntityFlag)GameIO::FindValue(obj, "Flag").get_int();
+
 	{
 		float x = GameIO::FindValue(obj, "x").get_real();
 		float y = GameIO::FindValue(obj, "y").get_real();
 
 		entity->id = id;
+		entity->flag = entityFlag;
 		entity->pos = glm::vec3(x, y, 0);
 	}
 
@@ -1289,11 +1267,11 @@ void DeserializeEntity(Entity* entity, const mObject& obj)
 	
 	for (int i = 0; i < vertices.size(); i++)
 	{
-		const mObject vertexObj = vertices[i].get_obj();
+		const mObject pointObj = vertices[i].get_obj();
 
-		float x = GameIO::FindValue(obj, "x").get_real();
-		float y = GameIO::FindValue(obj, "y").get_real();
-		float z = GameIO::FindValue(obj, "z").get_real();
+		float x = GameIO::FindValue(pointObj, "x").get_real();
+		float y = GameIO::FindValue(pointObj, "y").get_real();
+		float z = GameIO::FindValue(pointObj, "z").get_real();
 
 		glm::vec3 pos = glm::vec3(x, y, z);
 
@@ -1303,8 +1281,9 @@ void DeserializeEntity(Entity* entity, const mObject& obj)
 
 void LoadMap(World* world, string fileName)
 {
-	
 	std::cout << "Loading the map " << std::endl;
+
+	WorldManager::InitWorldCommon(world);
 
 	mValue content = GameIO::ReadJsonFileToMap(fileName.c_str());
 	const mObject& obj = content.get_obj();
@@ -1314,9 +1293,11 @@ void LoadMap(World* world, string fileName)
 	for (int i = 0; i < addr_array.size(); i++)
 	{
 		const mObject entityObj = addr_array[i].get_obj();
-	
+		
 		Entity* entity = &world->entities[i];
 		DeserializeEntity(entity, entityObj);
+		assert(world->numEntities == entity->id);
+		world->numEntities++;
 	}
 }
 
@@ -1344,6 +1325,14 @@ void SaveMap(World* world)
 	myfile.close();
 	
 }
+
+void TriangulateMap(World* world)
+{
+	
+//	CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holesVertices, (glm::vec2)world->max, world->cdTriangulationdebug);
+
+}
+
 
 
 extern DebugTable* globalDebugTable;
@@ -1387,7 +1376,8 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		platformAPI = gameMemory->platformAPI;
 
 
-		initWorld(&gameState->world);
+		WorldManager::InitWorld(&gameState->world);
+		//LoadMap(&gameState->world, "data.txt");
 
 		gameState->debugCameraEntity = {};
 		gameState->debugCameraEntity.pos = glm::vec3(0, -90, 400);
@@ -1455,6 +1445,7 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		else if (editorEvent == EditorEvent::TRIANGULATE)
 		{
 			std::cout << "Triangulate" << std::endl;
+			TriangulateMap(&gameState->world);
 		}
 	}
 
@@ -1535,12 +1526,6 @@ void RestartCollation(DebugState* debugState)
 	debugState->numFrames = 0;
 	debugState->collationFrame = 0;
 }
-
-void LoadMap(char* filename)
-{
-
-}
-
 
 
 
@@ -1699,10 +1684,6 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 
 	GameRender::DEBUGTextLine(buffer, &gameRenderState, startPos, 1);
 
-	if (gameInputState->save.endedDown && gameInputState->save.changed)
-	{
-		SaveMap(&gameState->world);
-	}
 
 	/*
 	// render the points 

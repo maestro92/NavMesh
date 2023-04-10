@@ -40,81 +40,83 @@ namespace Editor
 		EntityOption option;
 		int numOptions = 0;
 
+		// because these are obstacles, they are in counter clockwise order
+		//
 		option.name = "Square";		
 		vertices.clear();
-		vertices.push_back(glm::vec3(-1.0, -1.0, 0.0));
-		vertices.push_back(glm::vec3(1.0, -1.0, 0.0));
-		vertices.push_back(glm::vec3(1.0, 1.0, 0.0));
 		vertices.push_back(glm::vec3(-1.0, 1.0, 0.0));
+		vertices.push_back(glm::vec3(1.0, 1.0, 0.0));
+		vertices.push_back(glm::vec3(1.0, -1.0, 0.0));
+		vertices.push_back(glm::vec3(-1.0, -1.0, 0.0));
 		option.vertices = vertices;
 		editorState->options[numOptions++] = option;
 
 
 		option.name = "Concave";
 		vertices.clear();
-		vertices.push_back(glm::vec3(4.0, 0.0, 0.0));
-		vertices.push_back(glm::vec3(2.0, 4.0, 0.0));
-		vertices.push_back(glm::vec3(0.0, 6.0, 0.0));
-		vertices.push_back(glm::vec3(-5.0, 0.0, 0.0));
-		vertices.push_back(glm::vec3(-2.0, -5.0, 0.0));
-		vertices.push_back(glm::vec3(2.0, -9.0, 0.0));
 		vertices.push_back(glm::vec3(1.0, -3.0, 0.0));
+		vertices.push_back(glm::vec3(2.0, -9.0, 0.0));
+		vertices.push_back(glm::vec3(-2.0, -5.0, 0.0));
+		vertices.push_back(glm::vec3(-5.0, 0.0, 0.0));
+		vertices.push_back(glm::vec3(0.0, 6.0, 0.0));
+		vertices.push_back(glm::vec3(2.0, 4.0, 0.0));
+		vertices.push_back(glm::vec3(4.0, 0.0, 0.0));
 		option.vertices = vertices;
 		editorState->options[numOptions++] = option;
 
 
 		option.name = "4 point star";
 		vertices.clear();
-		vertices.push_back(glm::vec3(5.0, 0.0, 0.0));
-		vertices.push_back(glm::vec3(1.0, 1.0, 0.0));
-		vertices.push_back(glm::vec3(0.0, 5.0, 0.0));
-		vertices.push_back(glm::vec3(-1.0, 1.0, 0.0));
-		vertices.push_back(glm::vec3(-5.0, 0.0, 0.0));
-		vertices.push_back(glm::vec3(-1.0, -1.0, 0.0));
-		vertices.push_back(glm::vec3(0.0, -5.0, 0.0));
 		vertices.push_back(glm::vec3(1.0, -1.0, 0.0));
+		vertices.push_back(glm::vec3(0.0, -5.0, 0.0));
+		vertices.push_back(glm::vec3(-1.0, -1.0, 0.0));
+		vertices.push_back(glm::vec3(-5.0, 0.0, 0.0));
+		vertices.push_back(glm::vec3(-1.0, 1.0, 0.0));
+		vertices.push_back(glm::vec3(0.0, 5.0, 0.0));
+		vertices.push_back(glm::vec3(1.0, 1.0, 0.0));
+		vertices.push_back(glm::vec3(5.0, 0.0, 0.0));
 		option.vertices = vertices;
 		editorState->options[numOptions++] = option;
 
 
 		option.name = "Hexagon";
 		vertices.clear();
-		vertices.push_back(glm::vec3(5.0, 0.0, 0.0));
-		vertices.push_back(glm::vec3(3.0, 4.0, 0.0));
-		vertices.push_back(glm::vec3(-4.0, 6.0, 0.0));
-		vertices.push_back(glm::vec3(-7.0, 4.0, 0.0));
-		vertices.push_back(glm::vec3(-8.0, 0.0, 0.0));
 		vertices.push_back(glm::vec3(0.0, -4.0, 0.0));
+		vertices.push_back(glm::vec3(-8.0, 0.0, 0.0));
+		vertices.push_back(glm::vec3(-7.0, 4.0, 0.0));
+		vertices.push_back(glm::vec3(-4.0, 6.0, 0.0));
+		vertices.push_back(glm::vec3(3.0, 4.0, 0.0));
+		vertices.push_back(glm::vec3(5.0, 0.0, 0.0));
 		option.vertices = vertices;
 		editorState->options[numOptions++] = option;
 
 		
 		option.name = "Mineral";
 		vertices.clear();
-		vertices.push_back(glm::vec3(-1.0, -0.5, 0.0));
-		vertices.push_back(glm::vec3(1.0, -0.5, 0.0));
-		vertices.push_back(glm::vec3(1.0, 0.5, 0.0));
 		vertices.push_back(glm::vec3(-1.0, 0.5, 0.0));
+		vertices.push_back(glm::vec3(1.0, 0.5, 0.0));
+		vertices.push_back(glm::vec3(1.0, -0.5, 0.0));
+		vertices.push_back(glm::vec3(-1.0, -0.5, 0.0));
 		option.vertices = vertices;
 		editorState->options[numOptions++] = option;
 		
 
 		option.name = "long wall";
 		vertices.clear();
-		vertices.push_back(glm::vec3(-10.0, -1.0, 0.0));
-		vertices.push_back(glm::vec3(10.0, -1.0, 0.0));
-		vertices.push_back(glm::vec3(10.0, 1.0, 0.0));
 		vertices.push_back(glm::vec3(-10.0, 1.0, 0.0));
+		vertices.push_back(glm::vec3(10.0, 1.0, 0.0));
+		vertices.push_back(glm::vec3(10.0, -1.0, 0.0));
+		vertices.push_back(glm::vec3(-10.0, -1.0, 0.0));
 		option.vertices = vertices;
 		editorState->options[numOptions++] = option;
 
 
 		option.name = "tall wall";
 		vertices.clear();
-		vertices.push_back(glm::vec3(-1.0, -10.0, 0.0));
-		vertices.push_back(glm::vec3(1.0, -10.0, 0.0));
-		vertices.push_back(glm::vec3(1.0, 10.0, 0.0));
 		vertices.push_back(glm::vec3(-1.0, 10.0, 0.0));
+		vertices.push_back(glm::vec3(1.0, 10.0, 0.0));
+		vertices.push_back(glm::vec3(1.0, -10.0, 0.0));
+		vertices.push_back(glm::vec3(-1.0, -10.0, 0.0));
 		option.vertices = vertices;
 		editorState->options[numOptions++] = option;
 

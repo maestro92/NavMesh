@@ -158,6 +158,7 @@
     <ClInclude Include="game_io.h" />
     <ClInclude Include="game_render.h" />
     <ClInclude Include="game_state.h" />
+    <ClInclude Include="geometry_core.h" />
     <ClInclude Include="json_spirit\json_spirit.h" />
     <ClInclude Include="json_spirit\json_spirit_error_position.h" />
     <ClInclude Include="json_spirit\json_spirit_reader.h" />
@@ -179,7 +180,6 @@
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="game_code.cpp" />
-    <ClCompile Include="game_io.cpp" />
     <ClCompile Include="json_spirit\json_spirit_reader.cpp" />
     <ClCompile Include="json_spirit\json_spirit_value.cpp" />
     <ClCompile Include="json_spirit\json_spirit_writer.cpp" />
