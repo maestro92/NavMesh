@@ -133,15 +133,6 @@ void initEntity(Entity* entity, glm::vec3 pos, EntityFlag entityFlag, std::vecto
 	entity->flag = entityFlag;
 }
 
-/*
-void initEntity(Entity* entity, glm::vec3 pos, EntityFlag entityFlag, std::vector<Face> faces)
-{
-	entity->pos = pos;
-	entity->model = faces;
-	entity->flag = entityFlag;
-}
-*/
-
 void initPlayerEntity(Entity* entity, glm::vec3 pos)
 {
 	entity->pos = pos;
@@ -386,10 +377,42 @@ void CreateAreaA(World* world)
 	// use this online plotter to as online visualization of your points before running the game
 	// lines are plotted counter-clockswise so it's consistent with the right hand rule
 	std::vector<glm::vec3> vertices;
-
 	
-	float scale = 10;
+	// clockwise
+	std::vector<GeoCore::Polygon> holes;
 
+
+	vertices.push_back(glm::vec3(world->min.x, world->min.y, 0));
+	vertices.push_back(glm::vec3(world->max.x, world->min.y, 0));
+	vertices.push_back(glm::vec3(world->max.x, world->max.y, 0));
+	vertices.push_back(glm::vec3(world->min.x, world->max.y, 0));
+
+
+
+	GeoCore::Polygon hole;
+	hole.vertices.push_back(glm::vec3(-5, 50, 0));
+	hole.vertices.push_back(glm::vec3(5, 50, 0));
+	hole.vertices.push_back(glm::vec3(5, -50, 0));
+	hole.vertices.push_back(glm::vec3(-5, -50, 0));	
+	for (int i = 0; i < hole.vertices.size(); i++)
+	{
+		hole.vertices[i] += glm::vec3(76.743, 128.400, 0);
+	}	
+	holes.push_back(hole);
+
+	GeoCore::Polygon hole2;
+	hole2.vertices.push_back(glm::vec3(-5, 50, 0));
+	hole2.vertices.push_back(glm::vec3(5, 50, 0));
+	hole2.vertices.push_back(glm::vec3(5, -50, 0));
+	hole2.vertices.push_back(glm::vec3(-5, -50, 0));
+	for (int i = 0; i < hole2.vertices.size(); i++)
+	{
+		hole2.vertices[i] += glm::vec3(158.268, 127.925, 0);
+	}
+	holes.push_back(hole2);
+
+	/*
+	float scale = 10;
 	vertices.push_back(glm::vec3(2, 4, 0));
 	vertices.push_back(glm::vec3(-4, 6, 0));
 	vertices.push_back(glm::vec3(-9, 8, 0));
@@ -431,9 +454,7 @@ void CreateAreaA(World* world)
 	
 	
 
-	// clockwise
-	std::vector<GeoCore::Polygon> holes;
-	
+
 	GeoCore::Polygon hole;
 	hole.vertices.push_back(glm::vec3(2, 3, 0));
 	hole.vertices.push_back(glm::vec3(-8, 6, 0));
@@ -450,6 +471,7 @@ void CreateAreaA(World* world)
 	ScalingTheHole(hole2, scale, min);
 
 	holes.push_back(hole2);
+	*/
 
 	CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->max, world->cdTriangulationdebug);
 

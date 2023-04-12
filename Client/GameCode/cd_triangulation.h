@@ -679,6 +679,9 @@ namespace CDTriangulation
 		// 5. find an existing triangle that contains the point
 		bool foundTriangle = false;
 		DelaunayTriangle containingTriangle;
+
+		std::cout << ">>>>>>>>>>>>> AddVertexToTriangulation" << std::endl;
+		std::cout << "			" << curVertex.pos.x << " " << curVertex.pos.y << " " << curVertex.pos.z << std::endl;
 		for (int j = 0; j < triangles.size(); j++)
 		{
 			DelaunayTriangle triangleToCheck = triangles[j];
@@ -826,7 +829,7 @@ namespace CDTriangulation
 					IsPointOnTheLeftOfLineSegment(vEnd.pos, e1v0.pos, e1v1.pos)){
 						
 					containingTriangle = triangles[i];
-				//	std::cout << "containingTriangle " << containingTriangle.id << std::endl;
+					std::cout << "containingTriangle " << containingTriangle.id << std::endl;
 					break;
 				}
 			}
@@ -1000,6 +1003,27 @@ namespace CDTriangulation
 		glm::ivec2 mapSize,
 		DebugState* debugState)
 	{
+
+
+		std::cout << ">>>>> printing points " << std::endl;
+		for (int j = 0; j < points.size(); j++)
+		{
+			std::cout << "      " << points[j].x << " " << points[j].y << std::endl;
+		}
+
+		std::cout << ">>>>> printing holes " << std::endl;
+		for (int j = 0; j < holes.size(); j++)
+		{
+			std::cout << "      holes " << j << std::endl;
+			for (int k = 0; k < holes[j].vertices.size(); k++)
+			{
+				std::cout << "			" << holes[j].vertices[k].x << " " << holes[j].vertices[k].y << std::endl;
+			}
+
+		}
+
+
+
 		debugState->vertices = points;
 		debugState->holes = holes;
 
@@ -1052,7 +1076,7 @@ namespace CDTriangulation
 		//		break;
 			}
 
-			std::cout << "i " << i << " " << verticesToAdd[i].pos.x << " " << verticesToAdd[i].pos.y << std::endl;
+		//	std::cout << "i " << i << " " << verticesToAdd[i].pos.x << " " << verticesToAdd[i].pos.y << std::endl;
 
 			AddVertexToTriangulation(verticesToAdd[i], triangles, triangleCounter, triangleStack);
 		}
@@ -1078,9 +1102,42 @@ namespace CDTriangulation
 			masterHoleVertices.push_back(tempVertexList);
 		}
 
+
+		std::cout << ">>>>> printing masterVertexArray " << std::endl;
+		for (int j = 0; j < masterVertexArray.size(); j++)
+		{
+			std::cout << "      " << masterVertexArray[j].id << " " << masterVertexArray[j].pos.x << " " << masterVertexArray[j].pos.y << std::endl;
+		}
+
+
+
+		std::cout << ">>>>> printing masterHoleVertices " << std::endl;
+		for (int j = 0; j < masterHoleVertices.size(); j++)
+		{
+			for (int k = 0; k < masterHoleVertices[j].size(); k++)
+			{
+				std::cout << "      " << masterHoleVertices[j][k].id << std::endl;
+			}
+		}
+
+		std::cout << ">>>>> printing edges " << std::endl;
+		for (int j = 0; j < triangles.size(); j++)
+		{
+			std::cout << "      Triangle " << j << std::endl;
+			for (int k = 0; k < NUM_TRIANGLE_EDGES; k++)
+			{
+				std::cout << "			" << triangles[j].edges[k].vertices[0] << " " << triangles[j].edges[k].vertices[1] << std::endl;
+			}
+				
+		}
+
+
+
 		// 5.3 create the constrained edges
 		for (int j = 0; j < holes.size(); j++)
 		{
+			std::cout << ">>>>> Examining hole " << j << std::endl;
+
 			std::vector<Vertex> holeVertices = masterHoleVertices[j];
 
 			std::vector<DelaunayTriangleEdge> constrainedEdges;
@@ -1124,7 +1181,7 @@ namespace CDTriangulation
 			}
 			debugState->debugConstrainedEdgePolygons.push_back(debugConstrainedEdgePolygon);
 
-
+			std::cout << "     constrainedEdges.size() " << constrainedEdges.size() << std::endl;
 			// 5.3.1 search for triangle that contains the beginning of the new edge
 			for (int i = 0; i < constrainedEdges.size(); i++)
 			{
@@ -1133,6 +1190,9 @@ namespace CDTriangulation
 
 				std::queue<IntersectedEdge> intersectedEdgesQueue;
 				{
+					std::cout << "     masterVertexArray " << masterVertexArray.size() << std::endl;
+					std::cout << "     triangles " << triangles.size() << std::endl;
+
 					// 5.3.2 get all the edges that intersects
 					std::vector<IntersectedEdge> intersectedEdges = GetEdgesInteserctedByEdge(constrainedEdges[i], triangles, masterVertexArray);
 					std::string debugString;

@@ -1329,8 +1329,39 @@ void SaveMap(World* world)
 void TriangulateMap(World* world)
 {
 	
-//	CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holesVertices, (glm::vec2)world->max, world->cdTriangulationdebug);
 
+	// https://technology.cpm.org/general/3dgraph/
+	// https://oercommons.s3.amazonaws.com/media/courseware/relatedresource/file/imth-6-1-9-6-1-coordinate_plane_plotter/index.html
+	// use this online plotter to as online visualization of your points before running the game
+	// lines are plotted counter-clockswise so it's consistent with the right hand rule
+	std::vector<glm::vec3> vertices;
+
+
+	float scale = 10;
+
+	vertices.push_back(glm::vec3(world->min.x, world->min.y, 0));
+	vertices.push_back(glm::vec3(world->max.x, world->min.y, 0));
+	vertices.push_back(glm::vec3(world->max.x, world->max.y, 0));
+	vertices.push_back(glm::vec3(world->min.x, world->max.y, 0));
+
+	// clockwise
+	std::vector<GeoCore::Polygon> holes;
+	std::cout << ">>>>>>>>>> num entities " << world->numEntities << std::endl;
+	for (int i = 0; i < world->numEntities; i++)
+	{
+		Entity* entity = &world->entities[i];
+		if (entity->flag == OBSTACLE)
+		{
+			GeoCore::Polygon hole;
+			for (int j = 0; j < entity->vertices.size(); j++)
+			{
+				hole.vertices.push_back(entity->vertices[j] + entity->pos);
+			}
+			holes.push_back(hole);
+		}
+	}
+	
+	CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->max, world->cdTriangulationdebug);
 }
 
 
@@ -1376,8 +1407,15 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		platformAPI = gameMemory->platformAPI;
 
 
-		WorldManager::InitWorld(&gameState->world);
-		//LoadMap(&gameState->world, "data.txt");
+		if (false)
+		{
+			WorldManager::InitWorld(&gameState->world);
+		}
+		else
+		{
+			LoadMap(&gameState->world, "data.txt");
+		}
+
 
 		gameState->debugCameraEntity = {};
 		gameState->debugCameraEntity.pos = glm::vec3(0, -90, 400);
