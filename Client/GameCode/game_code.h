@@ -1346,7 +1346,7 @@ void TriangulateMap(World* world)
 
 	// clockwise
 	std::vector<GeoCore::Polygon> holes;
-	std::cout << ">>>>>>>>>> num entities " << world->numEntities << std::endl;
+
 	for (int i = 0; i < world->numEntities; i++)
 	{
 		Entity* entity = &world->entities[i];
