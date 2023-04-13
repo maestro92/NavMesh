@@ -543,14 +543,15 @@ void RenderTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderComman
 	float thickness = 0.2f;
 	for (int i = 0; i < triangulationDebug->triangles.size(); i++)
 	{
-		Triangulation::Triangle triangle = triangulationDebug->triangles[i];
+		Triangulation::Triangle* triangle = &triangulationDebug->triangles[i];
 		glm::vec3 liftedVertex[3];
 
 		for (int j = 0; j < Triangulation::NUM_TRIANGLE_VERTEX; j++)
 		{
 			// lifting it slightly higher
-			liftedVertex[j] = triangle.vertices[j] + GameRender::DEBUG_RENDER_OFFSET;
+			liftedVertex[j] = triangle->vertices[j] + GameRender::DEBUG_RENDER_OFFSET;
 		}
+
 		GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, GameRender::COLOR_WHITE, liftedVertex, thickness, false);
 	}
 
@@ -733,7 +734,7 @@ void RenderCDTriangulationDebug(
 		}
 	}
 
-
+	/*
 	std::vector<glm::vec4> colors = {
 		GameRender::COLOR_WHITE, 
 		GameRender::COLOR_YELLOW,
@@ -742,10 +743,11 @@ void RenderCDTriangulationDebug(
 		GameRender::COLOR_RED,
 		GameRender::COLOR_TEAL,
 		GameRender::COLOR_ORANGE };
+		*/
 
 	for (int i = 0; i < triangulationDebug->triangles.size(); i++)
 	{
-		CDTriangulation::DelaunayTriangle triangle = triangulationDebug->triangles[i];
+		CDTriangulation::DelaunayTriangle* triangle = &triangulationDebug->triangles[i];
 		glm::vec3 liftedVertex[3];
 
 		glm::vec3 centroid;
@@ -753,29 +755,38 @@ void RenderCDTriangulationDebug(
 		for (int j = 0; j < Triangulation::NUM_TRIANGLE_VERTEX; j++)
 		{
 			// lifting it slightly higher
-			liftedVertex[j] = triangle.vertices[j].pos + GameRender::DEBUG_RENDER_OFFSET;
-			centroid += glm::vec3(triangle.vertices[j].pos.x, triangle.vertices[j].pos.y, 0);
+			liftedVertex[j] = triangle->vertices[j].pos + GameRender::DEBUG_RENDER_OFFSET;
+			centroid += glm::vec3(triangle->vertices[j].pos.x, triangle->vertices[j].pos.y, 0);
 		}
 
 		centroid = centroid / 3.0f;
 
 
-		glm::vec4 color = colors[i % colors.size()];
-		GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, GameRender::COLOR_WHITE, liftedVertex, thickness, false);
+	//	glm::vec4 color = colors[i % colors.size()];
+		
+		if (triangle->isObstacle)
+		{
+			GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, liftedVertex, thickness, false);
+		}
+		else
+		{
+			GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, GameRender::COLOR_WHITE, liftedVertex, thickness, false);
+		}
+
 		// GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, color, liftedVertex, thickness, false);
 		// GameRender::PushTriangle(gameRenderCommands, group, bitmap, color, liftedVertex, false);
 
-		std::string s = std::to_string(triangle.id);
+		std::string s = std::to_string(triangle->id);
 
 
 		GameRender::DEBUGTextLine(s.c_str(), gameRenderState, centroid, 0.5);
 
-		if (triangulationDebug->highlightedTriangle != NULL && triangle.id == triangulationDebug->highlightedTriangle->id)
+		if (triangulationDebug->highlightedTriangle != NULL && triangle->id == triangulationDebug->highlightedTriangle->id)
 		{
 
 			GameRender::PushTriangle(gameRenderCommands, group, bitmap, GameRender::COLOR_YELLOW, liftedVertex, false);
 
-			Triangulation::Circle circle = CDTriangulation::FindCircumCircle(triangle);
+			Triangulation::Circle circle = CDTriangulation::FindCircumCircle(*triangle);
 			GameRender::RenderCircle(
 				gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, circle.center, circle.radius, lineThickness);
 
@@ -1362,6 +1373,24 @@ void TriangulateMap(World* world)
 	}
 	
 	CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->max, world->cdTriangulationdebug);
+
+	for (int i = 0; i < world->cdTriangulationdebug->triangles.size(); i++)
+	{
+		CDTriangulation::DelaunayTriangle* triangle = &world->cdTriangulationdebug->triangles[i];
+		glm::vec3 center = triangle->GetCenter();
+
+		std::cout << center.x << " " << center.y << " " << std::endl;
+		for (int j = 0; j < holes.size(); j++)
+		{
+			if (Collision::IsPointInsidePolygon2D(center, holes[j].vertices))
+			{
+				triangle->isObstacle = true;
+				break;
+			}
+		}
+	}
+
+	int a = 1;
 }
 
 

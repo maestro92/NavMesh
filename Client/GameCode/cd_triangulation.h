@@ -49,8 +49,15 @@ namespace CDTriangulation
 		int id;
 		Vertex vertices[NUM_TRIANGLE_VERTEX];
 		int neighbors[NUM_TRIANGLE_EDGES];	// neighbor triangle id, got a neighbor per edge, hence 3 neighbors
+		bool isObstacle;
 
 		DelaunayTriangleEdge edges[NUM_TRIANGLE_EDGES];
+		
+		DelaunayTriangle()
+		{
+			isObstacle = false;
+		}
+		
 		friend bool operator==(const DelaunayTriangle& l, const DelaunayTriangle& r)
 		{
 			for (int i = 0; i < NUM_TRIANGLE_VERTEX; i++)
@@ -71,6 +78,18 @@ namespace CDTriangulation
 				}
 			}
 			return true;
+		}
+
+		glm::vec3 GetCenter()
+		{
+			glm::vec3 center = glm::vec3(0);
+			for (int i = 0; i < NUM_TRIANGLE_VERTEX; i++)
+			{
+				center += vertices[i].pos;
+			}
+
+			center = center / 3.0f;
+			return center;
 		}
 
 		void ReorganizeVertices(int diff)
