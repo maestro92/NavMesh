@@ -707,19 +707,11 @@ void RenderCDTriangulationDebug(
 		CDTriangulation::DelaunayTriangle* triangle = &triangulationDebug->triangles[i];
 		glm::vec3 liftedVertex[3];
 
-		glm::vec3 centroid;
-
 		for (int j = 0; j < Triangulation::NUM_TRIANGLE_VERTEX; j++)
 		{
 			// lifting it slightly higher
 			liftedVertex[j] = triangle->vertices[j].pos + GameRender::DEBUG_RENDER_OFFSET;
-			centroid += glm::vec3(triangle->vertices[j].pos.x, triangle->vertices[j].pos.y, 0);
 		}
-
-		centroid = centroid / 3.0f;
-
-
-	//	glm::vec4 color = colors[i % colors.size()];
 		
 		if (triangle->isObstacle)
 		{
@@ -730,13 +722,8 @@ void RenderCDTriangulationDebug(
 			GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, GameRender::COLOR_WHITE, liftedVertex, thickness, false);
 		}
 
-		// GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, color, liftedVertex, thickness, false);
-		// GameRender::PushTriangle(gameRenderCommands, group, bitmap, color, liftedVertex, false);
-
 		std::string s = std::to_string(triangle->id);
-
-
-		GameRender::DEBUGTextLine(s.c_str(), gameRenderState, centroid, 0.1);
+		GameRender::DEBUGTextLine(s.c_str(), gameRenderState, triangle->GetCenter(), 0.5);
 
 
 		if (editorState->highlightTriangle)
@@ -973,6 +960,8 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 		if (gameInputState->moveDown.endedDown) {
 			pmove.velocity += stepSize * glm::vec3(0, -1, 0);
 		}
+		// make the zoom reverse by distance like what Casey did
+		//
 		if (gameInputState->zoomIn.endedDown) {
 			pmove.velocity += stepSize * newViewDir * 5.0f;
 		}

@@ -3,17 +3,14 @@
 #include "../PlatformShared/platform_shared.h"
 #include "math.h"
 #include <vector>
+#include "geometry_core.h"
+#include <algorithm>
 
 namespace Collision
 {
 	float EPSILON = 1e-5;
-	struct Rect
-	{
-		glm::vec3 min;
-		glm::vec3 max;
-	};
 
-	bool IsPointInsideRect(Rect rect, glm::vec3 point)
+	bool IsPointInsideRect(GeoCore::AABB rect, glm::vec3 point)
 	{
 		return rect.min.x <= point.x && point.x < rect.max.x&& rect.min.y <= point.y && point.y < rect.max.y;
 	}
@@ -137,6 +134,21 @@ namespace Collision
 		return (a.x - c.x) * (b.y - c.y) - (a.y - c.y) * (b.x - c.x);
 	}
 
+
+	bool DoesAABBAABBIntersect2D(GeoCore::AABB a, GeoCore::AABB b)
+	{
+		if (a.max.x < b.min.x || a.min.x > b.max.x)
+		{
+			return false;
+		}
+
+		if (a.max.y < b.min.y || a.min.y > b.max.y)
+		{
+			return false;
+		}
+
+		return true;
+	}
 
 
 	bool GetLineLineIntersectionPoint(glm::vec2 p0, glm::vec2 p1, glm::vec2 p2, glm::vec2 p3, glm::vec2& intersectionPoint)
@@ -322,8 +334,84 @@ namespace Collision
 	bool IsPointOnTheRightOfLineSegment2D(glm::vec2 point, glm::vec2 a, glm::vec2 b)
 	{
 		return GetDeterminant(b-a, point-a) < 0;
-	}
+	}	
+	
 
+
+	// https://www.jkh.me/files/tutorials/Separating%20Axis%20Theorem%20for%20Oriented%20Bounding%20Boxes.pdf
+	// separating axis theorem
+	bool TestTriangleAABB2D(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, GeoCore::AABB b)
+	{
+		// p0, p1, p2, is projecting the triangle points onto an axis
+		float p0, p1, p2, r;
+
+		glm::vec3 c = (b.min + b.max) * 0.5f;
+		float e0 = (b.max.x - b.min.x) * 0.5f;
+		float e1 = (b.max.y - b.min.y) * 0.5f;
+
+		v0 = v0 - c;
+		v1 = v1 - c;
+		v2 = v2 - c;
+
+		// triangle edges
+		glm::vec3 f0 = v1 - v0;
+		glm::vec3 f1 = v2 - v1;
+		glm::vec3 f2 = v0 - v2;
+
+		glm::vec3 zAxis = glm::vec3(0, 0, 1);
+
+		// 3 separating axis of the triangle edges
+		glm::vec3 axis = glm::normalize(glm::cross(f0, zAxis));
+
+		p0 = glm::dot(v0, axis);
+		p1 = glm::dot(v1, axis);
+		p2 = glm::dot(v2, axis);
+
+		r = e0 * std::abs(glm::dot(glm::vec3(1, 0, 0), axis)) + e1 * std::abs(glm::dot(glm::vec3(0, 1, 0), axis));
+		if ( std::max(-Math::Max(p0, p1, p2), Math::Min(p0, p1, p2)) > r) 
+		{
+			return false;
+		}
+
+		// 2nd edge
+		axis = glm::normalize(glm::cross(f1, zAxis));
+		p0 = glm::dot(v0, axis);
+		p1 = glm::dot(v1, axis);
+		p2 = glm::dot(v2, axis);
+
+		r = e0 * std::abs(glm::dot(glm::vec3(1, 0, 0), axis)) + e1 * std::abs(glm::dot(glm::vec3(0, 1, 0), axis));
+		if (std::max(-Math::Max(p0, p1, p2), Math::Min(p0, p1, p2)) > r)
+		{
+			return false;
+		}
+
+		// 3rd edge
+		axis = glm::normalize(glm::cross(f2, zAxis));
+		p0 = glm::dot(v0, axis);
+		p1 = glm::dot(v1, axis);
+		p2 = glm::dot(v2, axis);
+
+		r = e0 * std::abs(glm::dot(glm::vec3(1, 0, 0), axis)) + e1 * std::abs(glm::dot(glm::vec3(0, 1, 0), axis));
+		if (std::max(-Math::Max(p0, p1, p2), Math::Min(p0, p1, p2)) > r)
+		{
+			return false;
+		}
+
+
+		// 2 axes to the face normals of aabb b
+		if (Math::Max(v0.x, v1.x, v2.x) < -e0 || Math::Min(v0.x, v1.x, v2.x) > e0)
+		{
+			return false;
+		}
+
+		if (Math::Max(v0.y, v1.y, v2.y) < -e1 || Math::Min(v0.y, v1.y, v2.y) > e1)
+		{
+			return false;
+		}
+
+		return true;
+	}
+	
 
 	// https://erich.realtimerendering.com/ptinpoly/
 	// assume polygon is counter clockwise

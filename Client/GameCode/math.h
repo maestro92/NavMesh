@@ -3,6 +3,7 @@
 #include "../PlatformShared/platform_shared.h"
 #include <math.h>       /* atan2 */
 #include <sstream>
+#include <algorithm>
 
 #define PI 3.14159265
 
@@ -45,6 +46,16 @@ namespace Math
 	inline float TriArea_XYPlane(const glm::vec3 d0, const glm::vec3 d1)
 	{
 		return d0.x * d1.y - d1.x * d0.y;
+	}
+
+	float Max(float a, float b, float c)
+	{
+		return std::max(std::max(a, b), c);
+	}
+
+	float Min(float a, float b, float c)
+	{
+		return std::min(std::min(a, b), c);
 	}
 
 	float ConvertAngleTo0To360(float angle)

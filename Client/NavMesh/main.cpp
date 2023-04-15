@@ -5,6 +5,7 @@
 
 #include "SDL.h"
 #undef main
+#define NOMINMAX
 
 #include <windows.h>
 #include <string>

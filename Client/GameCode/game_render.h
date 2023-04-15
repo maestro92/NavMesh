@@ -684,8 +684,6 @@ namespace GameRender
 		PushLine(gameRenderCommands, renderGroup, bitmap, COLOR_BLUE, origin, zAxisEnd, cubeThickness);
 	}
 
-
-
 	void DEBUGTextLine(const char* s,
 		GameRenderState* gameRenderState,
 		glm::vec3 position, float bitmapScale)
@@ -730,8 +728,9 @@ namespace GameRender
 				float height = DEBUG_CHAR_BITMAP_SCALE * glyphBitmap->bitmap.height;
 				float width = glyphBitmap->bitmap.width / (float)glyphBitmap->bitmap.height * height;
 
-				int x = xPos + glyphBitmap->bitmapXYOffsets.x;
-				int y = yBaselinePos - glyphBitmap->bitmapXYOffsets.y;
+				// i dont know why i only multiple scale here... but i'll investigate later
+				float x = xPos + (float)(glyphBitmap->bitmapXYOffsets.x) * scale;
+				float y = yBaselinePos - (float)(glyphBitmap->bitmapXYOffsets.y);
 
 				// 0.2 so that its slightly above the z plane
 				glm::vec3 leftTopPos = glm::vec3(x, y, 0.2);

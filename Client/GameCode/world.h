@@ -572,8 +572,34 @@ void CreateAreaA(World* world)
 	{
 		CDTriangulation::DelaunayTriangle& triangle = world->cdTriangulationdebug->triangles[i];
 
+		for (int y = 0, yi = 0; yi < world->max.y; y++, yi += world->mapGrid.cellSize)
+		{
+			for (int x = 0, xi = 0; xi < world->max.x; x++, xi += world->mapGrid.cellSize)
+			{
+				if (x == 2 && y == 1)
+				{
+
+				}
+
+				glm::vec3 min = glm::vec3(xi, yi, 0);
+				glm::vec3 max = min + glm::vec3(world->mapGrid.cellSize, world->mapGrid.cellSize, 0);
+
+				GeoCore::AABB aabb = { min, max };
+
+				if (Collision::TestTriangleAABB2D(triangle.vertices[0].pos, triangle.vertices[1].pos, triangle.vertices[2].pos, aabb))
+				{
+					world->mapGrid.AddTriangle(triangle.id, x, y);
+				}
+			}
+		}
+
+		/*
 		for (int j = 0; j < CDTriangulation::NUM_TRIANGLE_VERTEX; j++)
 		{
+			// not a strict test, just using the AABB that the triangle occupies and see if it overlaps
+			// TODO: making this a strict AABB vs triangle intersection test
+
+
 			glm::vec3 pt = triangle.vertices[j].pos;
 
 			if (world->IsValidSimPos(pt))
@@ -584,6 +610,7 @@ void CreateAreaA(World* world)
 				world->mapGrid.AddTriangle(triangle.id, cellX, cellY);
 			}
 		}
+		*/
 	}
 }
 

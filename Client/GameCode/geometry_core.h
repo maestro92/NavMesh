@@ -10,4 +10,10 @@ namespace GeoCore {
 		std::vector<glm::vec3> vertices;
 	};
 
+	struct AABB
+	{
+		glm::vec3 min;
+		glm::vec3 max;
+	};
+
 }
