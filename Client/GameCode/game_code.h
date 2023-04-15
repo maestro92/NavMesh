@@ -1391,7 +1391,7 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 
 		if (true)
 		{
-			WorldManager::InitWorld(&gameState->world);
+			gameState->world.LoadSampleMap();
 		}
 		else
 		{

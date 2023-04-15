@@ -360,43 +360,30 @@ namespace Collision
 
 		glm::vec3 zAxis = glm::vec3(0, 0, 1);
 
+		glm::vec3 edges[3];
+		edges[0] = f0;
+		edges[1] = f1;
+		edges[2] = f2;
+
 		// 3 separating axis of the triangle edges
-		glm::vec3 axis = glm::normalize(glm::cross(f0, zAxis));
-
-		p0 = glm::dot(v0, axis);
-		p1 = glm::dot(v1, axis);
-		p2 = glm::dot(v2, axis);
-
-		r = e0 * std::abs(glm::dot(glm::vec3(1, 0, 0), axis)) + e1 * std::abs(glm::dot(glm::vec3(0, 1, 0), axis));
-		if ( std::max(-Math::Max(p0, p1, p2), Math::Min(p0, p1, p2)) > r) 
+		for (int i = 0; i < 3; i++)
 		{
-			return false;
+			// recall the separating axis is perpendicular to the edge
+			// so we just use the zAxis to get it.
+			glm::vec3 axis = glm::normalize(glm::cross(edges[i], zAxis));
+
+			p0 = glm::dot(v0, axis);
+			p1 = glm::dot(v1, axis);
+			p2 = glm::dot(v2, axis);
+
+			r = e0 * std::abs(glm::dot(glm::vec3(1, 0, 0), axis)) + 
+				e1 * std::abs(glm::dot(glm::vec3(0, 1, 0), axis));
+
+			if (std::max(-Math::Max(p0, p1, p2), Math::Min(p0, p1, p2)) > r)
+			{
+				return false;
+			}
 		}
-
-		// 2nd edge
-		axis = glm::normalize(glm::cross(f1, zAxis));
-		p0 = glm::dot(v0, axis);
-		p1 = glm::dot(v1, axis);
-		p2 = glm::dot(v2, axis);
-
-		r = e0 * std::abs(glm::dot(glm::vec3(1, 0, 0), axis)) + e1 * std::abs(glm::dot(glm::vec3(0, 1, 0), axis));
-		if (std::max(-Math::Max(p0, p1, p2), Math::Min(p0, p1, p2)) > r)
-		{
-			return false;
-		}
-
-		// 3rd edge
-		axis = glm::normalize(glm::cross(f2, zAxis));
-		p0 = glm::dot(v0, axis);
-		p1 = glm::dot(v1, axis);
-		p2 = glm::dot(v2, axis);
-
-		r = e0 * std::abs(glm::dot(glm::vec3(1, 0, 0), axis)) + e1 * std::abs(glm::dot(glm::vec3(0, 1, 0), axis));
-		if (std::max(-Math::Max(p0, p1, p2), Math::Min(p0, p1, p2)) > r)
-		{
-			return false;
-		}
-
 
 		// 2 axes to the face normals of aabb b
 		if (Math::Max(v0.x, v1.x, v2.x) < -e0 || Math::Min(v0.x, v1.x, v2.x) > e0)

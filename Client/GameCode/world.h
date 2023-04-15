@@ -193,8 +193,158 @@ struct World
 		mapGrid.dimY = max.y / mapGrid.cellSize;
 		int numCells = mapGrid.cellSize * mapGrid.cellSize;
 		mapGrid.grid = new MapCell[numCells];
-
 	}
+
+	void LoadSampleMap()
+	{
+		Init();
+		CreateAreaA(this);
+	}
+
+	void CreateAreaA(World* world)
+	{
+		Entity* entity = NULL;
+		std::vector<Face> faces;
+
+
+		// lower level
+		// Box
+		// entity = &world->entities[world->numEntities++];
+		glm::vec3 pos;
+		glm::vec3 dim;
+		glm::vec3 min;
+		glm::vec3 max;
+
+
+		// https://technology.cpm.org/general/3dgraph/
+		// https://oercommons.s3.amazonaws.com/media/courseware/relatedresource/file/imth-6-1-9-6-1-coordinate_plane_plotter/index.html
+		// use this online plotter to as online visualization of your points before running the game
+		// lines are plotted counter-clockswise so it's consistent with the right hand rule
+		std::vector<glm::vec3> vertices;
+
+		// clockwise
+		std::vector<GeoCore::Polygon> holes;
+
+
+		vertices.push_back(glm::vec3(world->min.x, world->min.y, 0));
+		vertices.push_back(glm::vec3(world->max.x, world->min.y, 0));
+		vertices.push_back(glm::vec3(world->max.x, world->max.y, 0));
+		vertices.push_back(glm::vec3(world->min.x, world->max.y, 0));
+
+
+
+		GeoCore::Polygon hole;
+		hole.vertices.push_back(glm::vec3(-5, 50, 0));
+		hole.vertices.push_back(glm::vec3(5, 50, 0));
+		hole.vertices.push_back(glm::vec3(5, -50, 0));
+		hole.vertices.push_back(glm::vec3(-5, -50, 0));
+		for (int i = 0; i < hole.vertices.size(); i++)
+		{
+			hole.vertices[i] += glm::vec3(76.743, 128.400, 0);
+		}
+		holes.push_back(hole);
+
+		GeoCore::Polygon hole2;
+		hole2.vertices.push_back(glm::vec3(-5, 50, 0));
+		hole2.vertices.push_back(glm::vec3(5, 50, 0));
+		hole2.vertices.push_back(glm::vec3(5, -50, 0));
+		hole2.vertices.push_back(glm::vec3(-5, -50, 0));
+		for (int i = 0; i < hole2.vertices.size(); i++)
+		{
+			hole2.vertices[i] += glm::vec3(158.268, 127.925, 0);
+		}
+		holes.push_back(hole2);
+
+		/*
+		float scale = 10;
+		vertices.push_back(glm::vec3(2, 4, 0));
+		vertices.push_back(glm::vec3(-4, 6, 0));
+		vertices.push_back(glm::vec3(-9, 8, 0));
+
+		vertices.push_back(glm::vec3(7, 2, 0));
+		vertices.push_back(glm::vec3(6, -3, 0));
+		vertices.push_back(glm::vec3(5, -9, 0));
+
+		vertices.push_back(glm::vec3(3, -5, 0));
+		vertices.push_back(glm::vec3(1, -9, 0));
+		vertices.push_back(glm::vec3(-3, -8, 0));
+
+		vertices.push_back(glm::vec3(-12, 3, 0));
+		vertices.push_back(glm::vec3(-8, 0, 0));
+		vertices.push_back(glm::vec3(-9, 2, 0));
+
+		vertices.push_back(glm::vec3(-1, -5, 0));
+		vertices.push_back(glm::vec3(-1, 10, 0));
+
+		min = glm::vec3(FLT_MAX, FLT_MAX, 0);
+		for (int i = 0; i < vertices.size(); i++)
+		{
+			if (vertices[i].x < min.x)
+			{
+				min.x = vertices[i].x;
+			}
+
+			if (vertices[i].y < min.y)
+			{
+				min.y = vertices[i].y;
+			}
+		}
+
+		for (int i = 0; i < vertices.size(); i++)
+		{
+			vertices[i] = (vertices[i] - min) * scale;
+			std::cout << vertices[i].x << " " << vertices[i].y << std::endl;
+		}
+
+
+
+
+		GeoCore::Polygon hole;
+		hole.vertices.push_back(glm::vec3(2, 3, 0));
+		hole.vertices.push_back(glm::vec3(-8, 6, 0));
+		hole.vertices.push_back(glm::vec3(-3, 7, 0));
+		hole.vertices.push_back(glm::vec3(3, 4, 0));
+		ScalingTheHole(hole, scale, min);
+		holes.push_back(hole);
+
+		GeoCore::Polygon hole2;
+		hole2.vertices.push_back(glm::vec3(4, -3, 0));
+		hole2.vertices.push_back(glm::vec3(-5, 0, 0));
+		hole2.vertices.push_back(glm::vec3(0, 1, 0));
+		hole2.vertices.push_back(glm::vec3(5, -2, 0));
+		ScalingTheHole(hole2, scale, min);
+
+		holes.push_back(hole2);
+		*/
+
+		CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->max, world->cdTriangulationdebug);
+
+		for (int i = 0; i < world->cdTriangulationdebug->triangles.size(); i++)
+		{
+			CDTriangulation::DelaunayTriangle& triangle = world->cdTriangulationdebug->triangles[i];
+
+			for (int y = 0, yi = 0; yi < world->max.y; y++, yi += world->mapGrid.cellSize)
+			{
+				for (int x = 0, xi = 0; xi < world->max.x; x++, xi += world->mapGrid.cellSize)
+				{
+
+					glm::vec3 min = glm::vec3(xi, yi, 0);
+					glm::vec3 max = min + glm::vec3(world->mapGrid.cellSize, world->mapGrid.cellSize, 0);
+
+					GeoCore::AABB aabb = { min, max };
+
+					if (Collision::TestTriangleAABB2D(triangle.vertices[0].pos, triangle.vertices[1].pos, triangle.vertices[2].pos, aabb))
+					{
+						world->mapGrid.AddTriangle(triangle.id, x, y);
+					}
+				}
+			}
+		}
+
+		glm::vec3 start;
+		glm::vec3 end;
+	}
+
 
 	void initEntity(Entity* entity, glm::vec3 pos, EntityFlag entityFlag, std::vector<glm::vec3> vertices)
 	{
@@ -447,183 +597,6 @@ void ScalingTheHole(GeoCore::Polygon& hole, float scale, glm::vec3 min)
 	{
 		hole.vertices[i] = (hole.vertices[i] - min) * scale;
 		std::cout << hole.vertices[i].x << " " << hole.vertices[i].y << std::endl;
-	}
-}
-
-void CreateAreaA(World* world)
-{
-	Entity* entity = NULL;
-	std::vector<Face> faces;
-
-	
-	// lower level
-	// Box
-	// entity = &world->entities[world->numEntities++];
-	glm::vec3 pos;
-	glm::vec3 dim;
-	glm::vec3 min;
-	glm::vec3 max;
-
-
-	// https://technology.cpm.org/general/3dgraph/
-	// https://oercommons.s3.amazonaws.com/media/courseware/relatedresource/file/imth-6-1-9-6-1-coordinate_plane_plotter/index.html
-	// use this online plotter to as online visualization of your points before running the game
-	// lines are plotted counter-clockswise so it's consistent with the right hand rule
-	std::vector<glm::vec3> vertices;
-	
-	// clockwise
-	std::vector<GeoCore::Polygon> holes;
-
-
-	vertices.push_back(glm::vec3(world->min.x, world->min.y, 0));
-	vertices.push_back(glm::vec3(world->max.x, world->min.y, 0));
-	vertices.push_back(glm::vec3(world->max.x, world->max.y, 0));
-	vertices.push_back(glm::vec3(world->min.x, world->max.y, 0));
-
-
-
-	GeoCore::Polygon hole;
-	hole.vertices.push_back(glm::vec3(-5, 50, 0));
-	hole.vertices.push_back(glm::vec3(5, 50, 0));
-	hole.vertices.push_back(glm::vec3(5, -50, 0));
-	hole.vertices.push_back(glm::vec3(-5, -50, 0));	
-	for (int i = 0; i < hole.vertices.size(); i++)
-	{
-		hole.vertices[i] += glm::vec3(76.743, 128.400, 0);
-	}	
-	holes.push_back(hole);
-
-	GeoCore::Polygon hole2;
-	hole2.vertices.push_back(glm::vec3(-5, 50, 0));
-	hole2.vertices.push_back(glm::vec3(5, 50, 0));
-	hole2.vertices.push_back(glm::vec3(5, -50, 0));
-	hole2.vertices.push_back(glm::vec3(-5, -50, 0));
-	for (int i = 0; i < hole2.vertices.size(); i++)
-	{
-		hole2.vertices[i] += glm::vec3(158.268, 127.925, 0);
-	}
-	holes.push_back(hole2);
-
-	/*
-	float scale = 10;
-	vertices.push_back(glm::vec3(2, 4, 0));
-	vertices.push_back(glm::vec3(-4, 6, 0));
-	vertices.push_back(glm::vec3(-9, 8, 0));
-
-	vertices.push_back(glm::vec3(7, 2, 0));
-	vertices.push_back(glm::vec3(6, -3, 0));
-	vertices.push_back(glm::vec3(5, -9, 0));
-	
-	vertices.push_back(glm::vec3(3, -5, 0));
-	vertices.push_back(glm::vec3(1, -9, 0));
-	vertices.push_back(glm::vec3(-3, -8, 0));
-
-	vertices.push_back(glm::vec3(-12, 3, 0));
-	vertices.push_back(glm::vec3(-8, 0, 0));
-	vertices.push_back(glm::vec3(-9, 2, 0));
-
-	vertices.push_back(glm::vec3(-1, -5, 0));
-	vertices.push_back(glm::vec3(-1, 10, 0));
-
-	min = glm::vec3(FLT_MAX, FLT_MAX, 0);
-	for (int i = 0; i < vertices.size(); i++)
-	{
-		if (vertices[i].x < min.x)
-		{
-			min.x = vertices[i].x;
-		}
-
-		if (vertices[i].y < min.y)
-		{
-			min.y = vertices[i].y;
-		}
-	}
-
-	for (int i = 0; i < vertices.size(); i++)
-	{
-		vertices[i] = (vertices[i] - min) * scale;
-		std::cout << vertices[i].x << " " << vertices[i].y << std::endl;
-	}
-	
-	
-
-
-	GeoCore::Polygon hole;
-	hole.vertices.push_back(glm::vec3(2, 3, 0));
-	hole.vertices.push_back(glm::vec3(-8, 6, 0));
-	hole.vertices.push_back(glm::vec3(-3, 7, 0));
-	hole.vertices.push_back(glm::vec3(3, 4, 0));
-	ScalingTheHole(hole, scale, min);
-	holes.push_back(hole);
-
-	GeoCore::Polygon hole2;
-	hole2.vertices.push_back(glm::vec3(4, -3, 0));
-	hole2.vertices.push_back(glm::vec3(-5, 0, 0));
-	hole2.vertices.push_back(glm::vec3(0, 1, 0));
-	hole2.vertices.push_back(glm::vec3(5, -2, 0));
-	ScalingTheHole(hole2, scale, min);
-
-	holes.push_back(hole2);
-	*/
-
-	CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->max, world->cdTriangulationdebug);
-
-	for (int i = 0; i < world->cdTriangulationdebug->triangles.size(); i++)
-	{
-		CDTriangulation::DelaunayTriangle& triangle = world->cdTriangulationdebug->triangles[i];
-
-		for (int y = 0, yi = 0; yi < world->max.y; y++, yi += world->mapGrid.cellSize)
-		{
-			for (int x = 0, xi = 0; xi < world->max.x; x++, xi += world->mapGrid.cellSize)
-			{
-				if (x == 2 && y == 1)
-				{
-
-				}
-
-				glm::vec3 min = glm::vec3(xi, yi, 0);
-				glm::vec3 max = min + glm::vec3(world->mapGrid.cellSize, world->mapGrid.cellSize, 0);
-
-				GeoCore::AABB aabb = { min, max };
-
-				if (Collision::TestTriangleAABB2D(triangle.vertices[0].pos, triangle.vertices[1].pos, triangle.vertices[2].pos, aabb))
-				{
-					world->mapGrid.AddTriangle(triangle.id, x, y);
-				}
-			}
-		}
-
-		/*
-		for (int j = 0; j < CDTriangulation::NUM_TRIANGLE_VERTEX; j++)
-		{
-			// not a strict test, just using the AABB that the triangle occupies and see if it overlaps
-			// TODO: making this a strict AABB vs triangle intersection test
-
-
-			glm::vec3 pt = triangle.vertices[j].pos;
-
-			if (world->IsValidSimPos(pt))
-			{
-				int cellX = 0, cellY = 0;
-				world->SimPos2GridCoord(pt, cellX, cellY);
-				world->mapGrid.GetCellByIndex(cellX, cellY);
-				world->mapGrid.AddTriangle(triangle.id, cellX, cellY);
-			}
-		}
-		*/
-	}
-}
-
-
-
-namespace WorldManager
-{
-
-
-	void InitWorld(World* world)
-	{
-		world->Init();
-		CreateAreaA(world);
 	}
 }
 
