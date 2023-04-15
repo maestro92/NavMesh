@@ -10,6 +10,9 @@
 #include <vector>
 #include <string>
 
+typedef int TriangleId;
+
+
 // constrained delaunay triangulation
 namespace CDTriangulation
 {
@@ -17,6 +20,7 @@ namespace CDTriangulation
 	const int NUM_TRIANGLE_EDGES = 3;
 	const int INVALID_NEIGHBOR = -1;
 	const int INVALID_INDEX = -1;
+
 
 	// Just has a DebugId for conveniences
 	struct Vertex
@@ -46,7 +50,7 @@ namespace CDTriangulation
 	};
 
 	struct DelaunayTriangle {
-		int id;
+		TriangleId id;
 		Vertex vertices[NUM_TRIANGLE_VERTEX];
 		int neighbors[NUM_TRIANGLE_EDGES];	// neighbor triangle id, got a neighbor per edge, hence 3 neighbors
 		bool isObstacle;

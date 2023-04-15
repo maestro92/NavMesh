@@ -2,6 +2,7 @@
 
 #include "../PlatformShared/platform_shared.h"
 #include <math.h>       /* atan2 */
+#include <sstream>
 
 #define PI 3.14159265
 
@@ -13,6 +14,12 @@ namespace Math
 	const float DEGREE_TO_RADIAN = 0.0174;    /// pi/180
 	const float RADIAN_TO_DEGREE = 57.32;     /// 180/pi
 
+	std::string IntToStr(int value)
+	{
+		std::stringstream ss;
+		ss << value; // add number to string
+		return ss.str();
+	}
 
 	std::ostream& operator<<(std::ostream& os, const glm::vec3& vec)
 	{

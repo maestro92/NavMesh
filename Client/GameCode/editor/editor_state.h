@@ -2,7 +2,6 @@
 
 #include "../../PlatformShared/platform_shared.h"
 #include <string>
-// #include <vector>
 #include <queue>
 #include "../world.h"
 
@@ -14,6 +13,9 @@ struct EntityOption
 
 enum EditorEvent {
 	SAVE,
+	SHOW_GRID,
+	DEBUG_TRIANGLE,
+	DEBUG_GRID,
 	TRIANGULATE
 };
 
@@ -22,7 +24,27 @@ struct EditorStateData
 	std::queue<EditorEvent> editorEvents;
 };
 
+struct HighlightGridCell
+{
+	int cellX;
+	int cellY;
+	MapCell* cell;
+
+	void Reset()
+	{
+		cellX = -1;
+		cellY = -1;
+		cell = NULL;
+	}
+
+	bool IsEmpty()
+	{
+		return cellX == -1 && cellY == -1 && cell == NULL;
+	}
+};
+
 struct EditorState {
+
 	EntityOption* options;
 	int numOptions;
 
@@ -32,6 +54,12 @@ struct EditorState {
 
 	// get rid of this indirection
 	EditorStateData* coreData;
+	bool showGrid;
+	bool highlightTriangle;
+	bool highlightGrid;
+
+	std::string mapCellDebugString;
+	HighlightGridCell hightlightMapCell;
 
 	Entity* draggedEntity;
 	glm::vec3 draggedPivot;
@@ -42,3 +70,7 @@ struct EditorState {
 	}
 };
 
+namespace EditorMain
+{
+	glm::vec4 COLOR_HIGHLIGHT_GRID = glm::vec4(1, 1, 0, 0.5);
+}

@@ -90,13 +90,57 @@ struct WorldCameraSetup
 	glm::mat4 translation;
 };
 
+struct MapCell
+{
+	std::vector<TriangleId> triangles;
 
+	bool ContainsTriangle(TriangleId id)
+	{
+		for (int i = 0; i < triangles.size(); i++)
+		{
+			if (triangles[i] == id)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	void AddTriangle(TriangleId id)
+	{
+		if (!ContainsTriangle(id))
+		{
+			triangles.push_back(id);
+		}
+	}
+};
+
+struct MapGrid
+{
+	MapCell* grid;
+	int cellSize;
+	int dimX;
+	int dimY;
+
+	MapCell* GetCellByIndex(int cx, int cy)
+	{
+		return &grid[cy * dimX + cx];
+	}
+
+	void AddTriangle(TriangleId id, int cx, int cy)
+	{
+		MapCell* cell = GetCellByIndex(cx, cy);
+		cell->AddTriangle(id);
+	}
+};
 
 struct World
 {
-
-
 	MemoryArena memoryArena;
+
+	glm::vec3 xAxis;
+	glm::vec3 yAxis;
+	glm::vec3 zAxis;
 
 	glm::ivec2 min;
 	glm::ivec2 max;
@@ -123,15 +167,64 @@ struct World
 
 	CDTriangulation::DebugState* cdTriangulationdebug;
 
+	MapGrid mapGrid;
+
 	WorldCameraSetup cameraSetup;
+
+	void Init()
+	{
+		// initlaize the game state  
+		numEntities = 0;
+		maxEntityCount = 1024;
+		triangulationDebug = new Triangulation::DebugState();
+		voronoiDebug = new Voronoi::DebugState();
+		cdTriangulationdebug = new CDTriangulation::DebugState();
+
+		xAxis = glm::vec3(1.0, 0.0, 0.0);
+		yAxis = glm::vec3(0.0, 1.0, 0.0);
+		zAxis = glm::vec3(0.0, 0.0, 1.0);
+
+
+		min = glm::ivec2(0);
+		max = glm::ivec2(256, 256);
+
+		mapGrid.cellSize = 16;
+		mapGrid.dimX = max.x / mapGrid.cellSize;
+		mapGrid.dimY = max.y / mapGrid.cellSize;
+		int numCells = mapGrid.cellSize * mapGrid.cellSize;
+		mapGrid.grid = new MapCell[numCells];
+
+	}
+
+	void initEntity(Entity* entity, glm::vec3 pos, EntityFlag entityFlag, std::vector<glm::vec3> vertices)
+	{
+		entity->pos = pos;
+		entity->vertices = vertices;
+		entity->flag = entityFlag;
+	}
+
+	void AddObstacle(glm::vec3 pos, std::vector<glm::vec3> vertices)
+	{
+		int id = numEntities++;
+		Entity* entity = &entities[id];
+		entity->id = id;
+		initEntity(entity, pos, OBSTACLE, vertices);
+	}
+
+	bool IsValidSimPos(glm::vec3 pos)
+	{
+		return 0 <= pos.x && pos.x < max.x && 0 <= pos.y && pos.y < max.y;
+	}
+
+	void SimPos2GridCoord(glm::vec3 pos, int& cx, int& cy)
+	{
+		cx = pos.x / mapGrid.cellSize;
+		cy = pos.y / mapGrid.cellSize;
+	}
 };
 
-void initEntity(Entity* entity, glm::vec3 pos, EntityFlag entityFlag, std::vector<glm::vec3> vertices)
-{
-	entity->pos = pos;
-	entity->vertices = vertices;
-	entity->flag = entityFlag;
-}
+
+
 
 void initPlayerEntity(Entity* entity, glm::vec3 pos)
 {
@@ -475,42 +568,34 @@ void CreateAreaA(World* world)
 
 	CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->max, world->cdTriangulationdebug);
 
+	for (int i = 0; i < world->cdTriangulationdebug->triangles.size(); i++)
+	{
+		CDTriangulation::DelaunayTriangle& triangle = world->cdTriangulationdebug->triangles[i];
+
+		for (int j = 0; j < CDTriangulation::NUM_TRIANGLE_VERTEX; j++)
+		{
+			glm::vec3 pt = triangle.vertices[j].pos;
+
+			if (world->IsValidSimPos(pt))
+			{
+				int cellX = 0, cellY = 0;
+				world->SimPos2GridCoord(pt, cellX, cellY);
+				world->mapGrid.GetCellByIndex(cellX, cellY);
+				world->mapGrid.AddTriangle(triangle.id, cellX, cellY);
+			}
+		}
+	}
 }
 
 
 
 namespace WorldManager
 {
-	void AddObstacle(World* world, glm::vec3 pos, std::vector<glm::vec3> vertices)
-	{
 
-		// std::cout << "adding obstacle" << std::endl;
-		int id = world->numEntities++;
-		// std::cout << "id " << id << std::endl;
-		Entity* entity = &world->entities[id];
-		entity->id = id;
-		initEntity(entity, pos, OBSTACLE, vertices);
-		//	world->data->obstacles.push_back(vertices);
-
-			// std::cout << "made it to the end" << std::endl;	
-	}
-
-	void InitWorldCommon(World* world)
-	{
-		// initlaize the game state  
-		world->numEntities = 0;
-		world->maxEntityCount = 1024;
-		world->triangulationDebug = new Triangulation::DebugState();
-		world->voronoiDebug = new Voronoi::DebugState();
-		world->cdTriangulationdebug = new CDTriangulation::DebugState();
-
-		world->min = glm::ivec2(0);
-		world->max = glm::ivec2(256, 256);
-	}
 
 	void InitWorld(World* world)
 	{
-		InitWorldCommon(world);
+		world->Init();
 		CreateAreaA(world);
 	}
 }

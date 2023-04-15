@@ -259,7 +259,17 @@ void SDLProcessPendingEvents(GameInputState* game_input_state)
 				is_game_running = false;				
 			}	break;
 
-			
+			case SDL_MOUSEWHEEL:
+			{
+				if (event.wheel.y > 0)
+				{
+					SDLProcessKeyboardEvent(&game_input_state->zoomIn, true);
+				}
+				else if (event.wheel.y < 0)
+				{
+					SDLProcessKeyboardEvent(&game_input_state->zoomOut, true);
+				}
+			}	break;
 
 			case SDL_KEYDOWN:
 			{
@@ -291,18 +301,7 @@ void SDLProcessPendingEvents(GameInputState* game_input_state)
 					}
 					else if (keyCode == SDLK_s)
 					{
-						if (ctrlKeyIsDown)
-						{
-							std::cout << "save is down before " << game_input_state->save.endedDown << " " << game_input_state->save.changed << std::endl;
-							SDLProcessKeyboardEvent(&game_input_state->save, isDown);
-
-							std::cout << "save is down after " << game_input_state->save.endedDown << " " << game_input_state->save.changed << std::endl;
-
-						}
-						else
-						{
-							SDLProcessKeyboardEvent(&game_input_state->moveDown, isDown);
-						}
+						SDLProcessKeyboardEvent(&game_input_state->moveDown, isDown);
 					}
 					else if (keyCode == SDLK_d)
 					{
@@ -310,11 +309,11 @@ void SDLProcessPendingEvents(GameInputState* game_input_state)
 					}
 					else if (keyCode == SDLK_q)
 					{
-						SDLProcessKeyboardEvent(&game_input_state->zoomIn, isDown);
+					//	SDLProcessKeyboardEvent(&game_input_state->zoomIn, isDown);
 					}
 					else if (keyCode == SDLK_e)
 					{
-						SDLProcessKeyboardEvent(&game_input_state->zoomOut, isDown);
+					//	SDLProcessKeyboardEvent(&game_input_state->zoomOut, isDown);
 					}
 
 					/*
@@ -587,8 +586,10 @@ int main(int argc, char *argv[])
 		{
 			newInput->dtForFrame = targetSecondsPerFrame;
 			
-			newInput->save = oldInput->save;
-			newInput->save.changed = false;
+			newInput->zoomIn.endedDown = false;
+			newInput->zoomIn.changed = false;
+			newInput->zoomOut.endedDown = false;
+			newInput->zoomOut.changed = false;
 
 			// process keyboard events
 			SDLProcessPendingEvents(newInput);

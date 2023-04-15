@@ -160,69 +160,6 @@ glm::vec3 MousePosToMousePickingRay(WorldCameraSetup worldCameraSetup, RenderSys
 }
 
 
-/*
-void DEBUGTextLine(const char* s, RenderSystem::GameRenderCommands* gameRenderCommands, RenderSystem::RenderGroup* group, GameAssets* gameAssets, glm::vec3 position)
-{
-	// how big do we want char to be displayed
-	const float DEBUG_CHAR_BITMAP_SCALE = 1;
-
-	int ascent = 0;
-	int descent = 0;
-	int lineGap = 0;
-	stbtt_GetFontVMetrics(&debugLoadedFont->fontInfo, &ascent, &descent, &lineGap);
-	float scale = stbtt_ScaleForPixelHeight(&debugLoadedFont->fontInfo, FONT_SCALE);
-
-	int lineGapBetweenNextBaseline = (ascent - descent + lineGap);
-	int scaledLineGap = (int)(lineGapBetweenNextBaseline * scale);
-
-	float xPos = position.x;
-	int yBaselinePos = position.y;
-
-	// This is essentially following the example from stb library
-//	for (int i = 0; i < size; i++)
-
-	int i = 0;
-	while (s[i] != '\0')
-	{
-		int advance, leftSideBearing;
-		stbtt_GetCodepointHMetrics(&debugLoadedFont->fontInfo, s[i], &advance, &leftSideBearing);
-
-		GlyphId glyphID = GetGlyph(gameAssets, debugLoadedFont, s[i]);
-		LoadedGlyph* glyphBitmap = GetGlyph(gameAssets, glyphID);
-
-		if (s[i] == '\n')
-		{
-			xPos = position.x;
-			yBaselinePos -= scaledLineGap;
-		}
-		else
-		{
-			float height = DEBUG_CHAR_BITMAP_SCALE * glyphBitmap->bitmap.height;
-			float width = glyphBitmap->bitmap.width / (float)glyphBitmap->bitmap.height * height;
-
-			int x = xPos + glyphBitmap->bitmapXYOffsets.x;
-			int y = yBaselinePos - glyphBitmap->bitmapXYOffsets.y;
-
-			glm::vec3 leftTopPos = glm::vec3(x, y, 0.2);
-
-			GameRender::PushBitmap(
-				gameRenderCommands,
-				group,
-				&glyphBitmap->bitmap,
-				GameRender::COLOR_WHITE,
-				leftTopPos,
-				glm::vec3(width / 2.0, height / 2.0, 0),
-				GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Top);
-
-
-			xPos += (advance * scale);
-			xPos += scale * stbtt_GetCodepointKernAdvance(&debugLoadedFont->fontInfo, s[i], s[i + 1]);
-		}
-		i++;
-	}
-
-}
-*/
 
 void RenderMiddle(RenderSystem::GameRenderCommands* gameRenderCommands,
 	RenderSystem::RenderGroup* renderGroup, GameAssets* gameAssets, glm::ivec2 mousePos)
@@ -452,7 +389,7 @@ void RenderEntityStaticModel(
 	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Wall);
 	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
 
-	float lineThickness = 2;
+	float lineThickness = 0.5;
 	glm::vec3 translate = entity->pos;
 	for (int i = 0; i < entity->vertices.size(); i++)
 	{
@@ -487,26 +424,6 @@ void RenderEntityStaticModel(
 	*/
 }
 
-/*
-void RenderEntityGroundModel(
-	RenderSystem::GameRenderCommands* gameRenderCommands,
-	RenderSystem::RenderGroup* renderGroup,
-	GameAssets* gameAssets,
-	Entity* entity)
-{
-	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Chessboard);
-	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
-
-	for (int i = 0; i < entity->model.size(); i++)
-	{
-		GameRender::PushQuad(gameRenderCommands, renderGroup, bitmap,
-			entity->model[i].vertices[0],
-			entity->model[i].vertices[1],
-			entity->model[i].vertices[2],
-			entity->model[i].vertices[3], GameRender::COLOR_WHITE);
-	}
-}
-*/
 
 void RenderTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderCommands,
 	RenderSystem::RenderGroup* group,
@@ -514,28 +431,6 @@ void RenderTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderComman
 	Triangulation::DebugState* triangulationDebug)
 {
 	float lineThickness = 0.5;
-
-	/*
-	Triangulation::Triangle* superTriangle = &triangulationDebug->superTriangle;
-	int size = ArrayCount(superTriangle->vertices);
-	for (int i = 0; i < size; i++)
-	{
-		GameRender::RenderPoint(gameRenderCommands, group, gameAssets, GameRender::COLOR_GREEN, triangulationDebug->superTriangle.vertices[i], 1);
-	
-		glm::vec3 p0 = superTriangle->vertices[i];
-		glm::vec3 p1;
-
-		if (i == size - 1)
-		{
-			p1 = superTriangle->vertices[0];
-		}
-		else
-		{
-			p1 = superTriangle->vertices[i + 1];
-		}
-		GameRender::RenderLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, p0, p1, lineThickness);
-	}
-	*/
 
 	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
 	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
@@ -588,6 +483,67 @@ void RenderVoronoiDebug(RenderSystem::GameRenderCommands* gameRenderCommands,
 		{
 			Voronoi::Vertex neighbor = cell.neighbors[j];
 			GameRender::PushLine(gameRenderCommands, group, bitmap, color, cell.center.pos, neighbor.pos, lineThickness);
+		}
+	}
+}
+
+void RenderGrid(EditorState* editorState, GameRender::GameRenderState* gameRenderState, World* world, glm::vec3 groundIntersectionPoint)
+{
+	RenderSystem::GameRenderCommands* gameRenderCommands = gameRenderState->gameRenderCommands;
+	GameAssets* gameAssets = gameRenderState->gameAssets;
+	RenderSystem::RenderGroup* group = gameRenderState->renderGroup;
+	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
+	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
+
+	if (editorState->showGrid)
+	{
+		float lineThickness = 0.1;
+		for (int xi = 0; xi < world->max.x; xi += world->mapGrid.cellSize)
+		{
+			glm::vec3 pos0 = glm::vec3(xi, 0, 0);
+			glm::vec3 pos1 = glm::vec3(xi, world->max.y, 0);
+
+			GameRender::RenderLine(
+				gameRenderCommands, group, gameAssets, GameRender::HALF_TRANS_COLOR_WHITE, pos0, pos1, lineThickness);
+		}
+
+		for (int yi = 0; yi < world->max.y; yi += world->mapGrid.cellSize)
+		{
+			glm::vec3 pos0 = glm::vec3(0, yi, 0);
+			glm::vec3 pos1 = glm::vec3(world->max.x, yi, 0);
+
+			GameRender::RenderLine(
+				gameRenderCommands, group, gameAssets, GameRender::HALF_TRANS_COLOR_WHITE, pos0, pos1, lineThickness);
+		}
+
+		for (int yi = 0, y = 0; yi < world->max.y; yi += world->mapGrid.cellSize, y++)
+		{
+			
+			for (int xi = 0, x = 0; xi < world->max.x; xi += world->mapGrid.cellSize, x++)
+			{
+				std::string s = std::to_string(x) + " " + std::to_string(y);
+				GameRender::DEBUGTextLine(s.c_str(), gameRenderState, glm::vec3(xi, yi, 0), 0.2);
+			}
+		}
+	}
+
+	if (editorState->highlightGrid)
+	{
+		editorState->hightlightMapCell.Reset();
+
+		if (world->IsValidSimPos(groundIntersectionPoint))
+		{
+			int cx, cy = 0;
+			world->SimPos2GridCoord(groundIntersectionPoint, cx, cy);
+
+			editorState->hightlightMapCell.cellX = cx;
+			editorState->hightlightMapCell.cellY = cy;
+			editorState->hightlightMapCell.cell = world->mapGrid.GetCellByIndex(cx, cy);
+
+			glm::vec3 min = glm::vec3(cx * world->mapGrid.cellSize, cy * world->mapGrid.cellSize, 0);
+			glm::vec3 max = min + glm::vec3(world->mapGrid.cellSize, world->mapGrid.cellSize, 0);
+
+			GameRender::PushCube(gameRenderCommands, group, bitmap, EditorMain::COLOR_HIGHLIGHT_GRID, min, max, false);
 		}
 	}
 }
@@ -695,7 +651,7 @@ void RenderSelectedEntityOption(
 			if (gameInputState->mouseButtons[(int)PlatformMouseButton_Left].endedDown &&
 				gameInputState->mouseButtons[(int)PlatformMouseButton_Left].changed)
 			{
-				WorldManager::AddObstacle(&gameState->world, point, option->vertices);
+				gameState->world.AddObstacle(point, option->vertices);
 			}
 		}
 
@@ -706,6 +662,7 @@ void RenderSelectedEntityOption(
 
 
 void RenderCDTriangulationDebug(
+	EditorState* editorState,
 	GameRender::GameRenderState* gameRenderState,
 	CDTriangulation::DebugState* triangulationDebug)
 {
@@ -713,8 +670,8 @@ void RenderCDTriangulationDebug(
 	GameAssets* gameAssets = gameRenderState->gameAssets;
 	RenderSystem::RenderGroup* group = gameRenderState->renderGroup;
 
-	float lineThickness = 0.5;
 
+	float lineThickness = 0.5;
 	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
 	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
 
@@ -779,25 +736,25 @@ void RenderCDTriangulationDebug(
 		std::string s = std::to_string(triangle->id);
 
 
-		GameRender::DEBUGTextLine(s.c_str(), gameRenderState, centroid, 0.5);
+		GameRender::DEBUGTextLine(s.c_str(), gameRenderState, centroid, 0.1);
 
-		if (triangulationDebug->highlightedTriangle != NULL && triangle->id == triangulationDebug->highlightedTriangle->id)
+
+		if (editorState->highlightTriangle)
 		{
+			if (triangulationDebug->highlightedTriangle != NULL && triangle->id == triangulationDebug->highlightedTriangle->id)
+			{
+				GameRender::PushTriangle(gameRenderCommands, group, bitmap, GameRender::COLOR_YELLOW, liftedVertex, false);
 
-			GameRender::PushTriangle(gameRenderCommands, group, bitmap, GameRender::COLOR_YELLOW, liftedVertex, false);
+				Triangulation::Circle circle = CDTriangulation::FindCircumCircle(*triangle);
+				GameRender::RenderCircle(
+					gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, circle.center, circle.radius, lineThickness);
 
-			Triangulation::Circle circle = CDTriangulation::FindCircumCircle(*triangle);
-			GameRender::RenderCircle(
-				gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, circle.center, circle.radius, lineThickness);
-
-
-			float thickness = 3;
-			GameRender::RenderPoint(gameRenderCommands, group, gameAssets, GameRender::COLOR_GREEN, liftedVertex[0], thickness);
-			GameRender::RenderPoint(gameRenderCommands, group, gameAssets, GameRender::COLOR_BLUE, liftedVertex[1], thickness);
-			GameRender::RenderPoint(gameRenderCommands, group, gameAssets, GameRender::COLOR_ORANGE, liftedVertex[2], thickness);
-
+				float thickness = 3;
+				GameRender::RenderPoint(gameRenderCommands, group, gameAssets, GameRender::COLOR_GREEN, liftedVertex[0], thickness);
+				GameRender::RenderPoint(gameRenderCommands, group, gameAssets, GameRender::COLOR_BLUE, liftedVertex[1], thickness);
+				GameRender::RenderPoint(gameRenderCommands, group, gameAssets, GameRender::COLOR_ORANGE, liftedVertex[2], thickness);
+			}
 		}
-
 	}
 
 
@@ -1017,10 +974,10 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 			pmove.velocity += stepSize * glm::vec3(0, -1, 0);
 		}
 		if (gameInputState->zoomIn.endedDown) {
-			pmove.velocity += stepSize * newViewDir;
+			pmove.velocity += stepSize * newViewDir * 5.0f;
 		}
 		if (gameInputState->zoomOut.endedDown) {
-			pmove.velocity += stepSize * -newViewDir;
+			pmove.velocity += stepSize * -newViewDir * 5.0f;
 		}
 	}
 
@@ -1186,27 +1143,35 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 	RenderVoronoiDebug(gameRenderCommands, &group, gameAssets, world->voronoiDebug);
 	
 	
-	
+	EditorState* editor = &gameState->editorState;
 	
 	glm::vec3 rayOrigin = gameState->debugCameraEntity.pos;
 	glm::vec3 rayDir = MousePosToMousePickingRay(gameState->world.cameraSetup, gameRenderCommands, gameInputState->mousePos);
 
-	glm::vec3 point;
+	glm::vec3 groundIntersectionPoint;
+	
+	Collision::Plane plane = { world->zAxis, 0 };
+	Collision::Ray ray = { rayOrigin, rayDir };
+	bool intersects = Collision::RayPlaneIntersection3D(plane, ray, groundIntersectionPoint);
 
 	world->cdTriangulationdebug->highlightedTriangle = NULL;
-	for (int i = 0; i < world->cdTriangulationdebug->triangles.size(); i++)
+	if (editor->highlightTriangle)
 	{
-		CDTriangulation::DelaunayTriangle triangle = world->cdTriangulationdebug->triangles[i];
-
-		if (Collision::RayTriangleIntersection3D(
-			triangle.vertices[0].pos,
-			triangle.vertices[1].pos,
-			triangle.vertices[2].pos,
-			rayOrigin, rayDir, point))
+		glm::vec3 triangleInterspectionPoint;
+		for (int i = 0; i < world->cdTriangulationdebug->triangles.size(); i++)
 		{
-			world->cdTriangulationdebug->highlightedTriangle = &world->cdTriangulationdebug->triangles[i];
-			break;
-//			std::cout << "intersecting with " << triangle.id << std::endl;
+			CDTriangulation::DelaunayTriangle triangle = world->cdTriangulationdebug->triangles[i];
+
+			if (Collision::IsPointInsideTriangle_Barycentric(
+				groundIntersectionPoint,
+				triangle.vertices[0].pos,
+				triangle.vertices[1].pos,
+				triangle.vertices[2].pos))
+			{
+				world->cdTriangulationdebug->highlightedTriangle = &world->cdTriangulationdebug->triangles[i];
+				break;
+				//			std::cout << "intersecting with " << triangle.id << std::endl;
+			}
 		}
 	}
 	
@@ -1219,16 +1184,15 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 	gameRenderState.gameAssets = transientState->assets;
 
 
-	RenderCDTriangulationDebug(&gameRenderState, world->cdTriangulationdebug);
+	RenderCDTriangulationDebug(editor, &gameRenderState, world->cdTriangulationdebug);
 
-	EditorState* editor = &gameState->editorState;
 	RenderSelectedEntityOption(editor, &gameRenderState, gameInputState, gameState);
 
 	// render world borders
 	
 	InteractWithWorldEntities(gameState, gameInputState, gameRenderCommands, world);
 
-
+	RenderGrid(editor, &gameRenderState, world, groundIntersectionPoint);
 	RenderWorldBorders(&gameRenderState, world);
 
 	GameRender::RenderCoordinateSystem(gameRenderCommands, &group, gameAssets);
@@ -1294,7 +1258,7 @@ void LoadMap(World* world, string fileName)
 {
 	std::cout << "Loading the map " << std::endl;
 
-	WorldManager::InitWorldCommon(world);
+	world->Init();
 
 	mValue content = GameIO::ReadJsonFileToMap(fileName.c_str());
 	const mObject& obj = content.get_obj();
@@ -1436,7 +1400,7 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		platformAPI = gameMemory->platformAPI;
 
 
-		if (false)
+		if (true)
 		{
 			WorldManager::InitWorld(&gameState->world);
 		}
@@ -1508,6 +1472,18 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		if (editorEvent == EditorEvent::SAVE)
 		{
 			SaveMap(&gameState->world);
+		}
+		else if (editorEvent == EditorEvent::SHOW_GRID)
+		{
+			editor->showGrid = !editor->showGrid;
+		}
+		else if (editorEvent == EditorEvent::DEBUG_TRIANGLE)
+		{
+			editor->highlightTriangle = !editor->highlightTriangle;
+		}
+		else if (editorEvent == EditorEvent::DEBUG_GRID)
+		{
+			editor->highlightGrid = !editor->highlightGrid;
 		}
 		else if (editorEvent == EditorEvent::TRIANGULATE)
 		{
@@ -1593,6 +1569,8 @@ void RestartCollation(DebugState* debugState)
 	debugState->numFrames = 0;
 	debugState->collationFrame = 0;
 }
+
+
 
 
 
@@ -1726,17 +1704,50 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 	size = sprintf(ptr, "rayDir %f %f %f\n", rayDir.x, rayDir.y, rayDir.z);
 	ptr += size;
 
-	if (gameState->world.cdTriangulationdebug->highlightedTriangle != NULL)
+	EditorState* editorState = &gameState->editorState;
+
+	if (editorState->highlightTriangle)
 	{
-		CDTriangulation::DelaunayTriangle* trig = gameState->world.cdTriangulationdebug->highlightedTriangle;
+		if (gameState->world.cdTriangulationdebug->highlightedTriangle != NULL)
+		{
+			CDTriangulation::DelaunayTriangle* trig = gameState->world.cdTriangulationdebug->highlightedTriangle;
 
-		size = sprintf(ptr, "trig %d neighbors %d %d %d\n", trig->id, trig->neighbors[0], trig->neighbors[1], trig->neighbors[2]);
-		ptr += size;
+			size = sprintf(ptr, "trig %d neighbors %d %d %d\n", trig->id, trig->neighbors[0], trig->neighbors[1], trig->neighbors[2]);
+			ptr += size;
+		}
 	}
-	
+
+	if (editorState->highlightGrid)
+	{
+		if (!editorState->hightlightMapCell.IsEmpty())
+		{
+			MapCell* mapCell = editorState->hightlightMapCell.cell;
+			
+			size = sprintf(ptr, "mapCell %d %d \n", editorState->hightlightMapCell.cellX, editorState->hightlightMapCell.cellY);
+			ptr += size;
+
+			editorState->mapCellDebugString.clear();
+
+			for (int i = 0; i < mapCell->triangles.size(); i++)
+			{
+				editorState->mapCellDebugString += Math::IntToStr(mapCell->triangles[i]) + " ";
+			}
+		
+			if (mapCell->triangles.size() > 0)
+			{
+				size = sprintf(ptr, "mapCell triangles %s \n", editorState->mapCellDebugString.c_str());
+				ptr += size;
+			}
+			else
+			{
+				size = sprintf(ptr, "mapCell has no triangles \n");
+				ptr += size;
+			}
+		}
+	}
 
 
-	if (gameState->editorState.draggedEntity != NULL)
+	if (editorState->draggedEntity != NULL)
 	{
 		size = sprintf(ptr, "dragging entity %d\n", gameState->editorState.draggedEntity->id);
 	}

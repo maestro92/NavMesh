@@ -13,7 +13,6 @@ namespace Editor
 	glm::vec4 SELECTED = glm::vec4(0.5, 0, 0.5, 0.5);
 	glm::vec4 REGULAR = glm::vec4(0, 0, 0.25, 0.25);
 
-
 	/*
 	
   -512,384			     511,384
@@ -193,6 +192,66 @@ namespace Editor
 		GameRender::DEBUGTextLine(s.c_str(), gameRenderState, pos, 1);
 	}
 
+
+
+	void RenderToggle(EditorState* editorState,
+		GameInputState* gameInputState,
+		GameRender::GameRenderState* gameRenderState,
+		glm::vec3 screenMousePos,
+		int x, int y,
+		int width, int height,
+		std::string s, EditorEvent editorEventToPublish, bool currentState)
+	{
+		RenderSystem::GameRenderCommands* gameRenderCommands = gameRenderState->gameRenderCommands;
+		RenderSystem::RenderGroup* renderGroup = gameRenderState->renderGroup;
+		GameAssets* gameAssets = gameRenderState->gameAssets;
+
+		BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
+		LoadedBitmap* defaultBitmap = GetBitmap(gameAssets, bitmapID);
+
+		glm::vec3 profileRectMin = glm::vec3(x, y, 0);
+		glm::vec3 profileRectMax = glm::vec3(x + width, y + height, 0);
+		glm::vec3 halfDim = (profileRectMax - profileRectMin) / 2.0f;
+
+		bool isHighlighted = false;
+		bool isPressed = false;
+		if (Collision::IsPointInsideRect({ profileRectMin, profileRectMax }, screenMousePos))
+		{
+			editorState->consumingMouse = true;
+			isHighlighted = true;
+
+			if (gameInputState->mouseButtons[(int)PlatformMouseButton_Left].endedDown)
+			{
+				isPressed = true;
+			}
+
+			if (gameInputState->DidMouseLeftButtonClicked())
+			{
+				editorState->coreData->editorEvents.push(editorEventToPublish);
+			}
+		}
+
+		if (isPressed || currentState)
+		{
+			GameRender::PushBitmap(gameRenderCommands, renderGroup, defaultBitmap, SELECTED, profileRectMin,
+				halfDim, GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Bottom);
+		}
+		else if (isHighlighted)
+		{
+			GameRender::PushBitmap(gameRenderCommands, renderGroup, defaultBitmap, HIGHLIGHTED, profileRectMin,
+				halfDim, GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Bottom);
+		}
+		else
+		{
+			GameRender::PushBitmap(gameRenderCommands, renderGroup, defaultBitmap, REGULAR, profileRectMin,
+				halfDim, GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Bottom);
+		}
+
+		glm::vec3 pos = profileRectMin;
+		GameRender::DEBUGTextLine(s.c_str(), gameRenderState, pos, 1);
+	}
+
+
 	void RenderChoice(
 		EditorState* editorState,
 		GameInputState* gameInputState,
@@ -283,12 +342,10 @@ namespace Editor
 
 		glm::vec3 screenMousePos = UIUtil::PlatformMouseToScreenRenderPos(gameRenderCommands, gameInputState->mousePos);
 
-		// triangulate and save 
-		int numSpecialButtons = 2; 
+
 
 		int numCol = 2;
-		int numRow = (editor->numOptions + numSpecialButtons + (numCol - 1)) / numCol;
-		
+
 		int btnWidth = 200;
 		int btnHeight = 50;
 
@@ -352,7 +409,32 @@ namespace Editor
 		IncrementButtonIndex(indexX, indexY, numCol);
 
 
-		float thickness = 10;
+		curX = startX + btnWidth * indexX;
+		curY = startY - btnHeight * (indexY + 1);
+		RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Show Grid", EditorEvent::SHOW_GRID, editor->showGrid);
+		IncrementButtonIndex(indexX, indexY, numCol);
+
+		
+		curX = startX + btnWidth * indexX;
+		curY = startY - btnHeight * (indexY + 1);
+		RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Debug Triangle", EditorEvent::DEBUG_TRIANGLE, editor->highlightTriangle);
+		IncrementButtonIndex(indexX, indexY, numCol);
+
+
+		curX = startX + btnWidth * indexX;
+		curY = startY - btnHeight * (indexY + 1);
+		RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Debug Grid", EditorEvent::DEBUG_GRID, editor->highlightGrid);
+		IncrementButtonIndex(indexX, indexY, numCol);
+		
+
+		int numSpecialButtons = indexY * numCol + indexX;
+		int numRow = (numSpecialButtons + (numCol - 1)) / numCol;
+
+
+		float thickness = 0.5;
 		curX = startX;
 		curY = startY;
 		float lineHeight = numRow * btnHeight;

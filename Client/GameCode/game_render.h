@@ -5,6 +5,8 @@
 
 namespace GameRender
 {
+	glm::vec4 HALF_TRANS_COLOR_WHITE = glm::vec4(1, 1, 1, 0.5);
+
 	glm::vec4 COLOR_WHITE = glm::vec4(1, 1, 1, 1);
 	glm::vec4 COLOR_RED = glm::vec4(1, 0, 0, 1);
 	glm::vec4 COLOR_GREEN = glm::vec4(0, 1, 0, 1);
@@ -657,8 +659,7 @@ namespace GameRender
 		BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
 		LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
 
-		float cubeThickness = 0.5f;
-		PushLine(gameRenderCommands, renderGroup, bitmap, color, p0, p1, cubeThickness);
+		PushLine(gameRenderCommands, renderGroup, bitmap, color, p0, p1, thickness);
 	}
 
 	void RenderCoordinateSystem(
@@ -732,6 +733,7 @@ namespace GameRender
 				int x = xPos + glyphBitmap->bitmapXYOffsets.x;
 				int y = yBaselinePos - glyphBitmap->bitmapXYOffsets.y;
 
+				// 0.2 so that its slightly above the z plane
 				glm::vec3 leftTopPos = glm::vec3(x, y, 0.2);
 
 				GameRender::PushBitmap(
