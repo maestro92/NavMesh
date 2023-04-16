@@ -6,6 +6,7 @@
 namespace GameRender
 {
 	glm::vec4 HALF_TRANS_COLOR_WHITE = glm::vec4(1, 1, 1, 0.5);
+	glm::vec4 HALF_TRANS_COLOR_RED = glm::vec4(1, 0, 0, 0.5);
 
 	glm::vec4 COLOR_WHITE = glm::vec4(1, 1, 1, 1);
 	glm::vec4 COLOR_RED = glm::vec4(1, 0, 0, 1);

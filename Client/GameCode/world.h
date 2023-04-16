@@ -193,7 +193,7 @@ struct World
 	void LoadSampleMap()
 	{
 		Init();
-		CreateAreaA(this);
+	//	CreateAreaA(this);
 	}
 
 

@@ -646,7 +646,7 @@ void RenderSelectedEntityOption(
 
 			BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
 			LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
-			float lineThickness = 2;
+			float lineThickness = 0.5;
 
 			EntityOption* option = editor->selected;
 			for (int i = 0; i < option->vertices.size(); i++)
@@ -667,12 +667,11 @@ void RenderSelectedEntityOption(
 
 
 				GameRender::RenderLine(
-					gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, pos0, pos1, lineThickness);
+					gameRenderCommands, group, gameAssets, GameRender::HALF_TRANS_COLOR_RED, pos0, pos1, lineThickness);
 
 			}
 
-			if (gameInputState->mouseButtons[(int)PlatformMouseButton_Left].endedDown &&
-				gameInputState->mouseButtons[(int)PlatformMouseButton_Left].changed)
+			if (gameInputState->DidMouseLeftButtonClicked())
 			{
 				gameState->world.AddObstacle(point, option->vertices);
 			}
@@ -1394,10 +1393,10 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		// intialize memory arena
 		platformAPI = gameMemory->platformAPI;
 
-		if (true)
+		if (false)
 		{
 			gameState->world.LoadSampleMap();
-			SamplePathingLogic(&gameState->world);
+		//	SamplePathingLogic(&gameState->world);
 		}
 		else
 		{
