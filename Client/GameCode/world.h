@@ -251,8 +251,8 @@ struct World
 		// clockwise
 		std::vector<GeoCore::Polygon> holes;
 
-		bool testPathing = true;
-		if (testPathing)
+		int testPathingCase = 2;
+		if (testPathingCase == 1)
 		{
 			vertices.push_back(glm::vec3(130, 0, 0));
 			vertices.push_back(glm::vec3(150, 50, 0));
@@ -264,6 +264,41 @@ struct World
 			vertices.push_back(glm::vec3(20, 40, 0));
 			vertices.push_back(glm::vec3(90, 40, 0));
 		}
+		else if (testPathingCase == 2)
+		{
+			vertices.push_back(glm::vec3(world->min.x, world->min.y, 0));
+			vertices.push_back(glm::vec3(world->max.x, world->min.y, 0));
+			vertices.push_back(glm::vec3(world->max.x, world->max.y, 0));
+			vertices.push_back(glm::vec3(world->min.x, world->max.y, 0));
+
+
+			GeoCore::Polygon hole;
+			
+			hole.vertices.clear();
+			hole.vertices.push_back(glm::vec3(144, 176, 0));
+			hole.vertices.push_back(glm::vec3(144, 208, 0));
+			hole.vertices.push_back(glm::vec3(192, 208, 0));
+			hole.vertices.push_back(glm::vec3(192, 256, 0));
+			hole.vertices.push_back(glm::vec3(80, 256, 0));
+			hole.vertices.push_back(glm::vec3(80, 176, 0));
+			holes.push_back(hole);
+
+			
+			hole.vertices.clear();
+			hole.vertices.push_back(glm::vec3(80, 80, 0));
+			hole.vertices.push_back(glm::vec3(160, 80, 0));
+			hole.vertices.push_back(glm::vec3(160, 128, 0));
+			hole.vertices.push_back(glm::vec3(80, 128, 0));
+			holes.push_back(hole);
+			
+
+			hole.vertices.clear();
+			hole.vertices.push_back(glm::vec3(256, 128, 0));
+			hole.vertices.push_back(glm::vec3(256, 176, 0));
+			hole.vertices.push_back(glm::vec3(192, 176, 0));
+			hole.vertices.push_back(glm::vec3(192, 128, 0));
+			holes.push_back(hole);
+		}
 		else
 		{
 			vertices.push_back(glm::vec3(world->min.x, world->min.y, 0));
@@ -273,6 +308,8 @@ struct World
 
 
 			GeoCore::Polygon hole;
+
+			hole.vertices.clear();
 			hole.vertices.push_back(glm::vec3(-5, 50, 0));
 			hole.vertices.push_back(glm::vec3(5, 50, 0));
 			hole.vertices.push_back(glm::vec3(5, -50, 0));
@@ -283,16 +320,17 @@ struct World
 			}
 			holes.push_back(hole);
 
-			GeoCore::Polygon hole2;
-			hole2.vertices.push_back(glm::vec3(-5, 50, 0));
-			hole2.vertices.push_back(glm::vec3(5, 50, 0));
-			hole2.vertices.push_back(glm::vec3(5, -50, 0));
-			hole2.vertices.push_back(glm::vec3(-5, -50, 0));
-			for (int i = 0; i < hole2.vertices.size(); i++)
+
+			hole.vertices.clear();
+			hole.vertices.push_back(glm::vec3(-5, 50, 0));
+			hole.vertices.push_back(glm::vec3(5, 50, 0));
+			hole.vertices.push_back(glm::vec3(5, -50, 0));
+			hole.vertices.push_back(glm::vec3(-5, -50, 0));
+			for (int i = 0; i < hole.vertices.size(); i++)
 			{
-				hole2.vertices[i] += glm::vec3(158.268, 127.925, 0);
+				hole.vertices[i] += glm::vec3(158.268, 127.925, 0);
 			}
-			holes.push_back(hole2);
+			holes.push_back(hole);
 		}
 		
 
@@ -302,7 +340,7 @@ struct World
 		CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->max, world->cdTriangulationGraph);
 		CDTriangulation::MarkObstacles(world->cdTriangulationGraph, holes);
 
-		if (testPathing)
+		if (testPathingCase == 1)
 		{
 			world->cdTriangulationGraph->trianglesById[5]->isObstacle = true;
 			world->cdTriangulationGraph->trianglesById[8]->isObstacle = true;

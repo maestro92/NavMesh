@@ -1331,8 +1331,8 @@ void TriangulateMap(World* world)
 
 void SamplePathingLogic(World* world)
 {
-	glm::vec3 start = glm::vec3(1, 1, 0);
-	glm::vec3 end = glm::vec3(100, 100, 0);
+	glm::vec3 start = glm::vec3(50, 170, 0);
+	glm::vec3 end = glm::vec3(230, 210, 0);
 
 //	glm::vec3 start = glm::vec3(30, 120, 0);
 //	glm::vec3 end = glm::vec3(130, 0, 0);
