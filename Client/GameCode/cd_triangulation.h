@@ -225,6 +225,17 @@ namespace CDTriangulation
 		{
 			return GetVertexIndex(vertexId) != INVALID_INDEX;
 		}
+
+		void TryRemoveNeighbor(int triangleId)
+		{
+			for (int i = 0; i < NUM_TRIANGLE_EDGES; i++)
+			{
+				if (neighbors[i] == triangleId)
+				{
+					neighbors[i] = INVALID_NEIGHBOR;
+				}
+			}
+		}
 	};
 
 	struct Bin
@@ -234,20 +245,26 @@ namespace CDTriangulation
 	};
 
 
-	struct DebugState
+	struct Graph
 	{
-		std::vector<DelaunayTriangle> triangles;
-
-		std::vector<DelaunayTriangle*> trianglesById;
-
 		std::vector<glm::vec3> vertices;
 		std::vector<GeoCore::Polygon> holes;
 		std::vector<std::vector<Vertex>> intersectingEdges;
 		std::vector<DebugConstrainedEdgePolygon> debugConstrainedEdgePolygons;
 
+		std::vector<DelaunayTriangle> triangles;
+		std::vector<DelaunayTriangle*> trianglesById;
+		std::vector<Vertex> masterVertexList;
+
 		std::vector<Triangulation::Circle> circles;
 
 		DelaunayTriangle* highlightedTriangle;
+
+		Vertex GetVertexById(int id)
+		{
+			assert(0 <= id && id < masterVertexList.size());
+			return masterVertexList[id];
+		}
 	};
 
 	/*
@@ -1015,7 +1032,7 @@ namespace CDTriangulation
 		}
 	}
 
-	void MarkObstacles(DebugState* debugState, std::vector<GeoCore::Polygon> holes)
+	void MarkObstacles(Graph* debugState, std::vector<GeoCore::Polygon> holes)
 	{
 		for (int i = 0; i < debugState->triangles.size(); i++)
 		{
@@ -1041,7 +1058,7 @@ namespace CDTriangulation
 		std::vector<glm::vec3> points,
 		std::vector<GeoCore::Polygon> holes,
 		glm::ivec2 mapSize,
-		DebugState* debugState)
+		Graph* debugState)
 	{
 		debugState->vertices = points;
 		debugState->holes = holes;
@@ -1280,11 +1297,13 @@ namespace CDTriangulation
 
 
 		// 6.0 remove all triangles that share an edge or vertices with the original super triangle
+		std::vector<int> removedTriangleIds;
 		int curIter = 0;
 		while (curIter < triangles.size())
 		{
 			if (SharedVertex(superTriangle, triangles[curIter]))
 			{
+				removedTriangleIds.push_back(triangles[curIter].id);
 				triangles.erase(triangles.begin() + curIter);
 			}
 			else
@@ -1293,6 +1312,14 @@ namespace CDTriangulation
 			}
 		}
 		
+		for (int i = 0; i < triangles.size(); i++)
+		{
+			for (int j = 0; j < removedTriangleIds.size(); j++)
+			{
+				triangles[i].TryRemoveNeighbor(removedTriangleIds[j]);
+			}
+		}
+
 		debugState->triangles = triangles;
 		
 		int maxId = 0;
@@ -1313,6 +1340,8 @@ namespace CDTriangulation
 			int id = debugState->triangles[i].id;
 			debugState->trianglesById[id] = &debugState->triangles[i];
 		}
+
+		debugState->masterVertexList = masterVertexArray;
 
 		int a = 1;
 

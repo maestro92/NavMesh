@@ -3,6 +3,7 @@
 #include "../PlatformShared/platform_shared.h"
 #include <vector>
 #include "nav_mesh.h"
+#include "cd_triangulation.h"
 
 namespace PathFinding
 {
@@ -16,5 +17,6 @@ namespace PathFinding
 
 		NavMesh::DualGraph* dualGraph;
 		std::vector<glm::vec3> waypoints;
+		std::vector<CDTriangulation::DelaunayTriangleEdge> portals;
 	};
 }

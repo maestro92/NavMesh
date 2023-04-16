@@ -709,6 +709,20 @@ void RenderPathingDebug(
 	}
 	
 
+	
+	for (int i = 0; i < debugState->portals.size(); i++)
+	{
+		CDTriangulation::DelaunayTriangleEdge edge = debugState->portals[i];
+
+		CDTriangulation::Vertex v0 = world->cdTriangulationGraph->GetVertexById(edge.vertices[0]);
+		CDTriangulation::Vertex v1 = world->cdTriangulationGraph->GetVertexById(edge.vertices[1]);
+
+		GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_TEAL, v0.pos, v1.pos, 0.5);
+
+	}
+
+
+
 
 	/*
 	for (int i = 0; i < world->dualGraph->nodes.size(); i++)
@@ -774,7 +788,7 @@ void RenderPathingDebug(
 void RenderCDTriangulationDebug(
 	EditorState* editorState,
 	GameRender::GameRenderState* gameRenderState,
-	CDTriangulation::DebugState* triangulationDebug)
+	CDTriangulation::Graph* triangulationDebug)
 {
 	RenderSystem::GameRenderCommands* gameRenderCommands = gameRenderState->gameRenderCommands;
 	GameAssets* gameAssets = gameRenderState->gameAssets;
@@ -816,18 +830,25 @@ void RenderCDTriangulationDebug(
 		CDTriangulation::DelaunayTriangle* triangle = &triangulationDebug->triangles[i];
 		glm::vec3 liftedVertex[3];
 
-		for (int j = 0; j < CDTriangulation::NUM_TRIANGLE_VERTEX; j++)
-		{
-			// lifting it slightly higher
-			liftedVertex[j] = triangle->vertices[j].pos + GameRender::DEBUG_RENDER_OFFSET;
-		}
-		
+
 		if (triangle->isObstacle)
 		{
-			GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, liftedVertex, thickness, false);
+			for (int j = 0; j < CDTriangulation::NUM_TRIANGLE_VERTEX; j++)
+			{
+				// lifting it slightly higher
+				liftedVertex[j] = triangle->vertices[j].pos + GameRender::DEBUG_RENDER_OFFSET;
+			}
+
+			GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, liftedVertex, 2*thickness, false);
 		}
 		else
 		{
+			for (int j = 0; j < CDTriangulation::NUM_TRIANGLE_VERTEX; j++)
+			{
+				// lifting it slightly higher
+				liftedVertex[j] = triangle->vertices[j].pos; // +GameRender::DEBUG_RENDER_OFFSET;
+			}
+
 			GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, GameRender::COLOR_WHITE, liftedVertex, thickness, false);
 		}
 
@@ -1121,13 +1142,13 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 	Collision::Ray ray = { rayOrigin, rayDir };
 	bool intersects = Collision::RayPlaneIntersection3D(plane, ray, groundIntersectionPoint);
 
-	world->cdTriangulationDebug->highlightedTriangle = NULL;
+	world->cdTriangulationGraph->highlightedTriangle = NULL;
 	if (editor->highlightTriangle)
 	{
 		glm::vec3 triangleInterspectionPoint;
-		for (int i = 0; i < world->cdTriangulationDebug->triangles.size(); i++)
+		for (int i = 0; i < world->cdTriangulationGraph->triangles.size(); i++)
 		{
-			CDTriangulation::DelaunayTriangle triangle = world->cdTriangulationDebug->triangles[i];
+			CDTriangulation::DelaunayTriangle triangle = world->cdTriangulationGraph->triangles[i];
 
 			if (Collision::IsPointInsideTriangle_Barycentric(
 				groundIntersectionPoint,
@@ -1135,7 +1156,7 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 				triangle.vertices[1].pos,
 				triangle.vertices[2].pos))
 			{
-				world->cdTriangulationDebug->highlightedTriangle = &world->cdTriangulationDebug->triangles[i];
+				world->cdTriangulationGraph->highlightedTriangle = &world->cdTriangulationGraph->triangles[i];
 				break;
 				//			std::cout << "intersecting with " << triangle.id << std::endl;
 			}
@@ -1151,7 +1172,7 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 	gameRenderState.gameAssets = transientState->assets;
 
 
-	RenderCDTriangulationDebug(editor, &gameRenderState, world->cdTriangulationDebug);
+	RenderCDTriangulationDebug(editor, &gameRenderState, world->cdTriangulationGraph);
 	RenderPathingDebug(editor, world, &gameRenderState,world->pathingDebug);
 
 	RenderSelectedEntityOption(editor, &gameRenderState, gameInputState, gameState);
@@ -1304,8 +1325,8 @@ void TriangulateMap(World* world)
 		}
 	}
 	
-	CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->max, world->cdTriangulationDebug);
-	CDTriangulation::MarkObstacles(world->cdTriangulationDebug, holes);
+	CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->max, world->cdTriangulationGraph);
+	CDTriangulation::MarkObstacles(world->cdTriangulationGraph, holes);
 }
 
 void SamplePathingLogic(World* world)
@@ -1313,10 +1334,12 @@ void SamplePathingLogic(World* world)
 	glm::vec3 start = glm::vec3(1, 1, 0);
 	glm::vec3 end = glm::vec3(100, 100, 0);
 
+//	glm::vec3 start = glm::vec3(30, 120, 0);
+//	glm::vec3 end = glm::vec3(130, 0, 0);
 
-	world->pathingDebug->dualGraph = new NavMesh::DualGraph(world->cdTriangulationDebug->triangles);
+
+	world->pathingDebug->dualGraph = new NavMesh::DualGraph(world->cdTriangulationGraph->triangles);
 	PathFinding::PathfindingResult pathingResult = PathFinding::FindPath(world->pathingDebug, world, start, end);
-
 	world->pathingDebug->waypoints = pathingResult.waypoints;
 
 	/*
@@ -1696,9 +1719,9 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 
 	if (editorState->highlightTriangle)
 	{
-		if (gameState->world.cdTriangulationDebug->highlightedTriangle != NULL)
+		if (gameState->world.cdTriangulationGraph->highlightedTriangle != NULL)
 		{
-			CDTriangulation::DelaunayTriangle* trig = gameState->world.cdTriangulationDebug->highlightedTriangle;
+			CDTriangulation::DelaunayTriangle* trig = gameState->world.cdTriangulationGraph->highlightedTriangle;
 
 			size = sprintf(ptr, "trig %d neighbors %d %d %d\n", trig->id, trig->neighbors[0], trig->neighbors[1], trig->neighbors[2]);
 			ptr += size;

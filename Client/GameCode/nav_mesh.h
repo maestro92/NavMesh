@@ -17,14 +17,8 @@ namespace NavMesh
 		
 		CDTriangulation::DelaunayTriangle* triangle;
 
-		struct Neighbor
-		{
-			int id;
-		//	std::vector<Edge> portals;
-		};
-		
 		glm::vec3 center;
-		std::vector<Neighbor> neighbors;
+		std::vector<int> neighbors;
 		
 		int GetId()
 		{
@@ -34,37 +28,6 @@ namespace NavMesh
 			}
 			return triangle->id;
 		}
-
-		void AddNeighbor(int neighbor)
-		{
-			for (int i = 0; i < neighbors.size(); i++)
-			{
-				if (neighbors[i].id == neighbor)
-				{
-					return;
-				}
-			}
-
-			Neighbor neighborNode = { neighbor };
-			neighbors.push_back(neighborNode);
-		}
-
-
-		/*
-		void AddNeighbor(int neighbor, std::vector<Edge> sharedEdges)
-		{
-			for (int i = 0; i < neighbors.size(); i++)
-			{
-				if (neighbors[i].id == neighbor)
-				{
-					return;
-				}
-			}
-
-			Neighbor neighborNode = { neighbor, sharedEdges };
-			neighbors.push_back(neighborNode);
-		}
-		*/
 	};
 
 	struct DualGraph
@@ -92,21 +55,6 @@ namespace NavMesh
 				int id = nodes[i].GetId();
 				nodesById[id] = &nodes[i];
 			}
-
-			
-			for (int i = 0; i < nodes.size(); i++)
-			{
-				DualGraphNode& node = nodes[i];
-				CDTriangulation::DelaunayTriangle* triangle = node.triangle;
-
-				for (int j = 0; j < ArrayCount(triangle->neighbors); j++)
-				{
-					if (triangle->neighbors[j] != CDTriangulation::INVALID_NEIGHBOR)
-					{
-						node.AddNeighbor(triangle->neighbors[j]);
-					}
-				}	
-			}			
 		}
 
 		DualGraphNode* GetNode(int id)
@@ -149,28 +97,30 @@ namespace NavMesh
 			}
 			portals.push_back(edge);
 		}
+		*/
 
-		std::vector<Edge> GetPortalList(std::vector<int> nodeIds)
+		std::vector<CDTriangulation::DelaunayTriangleEdge> GetPortalList(std::vector<int> nodeIds)
 		{
-			std::vector<Edge> portals;
-			for (int i = 0; i < nodeIds.size(); i++)
+			std::vector<CDTriangulation::DelaunayTriangleEdge> portals;
+			for (int i = 1; i < nodeIds.size(); i++)
 			{
-				int nodeId = nodeIds[i];
-				DualGraphNode* node = &nodes[nodeId];
+				int nodeId0 = nodeIds[i-1];
+				int nodeId1 = nodeIds[i];
 
-				for (int j = 0; j < node->neighbors.size(); j++)
+				DualGraphNode* node0 = GetNode(nodeId0);
+
+				CDTriangulation::DelaunayTriangle* triangle = node0->triangle;
+				for (int ni = 0; ni < ArrayCount(triangle->neighbors); ni++)
 				{
-					DualGraphNode::Neighbor* neighbor = &node->neighbors[j];
-
-					for (int k = 0; k < neighbor->portals.size(); k++)
+					if (triangle->neighbors[ni] == nodeId1)
 					{
-						DedupAddPortal(portals, neighbor->portals[k]);
+						portals.push_back(triangle->edges[ni]);
 					}
 				}
 			}
 			return portals;
 		}
-		*/
+		
 	};
 
 };

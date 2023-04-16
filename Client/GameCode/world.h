@@ -9,7 +9,6 @@
 #include "cd_triangulation.h"
 #include "pathfinding_common.h"
 #include "voronoi.h"
-#include "map_grid.h"
 
 #define	DIST_EPSILON	(0.03125)
 
@@ -159,7 +158,7 @@ struct World
 	Triangulation::DebugState* triangulationDebug;
 	Voronoi::DebugState* voronoiDebug;
 
-	CDTriangulation::DebugState* cdTriangulationDebug;
+	CDTriangulation::Graph* cdTriangulationGraph;
 	PathFinding::DebugState* pathingDebug;
 
 	MapGrid mapGrid;
@@ -173,7 +172,7 @@ struct World
 		maxEntityCount = 1024;
 		triangulationDebug = new Triangulation::DebugState();
 		voronoiDebug = new Voronoi::DebugState();
-		cdTriangulationDebug = new CDTriangulation::DebugState();
+		cdTriangulationGraph = new CDTriangulation::Graph();
 		pathingDebug = new PathFinding::DebugState();
 
 		xAxis = glm::vec3(1.0, 0.0, 0.0);
@@ -208,9 +207,14 @@ struct World
 		for (int i = 0; i < mapCell->triangles.size(); i++)
 		{
 			int trigId = mapCell->triangles[i];
-			CDTriangulation::DelaunayTriangle* triangle = cdTriangulationDebug->trianglesById[trigId];
+			CDTriangulation::DelaunayTriangle* triangle = cdTriangulationGraph->trianglesById[trigId];
 
-			if (Collision::IsPointInsideTriangle_Barycentric_NotOnTheLine(
+			if (triangle->isObstacle)
+			{
+				continue;
+			}
+
+			if (Collision::IsPointInsideTriangle_Barycentric(
 				pos,
 				triangle->vertices[0].pos,
 				triangle->vertices[1].pos,
@@ -247,104 +251,68 @@ struct World
 		// clockwise
 		std::vector<GeoCore::Polygon> holes;
 
-
-		vertices.push_back(glm::vec3(world->min.x, world->min.y, 0));
-		vertices.push_back(glm::vec3(world->max.x, world->min.y, 0));
-		vertices.push_back(glm::vec3(world->max.x, world->max.y, 0));
-		vertices.push_back(glm::vec3(world->min.x, world->max.y, 0));
-
-
-
-		GeoCore::Polygon hole;
-		hole.vertices.push_back(glm::vec3(-5, 50, 0));
-		hole.vertices.push_back(glm::vec3(5, 50, 0));
-		hole.vertices.push_back(glm::vec3(5, -50, 0));
-		hole.vertices.push_back(glm::vec3(-5, -50, 0));
-		for (int i = 0; i < hole.vertices.size(); i++)
+		bool testPathing = true;
+		if (testPathing)
 		{
-			hole.vertices[i] += glm::vec3(76.743, 128.400, 0);
+			vertices.push_back(glm::vec3(130, 0, 0));
+			vertices.push_back(glm::vec3(150, 50, 0));
+			vertices.push_back(glm::vec3(120, 90, 0));
+			vertices.push_back(glm::vec3(50, 70, 0));
+
+			vertices.push_back(glm::vec3(30, 120, 0));
+			vertices.push_back(glm::vec3(0, 90, 0));
+			vertices.push_back(glm::vec3(20, 40, 0));
+			vertices.push_back(glm::vec3(90, 40, 0));
 		}
-		holes.push_back(hole);
-
-		GeoCore::Polygon hole2;
-		hole2.vertices.push_back(glm::vec3(-5, 50, 0));
-		hole2.vertices.push_back(glm::vec3(5, 50, 0));
-		hole2.vertices.push_back(glm::vec3(5, -50, 0));
-		hole2.vertices.push_back(glm::vec3(-5, -50, 0));
-		for (int i = 0; i < hole2.vertices.size(); i++)
+		else
 		{
-			hole2.vertices[i] += glm::vec3(158.268, 127.925, 0);
-		}
-		holes.push_back(hole2);
+			vertices.push_back(glm::vec3(world->min.x, world->min.y, 0));
+			vertices.push_back(glm::vec3(world->max.x, world->min.y, 0));
+			vertices.push_back(glm::vec3(world->max.x, world->max.y, 0));
+			vertices.push_back(glm::vec3(world->min.x, world->max.y, 0));
 
-		/*
-		float scale = 10;
-		vertices.push_back(glm::vec3(2, 4, 0));
-		vertices.push_back(glm::vec3(-4, 6, 0));
-		vertices.push_back(glm::vec3(-9, 8, 0));
 
-		vertices.push_back(glm::vec3(7, 2, 0));
-		vertices.push_back(glm::vec3(6, -3, 0));
-		vertices.push_back(glm::vec3(5, -9, 0));
-
-		vertices.push_back(glm::vec3(3, -5, 0));
-		vertices.push_back(glm::vec3(1, -9, 0));
-		vertices.push_back(glm::vec3(-3, -8, 0));
-
-		vertices.push_back(glm::vec3(-12, 3, 0));
-		vertices.push_back(glm::vec3(-8, 0, 0));
-		vertices.push_back(glm::vec3(-9, 2, 0));
-
-		vertices.push_back(glm::vec3(-1, -5, 0));
-		vertices.push_back(glm::vec3(-1, 10, 0));
-
-		min = glm::vec3(FLT_MAX, FLT_MAX, 0);
-		for (int i = 0; i < vertices.size(); i++)
-		{
-			if (vertices[i].x < min.x)
+			GeoCore::Polygon hole;
+			hole.vertices.push_back(glm::vec3(-5, 50, 0));
+			hole.vertices.push_back(glm::vec3(5, 50, 0));
+			hole.vertices.push_back(glm::vec3(5, -50, 0));
+			hole.vertices.push_back(glm::vec3(-5, -50, 0));
+			for (int i = 0; i < hole.vertices.size(); i++)
 			{
-				min.x = vertices[i].x;
+				hole.vertices[i] += glm::vec3(76.743, 128.400, 0);
 			}
+			holes.push_back(hole);
 
-			if (vertices[i].y < min.y)
+			GeoCore::Polygon hole2;
+			hole2.vertices.push_back(glm::vec3(-5, 50, 0));
+			hole2.vertices.push_back(glm::vec3(5, 50, 0));
+			hole2.vertices.push_back(glm::vec3(5, -50, 0));
+			hole2.vertices.push_back(glm::vec3(-5, -50, 0));
+			for (int i = 0; i < hole2.vertices.size(); i++)
 			{
-				min.y = vertices[i].y;
+				hole2.vertices[i] += glm::vec3(158.268, 127.925, 0);
 			}
+			holes.push_back(hole2);
+		}
+		
+
+		
+
+
+		CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->max, world->cdTriangulationGraph);
+		CDTriangulation::MarkObstacles(world->cdTriangulationGraph, holes);
+
+		if (testPathing)
+		{
+			world->cdTriangulationGraph->trianglesById[5]->isObstacle = true;
+			world->cdTriangulationGraph->trianglesById[8]->isObstacle = true;
 		}
 
-		for (int i = 0; i < vertices.size(); i++)
+		// spatial partioning, adding triangles to grid cell
+		//
+		for (int i = 0; i < world->cdTriangulationGraph->triangles.size(); i++)
 		{
-			vertices[i] = (vertices[i] - min) * scale;
-			std::cout << vertices[i].x << " " << vertices[i].y << std::endl;
-		}
-
-
-
-
-		GeoCore::Polygon hole;
-		hole.vertices.push_back(glm::vec3(2, 3, 0));
-		hole.vertices.push_back(glm::vec3(-8, 6, 0));
-		hole.vertices.push_back(glm::vec3(-3, 7, 0));
-		hole.vertices.push_back(glm::vec3(3, 4, 0));
-		ScalingTheHole(hole, scale, min);
-		holes.push_back(hole);
-
-		GeoCore::Polygon hole2;
-		hole2.vertices.push_back(glm::vec3(4, -3, 0));
-		hole2.vertices.push_back(glm::vec3(-5, 0, 0));
-		hole2.vertices.push_back(glm::vec3(0, 1, 0));
-		hole2.vertices.push_back(glm::vec3(5, -2, 0));
-		ScalingTheHole(hole2, scale, min);
-
-		holes.push_back(hole2);
-		*/
-
-		CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->max, world->cdTriangulationDebug);
-		CDTriangulation::MarkObstacles(world->cdTriangulationDebug, holes);
-
-		for (int i = 0; i < world->cdTriangulationDebug->triangles.size(); i++)
-		{
-			CDTriangulation::DelaunayTriangle& triangle = world->cdTriangulationDebug->triangles[i];
+			CDTriangulation::DelaunayTriangle& triangle = world->cdTriangulationGraph->triangles[i];
 
 			for (int y = 0, yi = 0; yi < world->max.y; y++, yi += world->mapGrid.cellSize)
 			{
@@ -365,8 +333,7 @@ struct World
 		}
 	}
 
-
-	void initEntity(Entity* entity, glm::vec3 pos, EntityFlag entityFlag, std::vector<glm::vec3> vertices)
+	void InitEntity(Entity* entity, glm::vec3 pos, EntityFlag entityFlag, std::vector<glm::vec3> vertices)
 	{
 		entity->pos = pos;
 		entity->vertices = vertices;
@@ -378,7 +345,7 @@ struct World
 		int id = numEntities++;
 		Entity* entity = &entities[id];
 		entity->id = id;
-		initEntity(entity, pos, OBSTACLE, vertices);
+		InitEntity(entity, pos, OBSTACLE, vertices);
 	}
 
 	bool IsValidSimPos(glm::vec3 pos)
@@ -620,3 +587,67 @@ void ScalingTheHole(GeoCore::Polygon& hole, float scale, glm::vec3 min)
 	}
 }
 
+
+
+
+		/*
+		float scale = 10;
+		vertices.push_back(glm::vec3(2, 4, 0));
+		vertices.push_back(glm::vec3(-4, 6, 0));
+		vertices.push_back(glm::vec3(-9, 8, 0));
+
+		vertices.push_back(glm::vec3(7, 2, 0));
+		vertices.push_back(glm::vec3(6, -3, 0));
+		vertices.push_back(glm::vec3(5, -9, 0));
+
+		vertices.push_back(glm::vec3(3, -5, 0));
+		vertices.push_back(glm::vec3(1, -9, 0));
+		vertices.push_back(glm::vec3(-3, -8, 0));
+
+		vertices.push_back(glm::vec3(-12, 3, 0));
+		vertices.push_back(glm::vec3(-8, 0, 0));
+		vertices.push_back(glm::vec3(-9, 2, 0));
+
+		vertices.push_back(glm::vec3(-1, -5, 0));
+		vertices.push_back(glm::vec3(-1, 10, 0));
+
+		min = glm::vec3(FLT_MAX, FLT_MAX, 0);
+		for (int i = 0; i < vertices.size(); i++)
+		{
+			if (vertices[i].x < min.x)
+			{
+				min.x = vertices[i].x;
+			}
+
+			if (vertices[i].y < min.y)
+			{
+				min.y = vertices[i].y;
+			}
+		}
+
+		for (int i = 0; i < vertices.size(); i++)
+		{
+			vertices[i] = (vertices[i] - min) * scale;
+			std::cout << vertices[i].x << " " << vertices[i].y << std::endl;
+		}
+
+
+
+
+		GeoCore::Polygon hole;
+		hole.vertices.push_back(glm::vec3(2, 3, 0));
+		hole.vertices.push_back(glm::vec3(-8, 6, 0));
+		hole.vertices.push_back(glm::vec3(-3, 7, 0));
+		hole.vertices.push_back(glm::vec3(3, 4, 0));
+		ScalingTheHole(hole, scale, min);
+		holes.push_back(hole);
+
+		GeoCore::Polygon hole2;
+		hole2.vertices.push_back(glm::vec3(4, -3, 0));
+		hole2.vertices.push_back(glm::vec3(-5, 0, 0));
+		hole2.vertices.push_back(glm::vec3(0, 1, 0));
+		hole2.vertices.push_back(glm::vec3(5, -2, 0));
+		ScalingTheHole(hole2, scale, min);
+
+		holes.push_back(hole2);
+		*/
