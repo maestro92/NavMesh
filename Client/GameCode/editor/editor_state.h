@@ -14,6 +14,8 @@ struct EntityOption
 enum EditorEvent {
 	SAVE,
 	SHOW_GRID,
+	SHOW_GRID_COORD,
+	SHOW_GRID_SIM_COORD,
 	DEBUG_TRIANGLE,
 	DEBUG_GRID,
 	TRIANGULATE
@@ -43,6 +45,17 @@ struct HighlightGridCell
 	}
 };
 
+namespace Editor
+{
+	struct GridDisplayConfig
+	{
+		bool showGrid;
+		bool showCellSimCoord;
+		bool showCellGridCoord;
+	};
+
+}
+
 struct EditorState {
 
 	EntityOption* options;
@@ -54,7 +67,8 @@ struct EditorState {
 
 	// get rid of this indirection
 	EditorStateData* coreData;
-	bool showGrid;
+	Editor::GridDisplayConfig gridConfig;
+
 	bool highlightTriangle;
 	bool highlightGrid;
 

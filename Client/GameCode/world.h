@@ -165,7 +165,9 @@ struct World
 	Triangulation::DebugState* triangulationDebug;
 	Voronoi::DebugState* voronoiDebug;
 
-	CDTriangulation::DebugState* cdTriangulationdebug;
+	CDTriangulation::DebugState* cdTriangulationDebug;
+	PathFinding::DebugState* pathingDebug;
+
 
 	MapGrid mapGrid;
 
@@ -178,7 +180,8 @@ struct World
 		maxEntityCount = 1024;
 		triangulationDebug = new Triangulation::DebugState();
 		voronoiDebug = new Voronoi::DebugState();
-		cdTriangulationdebug = new CDTriangulation::DebugState();
+		cdTriangulationDebug = new CDTriangulation::DebugState();
+		pathingDebug = new PathFinding::DebugState();
 
 		xAxis = glm::vec3(1.0, 0.0, 0.0);
 		yAxis = glm::vec3(0.0, 1.0, 0.0);
@@ -199,6 +202,16 @@ struct World
 	{
 		Init();
 		CreateAreaA(this);
+	}
+
+	void SamplePathingLogic()
+	{
+		glm::vec3 start = glm::vec3(1, 1, 0);
+		glm::vec3 end = glm::vec3(100, 100, 0);
+
+		pathingDebug->start = start;
+		pathingDebug->start = end;
+
 	}
 
 	void CreateAreaA(World* world)
@@ -317,11 +330,11 @@ struct World
 		holes.push_back(hole2);
 		*/
 
-		CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->max, world->cdTriangulationdebug);
+		CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->max, world->cdTriangulationDebug);
 
-		for (int i = 0; i < world->cdTriangulationdebug->triangles.size(); i++)
+		for (int i = 0; i < world->cdTriangulationDebug->triangles.size(); i++)
 		{
-			CDTriangulation::DelaunayTriangle& triangle = world->cdTriangulationdebug->triangles[i];
+			CDTriangulation::DelaunayTriangle& triangle = world->cdTriangulationDebug->triangles[i];
 
 			for (int y = 0, yi = 0; yi < world->max.y; y++, yi += world->mapGrid.cellSize)
 			{
@@ -340,9 +353,6 @@ struct World
 				}
 			}
 		}
-
-		glm::vec3 start;
-		glm::vec3 end;
 	}
 
 

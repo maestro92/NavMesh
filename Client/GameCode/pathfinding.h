@@ -9,6 +9,12 @@
 
 namespace PathFinding
 {
+	struct DebugState
+	{
+		glm::vec3 start;
+		glm::vec3 end;
+	};
+
 	NavMesh::DualGraphNode* GetPolygonNodeContainingPoint(
 		NavMesh::DualGraph* pathingEnvironment,
 		glm::vec3 point)

@@ -347,7 +347,7 @@ namespace Editor
 		int numCol = 2;
 
 		int btnWidth = 200;
-		int btnHeight = 50;
+		int btnHeight = 20;
 
 		int startX = halfWidth - numCol * btnWidth;
 		int startY = halfHeight;
@@ -412,10 +412,24 @@ namespace Editor
 		curX = startX + btnWidth * indexX;
 		curY = startY - btnHeight * (indexY + 1);
 		RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
-			curX, curY, btnWidth, btnHeight, "Show Grid", EditorEvent::SHOW_GRID, editor->showGrid);
+			curX, curY, btnWidth, btnHeight, "Show Grid", EditorEvent::SHOW_GRID, editor->gridConfig.showGrid);
 		IncrementButtonIndex(indexX, indexY, numCol);
 
-		
+		if (editor->gridConfig.showGrid)
+		{
+			curX = startX + btnWidth * indexX;
+			curY = startY - btnHeight * (indexY + 1);
+			RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+				curX, curY, btnWidth, btnHeight, "Show Grid Coord", EditorEvent::SHOW_GRID_COORD, editor->gridConfig.showCellGridCoord);
+			IncrementButtonIndex(indexX, indexY, numCol);
+
+			curX = startX + btnWidth * indexX;
+			curY = startY - btnHeight * (indexY + 1);
+			RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+				curX, curY, btnWidth, btnHeight, "Show Grid Sim Pos", EditorEvent::SHOW_GRID_SIM_COORD, editor->gridConfig.showCellSimCoord);
+			IncrementButtonIndex(indexX, indexY, numCol);
+		}
+
 		curX = startX + btnWidth * indexX;
 		curY = startY - btnHeight * (indexY + 1);
 		RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
