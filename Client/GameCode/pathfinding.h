@@ -13,6 +13,14 @@ namespace PathFinding
 	{
 		glm::vec3 start;
 		glm::vec3 end;
+
+		int startTrigId;
+		int endTrigId;
+
+		std::vector<NavMesh::NavMeshPolygon> navMeshPolygons;
+		NavMesh::DualGraph* dualGraph;
+		std::vector<glm::vec3> waypoints;
+		std::vector<NavMesh::Edge> portals;
 	};
 
 	NavMesh::DualGraphNode* GetPolygonNodeContainingPoint(

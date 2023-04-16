@@ -525,7 +525,10 @@ void RenderGrid(EditorState* editorState, GameRender::GameRenderState* gameRende
 				for (int xi = 0, x = 0; xi < world->max.x; xi += world->mapGrid.cellSize, x++)
 				{
 					std::string s = std::to_string(x) + " " + std::to_string(y);
-					GameRender::DEBUGTextLine(s.c_str(), gameRenderState, glm::vec3(xi, yi, 0), 0.2);
+
+					int xTextPos = xi;
+					int yTextPos = yi - world->mapGrid.cellSize / 2;
+					GameRender::DEBUGTextLine(s.c_str(), gameRenderState, glm::vec3(xTextPos, yTextPos, 0), 0.2);
 				}
 			}
 		}
@@ -536,7 +539,10 @@ void RenderGrid(EditorState* editorState, GameRender::GameRenderState* gameRende
 				for (int xi = 0, x = 0; xi < world->max.x; xi += world->mapGrid.cellSize, x++)
 				{
 					std::string s = std::to_string(xi) + " " + std::to_string(yi);
-					GameRender::DEBUGTextLine(s.c_str(), gameRenderState, glm::vec3(xi, yi, 0), 0.2);
+
+					int xTextPos = xi;
+					int yTextPos = yi - world->mapGrid.cellSize / 2;
+					GameRender::DEBUGTextLine(s.c_str(), gameRenderState, glm::vec3(xTextPos, yTextPos, 0), 0.2);
 				}
 			}
 		}
@@ -581,7 +587,7 @@ void RenderWorldBorders(
 	worldBorders.push_back(glm::vec3(world->max.x, world->max.y, 0));
 	worldBorders.push_back(glm::vec3(world->min.x, world->max.y, 0));
 
-	float lineThickness = 2;
+	float lineThickness = 0.5;
 	for (int i = 0; i < worldBorders.size(); i++)
 	{
 		GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_WHITE, worldBorders[i], lineThickness);
@@ -678,6 +684,7 @@ void RenderSelectedEntityOption(
 
 void RenderPathingDebug(
 	EditorState* editorState,
+	World* world,
 	GameRender::GameRenderState* gameRenderState,
 	PathFinding::DebugState* debugState)
 {
@@ -687,8 +694,88 @@ void RenderPathingDebug(
 	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
 	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
 
-	GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, debugState->start, 2);
-	GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, debugState->end, 2);
+	GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, debugState->start, 1);
+	GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, debugState->end, 1);
+
+	/*
+	for (int i = 1; i < world->waypoints.size(); i++)
+	{
+		glm::vec3 p0 = world->waypoints[i - 1];
+		glm::vec3 p1 = world->waypoints[i];
+
+		GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_GREEN, p1, 0.5);
+		GameRender::PushDashedLine(gameRenderCommands, &group, gameAssets, GameRender::COLOR_GREEN, p0, p1, 0.5);
+	}
+	*/
+
+
+	for (int i = 0; i < debugState->navMeshPolygons.size(); i++)
+	{
+		NavMesh::NavMeshPolygon* navMeshPolygon = &debugState->navMeshPolygons[i];
+	//	RenderNavMeshPolygon(gameRenderCommands, &group, gameAssets, navMeshPolygon);
+	}
+
+
+
+
+	/*
+	for (int i = 0; i < world->dualGraph->nodes.size(); i++)
+	{
+		NavMesh::DualGraphNode* node = &world->dualGraph->nodes[i];
+
+		BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
+		LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
+
+		// vertex
+		glm::vec3 offset = glm::vec3(0.5, 0.5, 0.5);
+		glm::vec3 min = node->center - offset;
+		glm::vec3 max = node->center + offset;
+		GameRender::PushCube(gameRenderCommands, &group, bitmap, GameRender::COLOR_GREEN, min, max, true);
+
+		for (int j = 0; j < node->neighbors.size(); j++)
+		{
+			int neighborId = node->neighbors[j].id;
+			NavMesh::DualGraphNode* neighbor = &world->dualGraph->nodes[neighborId];
+
+			// so we dont over draw. We only draw from lowerId to larger Id
+			if (neighborId > node->id)
+			{
+				GameRender::PushDashedLine(gameRenderCommands, &group, bitmap, GameRender::COLOR_GREEN, node->center, neighbor->center, 0.2);
+			}
+		}
+	}
+	*/
+
+
+
+	for (int i = 0; i < debugState->portals.size(); i++)
+	{
+		/*
+		NavMesh::Edge edge = world->portals[i];
+
+		if (i == 3)
+		{
+			GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_YELLOW, edge.vertices[0], 1);
+			GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_GREEN, edge.vertices[1], 1);
+			GameRender::PushLine(gameRenderCommands, &group, gameAssets, GameRender::COLOR_TEAL, edge.vertices[0], edge.vertices[1], 0.5);
+		}
+		*/
+
+
+		/*
+		if (i == 5)
+		{
+			NavMesh::Edge edge = world->portals[i];
+
+			GameRender::PushLine(gameRenderCommands, &group, gameAssets, GameRender::COLOR_YELLOW, world->start, edge.vertices[0], 0.2);
+			GameRender::RenderPoint(gameRenderCommands, &gr0000000000000000oup, gameAssets, GameRender::COLOR_YELLOW, edge.vertices[0], 1);
+
+			GameRender::PushLine(gameRenderCommands, &group, gameAssets, GameRender::COLOR_TEAL, world->start, edge.vertices[1], 0.2);
+			GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_TEAL, edge.vertices[1], 1);
+		}
+		*/
+	}
+
 }
 
 
@@ -709,16 +796,15 @@ void RenderCDTriangulationDebug(
 	float thickness = 0.2f;
 	for (int i = 0; i < triangulationDebug->vertices.size(); i++)
 	{
-		GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_GREEN, triangulationDebug->vertices[i], 2);
+		GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_GREEN, triangulationDebug->vertices[i], 1);
 	}
-
 
 	for (int j = 0; j < triangulationDebug->holes.size(); j++)
 	{
 		GeoCore::Polygon polygon = triangulationDebug->holes[j];
 		for (int i = 0; i < polygon.vertices.size(); i++)
 		{
-			GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, polygon.vertices[i], 2);
+			GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, polygon.vertices[i], 1);
 		}
 	}
 
@@ -1075,88 +1161,6 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 
 
 	
-	for (int i = 0; i < world->navMeshPolygons.size(); i++)
-	{
-		NavMesh::NavMeshPolygon* navMeshPolygon = &world->navMeshPolygons[i];
-		RenderNavMeshPolygon(gameRenderCommands, &group, gameAssets, navMeshPolygon);
-	}
-	
-
-
-
-	/*
-	for (int i = 0; i < world->dualGraph->nodes.size(); i++)
-	{
-		NavMesh::DualGraphNode* node = &world->dualGraph->nodes[i];
-		
-		BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
-		LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
-
-		// vertex
-		glm::vec3 offset = glm::vec3(0.5, 0.5, 0.5);
-		glm::vec3 min = node->center - offset;
-		glm::vec3 max = node->center + offset;
-		GameRender::PushCube(gameRenderCommands, &group, bitmap, GameRender::COLOR_GREEN, min, max, true);
-
-		for (int j = 0; j < node->neighbors.size(); j++)
-		{
-			int neighborId = node->neighbors[j].id;
-			NavMesh::DualGraphNode* neighbor = &world->dualGraph->nodes[neighborId];
-
-			// so we dont over draw. We only draw from lowerId to larger Id
-			if (neighborId > node->id)
-			{
-				GameRender::PushDashedLine(gameRenderCommands, &group, bitmap, GameRender::COLOR_GREEN, node->center, neighbor->center, 0.2);
-			}
-		}
-	}
-	*/
-
-
-
-
-	GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_GREEN, world->start, 1);
-	GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_RED, world->destination, 1);
-
-	
-
-	for (int i = 0; i < world->portals.size(); i++)
-	{
-		/*
-		NavMesh::Edge edge = world->portals[i];
-		
-		if (i == 3)
-		{
-			GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_YELLOW, edge.vertices[0], 1);
-			GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_GREEN, edge.vertices[1], 1);
-			GameRender::PushLine(gameRenderCommands, &group, gameAssets, GameRender::COLOR_TEAL, edge.vertices[0], edge.vertices[1], 0.5);
-		}
-		*/
-		
-
-		/*
-		if (i == 5)
-		{
-			NavMesh::Edge edge = world->portals[i];
-
-			GameRender::PushLine(gameRenderCommands, &group, gameAssets, GameRender::COLOR_YELLOW, world->start, edge.vertices[0], 0.2);
-			GameRender::RenderPoint(gameRenderCommands, &gr0000000000000000oup, gameAssets, GameRender::COLOR_YELLOW, edge.vertices[0], 1);
-
-			GameRender::PushLine(gameRenderCommands, &group, gameAssets, GameRender::COLOR_TEAL, world->start, edge.vertices[1], 0.2);
-			GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_TEAL, edge.vertices[1], 1);
-		}
-		*/
-	}
-	
-
-	for (int i = 1; i < world->waypoints.size(); i++)
-	{
-		glm::vec3 p0 = world->waypoints[i - 1];
-		glm::vec3 p1 = world->waypoints[i];
-
-		GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_GREEN, p1, 0.5);
-		GameRender::PushDashedLine(gameRenderCommands, &group, gameAssets, GameRender::COLOR_GREEN, p0, p1, 0.5);
-	}
 
 
 	RenderTriangulationDebug(gameRenderCommands, &group, gameAssets, world->triangulationDebug);
@@ -1205,7 +1209,7 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 
 
 	RenderCDTriangulationDebug(editor, &gameRenderState, world->cdTriangulationDebug);
-	RenderPathingDebug(editor, &gameRenderState, world->pathingDebug);
+	RenderPathingDebug(editor, world, &gameRenderState,world->pathingDebug);
 
 	RenderSelectedEntityOption(editor, &gameRenderState, gameInputState, gameState);
 

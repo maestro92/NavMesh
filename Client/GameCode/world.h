@@ -154,13 +154,8 @@ struct World
 	int maxPlayerEntity;
 	int numPlayerEntity;
 
-	std::vector<NavMesh::NavMeshPolygon> navMeshPolygons;
-	NavMesh::DualGraph* dualGraph;
 
-	std::vector<glm::vec3> waypoints;
-	std::vector<NavMesh::Edge> portals;
-	glm::vec3 start;
-	glm::vec3 destination;
+
 
 	Triangulation::DebugState* triangulationDebug;
 	Voronoi::DebugState* voronoiDebug;
@@ -210,9 +205,47 @@ struct World
 		glm::vec3 end = glm::vec3(100, 100, 0);
 
 		pathingDebug->start = start;
-		pathingDebug->start = end;
+		pathingDebug->end = end;
 
+		CDTriangulation::DelaunayTriangle* startTriangle = FindTriangleBySimPos(start);
+		CDTriangulation::DelaunayTriangle* endTriangle = FindTriangleBySimPos(end);
+
+		pathingDebug->startTrigId = startTriangle->id;
+		pathingDebug->endTrigId = endTriangle->id;
+
+		/*
+		dualGraph = new NavMesh::DualGraph(polygons);
+
+		PathFinding::PathfindingResult pathingResult = PathFinding::FindPath(world->dualGraph, world->start, world->destination);
+		world->portals = pathingResult.portals;
+		world->waypoints = pathingResult.waypoints;
+		*/
 	}
+
+	
+	CDTriangulation::DelaunayTriangle* FindTriangleBySimPos(glm::vec3 pos)
+	{
+		int cx, cy = 0;
+		SimPos2GridCoord(pos, cx, cy);
+
+		MapCell* mapCell = mapGrid.GetCellByIndex(cx, cy);
+		for (int i = 0; i < mapCell->triangles.size(); i++)
+		{
+			int trigId = mapCell->triangles[i];
+			CDTriangulation::DelaunayTriangle* triangle = cdTriangulationDebug->trianglesById[trigId];
+
+			if (Collision::IsPointInsideTriangle_Barycentric_NotOnTheLine(
+				pos,
+				triangle->vertices[0].pos,
+				triangle->vertices[1].pos,
+				triangle->vertices[2].pos))
+			{
+				return triangle;
+			}
+		}
+		return NULL;
+	}
+	
 
 	void CreateAreaA(World* world)
 	{

@@ -237,6 +237,9 @@ namespace CDTriangulation
 	struct DebugState
 	{
 		std::vector<DelaunayTriangle> triangles;
+
+		std::vector<DelaunayTriangle*> trianglesById;
+
 		std::vector<glm::vec3> vertices;
 		std::vector<GeoCore::Polygon> holes;
 		std::vector<std::vector<Vertex>> intersectingEdges;
@@ -1276,12 +1279,26 @@ namespace CDTriangulation
 		
 		debugState->triangles = triangles;
 		
+		int maxId = 0;
+		for (int i = 0; i < debugState->triangles.size(); i++)
+		{
+			maxId = std::max(maxId, debugState->triangles[i].id);
+			std::cout << "i " << i << " " << debugState->triangles[i].id << std::endl;
+		}
+
+		debugState->trianglesById.resize(maxId + 1);
+		for (int i = 0; i < debugState->trianglesById.size(); i++)
+		{
+			debugState->trianglesById[i] = NULL;
+		}
 		
+		for (int i = 0; i < debugState->triangles.size(); i++)
+		{
+			int id = debugState->triangles[i].id;
+			debugState->trianglesById[id] = &debugState->triangles[i];
+		}
 
-
-		
-
-
+		int a = 1;
 
 		/*
 		for (int i = 0; i < holeVertices.size(); i++)
