@@ -1012,11 +1012,27 @@ namespace CDTriangulation
 			{
 				SwapDiagonalEdges(a, b, triangles);
 			}
-
-
 		}
 	}
 
+	void MarkObstacles(DebugState* debugState, std::vector<GeoCore::Polygon> holes)
+	{
+		for (int i = 0; i < debugState->triangles.size(); i++)
+		{
+			CDTriangulation::DelaunayTriangle* triangle = &debugState->triangles[i];
+			glm::vec3 center = triangle->GetCenter();
+
+			std::cout << center.x << " " << center.y << " " << std::endl;
+			for (int j = 0; j < holes.size(); j++)
+			{
+				if (Collision::IsPointInsidePolygon2D(center, holes[j].vertices))
+				{
+					triangle->isObstacle = true;
+					break;
+				}
+			}
+		}
+	}
 
 	// https://www.habrador.com/tutorials/math/14-constrained-delaunay/
 	// https://forum.unity.com/threads/programming-tools-constrained-delaunay-triangulation.1066148/

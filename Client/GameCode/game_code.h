@@ -13,6 +13,7 @@
 #include "game_io.h"
 #include <iostream>
 #include "editor/editor.h"
+#include "pathfinding.h"
 
 
 
@@ -697,25 +698,16 @@ void RenderPathingDebug(
 	GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, debugState->start, 1);
 	GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, debugState->end, 1);
 
-	/*
-	for (int i = 1; i < world->waypoints.size(); i++)
+	
+	for (int i = 1; i < debugState->waypoints.size(); i++)
 	{
-		glm::vec3 p0 = world->waypoints[i - 1];
-		glm::vec3 p1 = world->waypoints[i];
+		glm::vec3 p0 = debugState->waypoints[i - 1];
+		glm::vec3 p1 = debugState->waypoints[i];
 
-		GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_GREEN, p1, 0.5);
-		GameRender::PushDashedLine(gameRenderCommands, &group, gameAssets, GameRender::COLOR_GREEN, p0, p1, 0.5);
+		GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_GREEN, p1, 0.5);
+		GameRender::PushDashedLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_GREEN, p0, p1, 0.5);
 	}
-	*/
-
-
-	for (int i = 0; i < debugState->navMeshPolygons.size(); i++)
-	{
-		NavMesh::NavMeshPolygon* navMeshPolygon = &debugState->navMeshPolygons[i];
-	//	RenderNavMeshPolygon(gameRenderCommands, &group, gameAssets, navMeshPolygon);
-	}
-
-
+	
 
 
 	/*
@@ -748,7 +740,7 @@ void RenderPathingDebug(
 
 
 
-	for (int i = 0; i < debugState->portals.size(); i++)
+//	for (int i = 0; i < debugState->portals.size(); i++)
 	{
 		/*
 		NavMesh::Edge edge = world->portals[i];
@@ -824,7 +816,7 @@ void RenderCDTriangulationDebug(
 		CDTriangulation::DelaunayTriangle* triangle = &triangulationDebug->triangles[i];
 		glm::vec3 liftedVertex[3];
 
-		for (int j = 0; j < Triangulation::NUM_TRIANGLE_VERTEX; j++)
+		for (int j = 0; j < CDTriangulation::NUM_TRIANGLE_VERTEX; j++)
 		{
 			// lifting it slightly higher
 			liftedVertex[j] = triangle->vertices[j].pos + GameRender::DEBUG_RENDER_OFFSET;
@@ -884,54 +876,7 @@ void RenderCDTriangulationDebug(
 				gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, edge.vertices[0].pos, edge.vertices[1].pos, lineThickness);
 		}
 	}
-
-
 }
-
-
-
-
-void RenderNavMeshPolygon(
-	RenderSystem::GameRenderCommands* gameRenderCommands,
-	RenderSystem::RenderGroup* renderGroup,
-	GameAssets* gameAssets,
-	NavMesh::NavMeshPolygon* polygon)
-{
-	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
-	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
-
-	float thickness = 0.2f;
-
-	for (int i = 0; i < polygon->vertices.size(); i++)
-	{
-		/*
-		glm::vec3 liftedVertex[3];
-
-		for (int j = 0; j < Triangulation::NUM_TRIANGLE_VERTEX; j++)
-		{
-			// lifting it slightly higher
-			liftedVertex[j] = polygon->vertices[j] + GameRender::DEBUG_RENDER_OFFSET;
-		}
-		GameRender::PushTriangleOutline(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_WHITE, liftedVertex, thickness, false);
-	*/
-		GameRender::RenderPoint(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_GREEN, polygon->vertices[i], 1);
-	}
-
-	/*
-	if (polygon->vertices.size() == 3)
-	{
-		glm::vec4 shadedRed = glm::vec4(0.1, 0, 0, 0.4);
-		glm::vec3 liftedVertex[3];
-		for (int j = 0; j < polygon->vertices.size(); j++)
-		{
-			// lifting it slightly higher
-			liftedVertex[j] = polygon->vertices[j] + glm::vec3(0,0.1,0);
-		}
-		GameRender::PushTriangle(gameRenderCommands, renderGroup, bitmap, shadedRed, liftedVertex, false);
-	}
-	*/
-}
-
 
 
 struct PlayerMoveData
@@ -1022,12 +967,10 @@ void InteractWithWorldEntities(GameState* gameState, GameInputState* gameInputSt
 					{
 						if (editorState->draggedEntity == entity)
 						{
-							std::cout << "NULL " << std::endl;
 							editorState->draggedEntity = NULL;
 						}
 						else
 						{
-							std::cout << "dragged entity " << std::endl;
 							editorState->draggedEntity = entity;
 							editorState->draggedPivot = intersectionPoint - editorState->draggedEntity->pos;
 						}
@@ -1362,25 +1305,29 @@ void TriangulateMap(World* world)
 	}
 	
 	CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->max, world->cdTriangulationDebug);
-
-	for (int i = 0; i < world->cdTriangulationDebug->triangles.size(); i++)
-	{
-		CDTriangulation::DelaunayTriangle* triangle = &world->cdTriangulationDebug->triangles[i];
-		glm::vec3 center = triangle->GetCenter();
-
-		std::cout << center.x << " " << center.y << " " << std::endl;
-		for (int j = 0; j < holes.size(); j++)
-		{
-			if (Collision::IsPointInsidePolygon2D(center, holes[j].vertices))
-			{
-				triangle->isObstacle = true;
-				break;
-			}
-		}
-	}
-
-	int a = 1;
+	CDTriangulation::MarkObstacles(world->cdTriangulationDebug, holes);
 }
+
+void SamplePathingLogic(World* world)
+{
+	glm::vec3 start = glm::vec3(1, 1, 0);
+	glm::vec3 end = glm::vec3(100, 100, 0);
+
+
+	world->pathingDebug->dualGraph = new NavMesh::DualGraph(world->cdTriangulationDebug->triangles);
+	PathFinding::PathfindingResult pathingResult = PathFinding::FindPath(world->pathingDebug, world, start, end);
+
+	world->pathingDebug->waypoints = pathingResult.waypoints;
+
+	/*
+	dualGraph = new NavMesh::DualGraph(polygons);
+
+	PathFinding::PathfindingResult pathingResult = PathFinding::FindPath(world->dualGraph, world->start, world->destination);
+	world->portals = pathingResult.portals;
+	world->waypoints = pathingResult.waypoints;
+	*/
+}
+
 
 
 
@@ -1424,11 +1371,10 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		// intialize memory arena
 		platformAPI = gameMemory->platformAPI;
 
-
 		if (true)
 		{
 			gameState->world.LoadSampleMap();
-			gameState->world.SamplePathingLogic();
+			SamplePathingLogic(&gameState->world);
 		}
 		else
 		{

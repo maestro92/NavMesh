@@ -6,10 +6,10 @@
 #include "../NavMesh/memory.h"
 #include "geometry_core.h"
 #include "nav_mesh.h"
-#include "triangulation.h"
 #include "cd_triangulation.h"
+#include "pathfinding_common.h"
 #include "voronoi.h"
-#include "pathfinding.h"
+#include "map_grid.h"
 
 #define	DIST_EPSILON	(0.03125)
 
@@ -90,6 +90,7 @@ struct WorldCameraSetup
 	glm::mat4 translation;
 };
 
+
 struct MapCell
 {
 	std::vector<TriangleId> triangles;
@@ -155,14 +156,11 @@ struct World
 	int numPlayerEntity;
 
 
-
-
 	Triangulation::DebugState* triangulationDebug;
 	Voronoi::DebugState* voronoiDebug;
 
 	CDTriangulation::DebugState* cdTriangulationDebug;
 	PathFinding::DebugState* pathingDebug;
-
 
 	MapGrid mapGrid;
 
@@ -199,28 +197,6 @@ struct World
 		CreateAreaA(this);
 	}
 
-	void SamplePathingLogic()
-	{
-		glm::vec3 start = glm::vec3(1, 1, 0);
-		glm::vec3 end = glm::vec3(100, 100, 0);
-
-		pathingDebug->start = start;
-		pathingDebug->end = end;
-
-		CDTriangulation::DelaunayTriangle* startTriangle = FindTriangleBySimPos(start);
-		CDTriangulation::DelaunayTriangle* endTriangle = FindTriangleBySimPos(end);
-
-		pathingDebug->startTrigId = startTriangle->id;
-		pathingDebug->endTrigId = endTriangle->id;
-
-		/*
-		dualGraph = new NavMesh::DualGraph(polygons);
-
-		PathFinding::PathfindingResult pathingResult = PathFinding::FindPath(world->dualGraph, world->start, world->destination);
-		world->portals = pathingResult.portals;
-		world->waypoints = pathingResult.waypoints;
-		*/
-	}
 
 	
 	CDTriangulation::DelaunayTriangle* FindTriangleBySimPos(glm::vec3 pos)
@@ -364,6 +340,7 @@ struct World
 		*/
 
 		CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->max, world->cdTriangulationDebug);
+		CDTriangulation::MarkObstacles(world->cdTriangulationDebug, holes);
 
 		for (int i = 0; i < world->cdTriangulationDebug->triangles.size(); i++)
 		{

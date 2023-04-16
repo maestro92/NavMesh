@@ -2,6 +2,9 @@
 
 #include "../PlatformShared/platform_shared.h"
 #include "nav_mesh.h"
+#include "pathfinding_common.h"
+#include "world.h"
+
 #include "collision.h"
 
 #include <queue>
@@ -9,52 +12,20 @@
 
 namespace PathFinding
 {
-	struct DebugState
-	{
-		glm::vec3 start;
-		glm::vec3 end;
-
-		int startTrigId;
-		int endTrigId;
-
-		std::vector<NavMesh::NavMeshPolygon> navMeshPolygons;
-		NavMesh::DualGraph* dualGraph;
-		std::vector<glm::vec3> waypoints;
-		std::vector<NavMesh::Edge> portals;
-	};
-
-	NavMesh::DualGraphNode* GetPolygonNodeContainingPoint(
+	NavMesh::DualGraphNode* GetNodeContainingPoint(
 		NavMesh::DualGraph* pathingEnvironment,
+		World* world,
 		glm::vec3 point)
 	{
-		std::cout << "point " << point.x << " " << point.y << " " << point.z << std::endl;
-		std::cout << "nodes size " << pathingEnvironment->nodes.size() << std::endl;
-
-		for (int i = 0; i < pathingEnvironment->nodes.size(); i++)
+		CDTriangulation::DelaunayTriangle* triangle = world->FindTriangleBySimPos(point);
+		if (triangle == NULL)
 		{
-			NavMesh::DualGraphNode* node = &pathingEnvironment->nodes[i];
-			NavMesh::NavMeshPolygon* polygon = node->navMeshPolygon;
-
-			std::cout << "		node->id " << node->id << " neighbors " <<polygon->vertices.size() << std::endl;
-			glm::vec3 vertex = polygon->vertices[0];
-			std::cout << "				 " << vertex.x << " " << vertex.y << " " << vertex.z << std::endl;
-
-			vertex = polygon->vertices[1];
-			std::cout << "				 " << vertex.x << " " << vertex.y << " " << vertex.z << std::endl;
-
-			vertex = polygon->vertices[2];
-			std::cout << "				 " << vertex.x << " " << vertex.y << " " << vertex.z << std::endl;
-
-			if (Collision::IsPointInsideTriangle_Barycentric(
-				point, 
-				polygon->vertices[0], 
-				polygon->vertices[1], 
-				polygon->vertices[2]))
-			{
-				return node;
-			}
+			return NULL;
 		}
-		return NULL;
+		else
+		{
+			pathingEnvironment->GetNode(triangle->id);
+		}
 	}
 
 	struct PathfindingResult
@@ -62,7 +33,7 @@ namespace PathFinding
 		bool valid;
 		std::vector<glm::vec3> waypoints;
 
-		std::vector<NavMesh::Edge> portals;
+	//	std::vector<NavMesh::Edge> portals;
 	};
 
 
@@ -97,13 +68,16 @@ namespace PathFinding
 
 	std::vector<int> AStarSearch(NavMesh::DualGraph* dualGraph, NavMesh::DualGraphNode* polygonNode0, NavMesh::DualGraphNode* polygonNode1)
 	{
-		// from triangle 0, do a bfs with a distance heuristic until u reach triangle1
+		std::cout << "start" << polygonNode0->GetId() << std::endl;
+		std::cout << "end" << polygonNode1->GetId() << std::endl;
 
+
+		// from triangle 0, do a bfs with a distance heuristic until u reach triangle1
 		std::priority_queue<AStarSearchNode, std::vector<AStarSearchNode>, AStarSearchNodeComparison> q;
 
 		std::unordered_map<int, AStarSearchNode> visited;
 
-		AStarSearchNode node = { polygonNode0->id, -1, 0};
+		AStarSearchNode node = { polygonNode0->GetId(), -1, 0};
 		q.push(node);
 	
 
@@ -115,7 +89,7 @@ namespace PathFinding
 
 			visited[curNode.polygonNodeId] = curNode;
 
-			if (curNode.polygonNodeId == polygonNode1->id)
+			if (curNode.polygonNodeId == polygonNode1->GetId())
 			{
 				destinationNode = curNode;
 				break;
@@ -123,6 +97,8 @@ namespace PathFinding
 
 			int curPolygonId = curNode.polygonNodeId;
 			NavMesh::DualGraphNode* polygonNode = dualGraph->GetNode(curPolygonId);
+
+			std::cout << "		visiting " << curPolygonId << std::endl;
 
 			glm::vec3 fromPos = polygonNode->center;
 
@@ -133,7 +109,12 @@ namespace PathFinding
 
 				NavMesh::DualGraphNode* neighbor = dualGraph->GetNode(neighborId);
 
-				if (visited.find(neighbor->id) != visited.end())
+				if (visited.find(neighbor->GetId()) != visited.end())
+				{
+					continue;
+				}
+
+				if (neighbor->triangle->isObstacle)
 				{
 					continue;
 				}
@@ -145,7 +126,7 @@ namespace PathFinding
 		
 		std::vector<int> polygonNodesPath;
 		int curId = destinationNode.polygonNodeId;
-		while (curId != polygonNode0->id)
+		while (curId != polygonNode0->GetId())
 		{
 			polygonNodesPath.push_back(curId);
 
@@ -169,7 +150,7 @@ namespace PathFinding
 		return polygonNodesPath;
 	}
 
-
+	/*
 	void CorrectPortalLeftRightEndpoints(std::vector<NavMesh::Edge>& portals, glm::vec3 start)
 	{
 
@@ -213,11 +194,10 @@ namespace PathFinding
 			p1 = edge.vertices[1];
 		}
 	}
-
+	
 	// http://digestingduck.blogspot.com/2010/03/simple-stupid-funnel-algorithm.html
 	std::vector<glm::vec3> Funnel(NavMesh::DualGraph* dualGraph, std::vector<int> polygonNodeIds, glm::vec3 start, glm::vec3 end)
 	{
-
 		std::vector<glm::vec3> results;
 		std::vector<NavMesh::Edge> portals = dualGraph->GetPortalList(polygonNodeIds);
 
@@ -378,20 +358,24 @@ namespace PathFinding
 
 		return results;
 	}
+	*/
 
-
-
-	PathfindingResult FindPath(NavMesh::DualGraph* dualGraph, glm::vec3 start, glm::vec3 goal)
+	PathfindingResult FindPath(PathFinding::DebugState* debugState, World* world, glm::vec3 start, glm::vec3 goal)
 	{
+		NavMesh::DualGraph* dualGraph = debugState->dualGraph;
+
 		PathfindingResult result;
 
-		NavMesh::DualGraphNode* node0 = GetPolygonNodeContainingPoint(dualGraph, start);
-		NavMesh::DualGraphNode* node1 = GetPolygonNodeContainingPoint(dualGraph, goal);
+		NavMesh::DualGraphNode* node0 = GetNodeContainingPoint(dualGraph, world, start);
+		NavMesh::DualGraphNode* node1 = GetNodeContainingPoint(dualGraph, world, goal);
 
 		if (node0 == NULL || node1 == NULL) {
 			result.valid = false;
 			return result;
 		}
+
+		debugState->startNodeId = node0->GetId();
+		debugState->endNodeId = node1->GetId();
 
 		result.valid = true;
 		if (node0 == node1)
@@ -404,16 +388,26 @@ namespace PathFinding
 		{
 			std::vector<int> polygonNodeIds = AStarSearch(dualGraph, node0, node1);
 
-			result.portals = dualGraph->GetPortalList(polygonNodeIds);
+		//	result.portals = dualGraph->GetPortalList(polygonNodeIds);
 
 			result.waypoints.push_back(start);
+			for (int i = 0; i < polygonNodeIds.size(); i++)
+			{
+				int id = polygonNodeIds[i];
+				NavMesh::DualGraphNode* node = dualGraph->GetNode(id);
+				result.waypoints.push_back(node->center);
+			}
+			result.waypoints.push_back(goal);
 
+
+			/*
 			std::vector<glm::vec3> path = Funnel(dualGraph, polygonNodeIds, start, goal);
 			for (int i = 0; i<path.size(); i++)
 			{
 				result.waypoints.push_back(path[i]);
 			}
 			result.waypoints.push_back(goal);
+			*/
 		}
 
 		return result;

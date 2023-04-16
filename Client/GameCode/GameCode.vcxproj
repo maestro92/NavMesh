@@ -171,6 +171,7 @@
     <ClInclude Include="json_spirit\json_spirit_writer_template.h" />
     <ClInclude Include="math.h" />
     <ClInclude Include="pathfinding.h" />
+    <ClInclude Include="pathfinding_common.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="triangulation.h" />
     <ClInclude Include="ui_util.h" />
