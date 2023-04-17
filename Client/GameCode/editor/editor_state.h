@@ -62,8 +62,8 @@ struct EditorState {
 	EntityOption* options;
 	int numOptions;
 
-	EntityOption* selected;
-	EntityOption* highlighted;
+	EntityOption* selectedOption;
+	EntityOption* highlightedOption;
 	bool consumingMouse;
 
 	// get rid of this indirection
@@ -83,7 +83,7 @@ struct EditorState {
 
 	bool IsInSelectionMode()
 	{
-		return selected != NULL;
+		return selectedOption != NULL;
 	}
 };
 

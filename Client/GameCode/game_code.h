@@ -621,7 +621,7 @@ void RenderSelectedEntityOption(
 		return;
 	}
 
-	if (editor->selected != NULL)
+	if (editor->selectedOption != NULL)
 	{
 
 		RenderSystem::GameRenderCommands* gameRenderCommands = gameRenderState->gameRenderCommands;
@@ -648,7 +648,7 @@ void RenderSelectedEntityOption(
 			LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
 			float lineThickness = 0.5;
 
-			EntityOption* option = editor->selected;
+			EntityOption* option = editor->selectedOption;
 			for (int i = 0; i < option->vertices.size(); i++)
 			{
 				glm::vec3 pos0 = option->vertices[i];
@@ -708,7 +708,6 @@ void RenderPathingDebug(
 	}
 	
 
-	
 	for (int i = 0; i < debugState->portals.size(); i++)
 	{
 		CDTriangulation::DelaunayTriangleEdge edge = debugState->portals[i];
@@ -895,7 +894,7 @@ void RenderCDTriangulationDebug(
 		GameRender::RenderLine(
 			gameRenderCommands, group, gameAssets, GameRender::COLOR_TEAL, v0.pos, v1.pos, 0.70);
 	}
-	*/
+	
 
 	for (int j = 0; j < triangulationDebug->constrainedEdges.size(); j++)
 	{
@@ -907,6 +906,7 @@ void RenderCDTriangulationDebug(
 		GameRender::RenderLine(
 			gameRenderCommands, group, gameAssets, GameRender::COLOR_TEAL, v0.pos, v1.pos, 0.70);
 	}
+	*/
 }
 
 
@@ -1340,6 +1340,8 @@ void TriangulateMap(World* world)
 		}
 	}
 	
+	world->AddWorldBoundsAsHoles(holes);
+
 	CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->max, world->cdTriangulationGraph);
 	CDTriangulation::MarkObstacles(world->cdTriangulationGraph, holes);
 }
@@ -1409,7 +1411,7 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		// intialize memory arena
 		platformAPI = gameMemory->platformAPI;
 
-		int testCase = 2;
+		int testCase = 0;
 
 		if (testCase == 0)
 		{
@@ -1418,7 +1420,7 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		else if (testCase == 1)
 		{
 			gameState->world.LoadSampleMap();
-		//	SamplePathingLogic(&gameState->world);
+			SamplePathingLogic(&gameState->world);
 		}
 		else if (testCase == 2)
 		{
@@ -1700,9 +1702,9 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 
 	// Render Debug stuff
 
-	RenderProfileBars(debugState, gameRenderCommands, &group, transientState->assets, gameInputState->mousePos);
+	// RenderProfileBars(debugState, gameRenderCommands, &group, transientState->assets, gameInputState->mousePos);
 
-	RenderMiddle(gameRenderCommands, &group, transientState->assets, gameInputState->mousePos);
+	// RenderMiddle(gameRenderCommands, &group, transientState->assets, gameInputState->mousePos);
 
 
 	glm::vec3 startPos = glm::vec3(-halfWidth, halfHeight - 120, 0.2);

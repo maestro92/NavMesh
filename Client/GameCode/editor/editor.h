@@ -13,6 +13,8 @@ namespace Editor
 	glm::vec4 SELECTED = glm::vec4(0.5, 0, 0.5, 0.5);
 	glm::vec4 REGULAR = glm::vec4(0, 0, 0.25, 0.25);
 
+	const int BTN_WIDTH = 200;
+	const int BTN_HEIGHT = 20;
 	/*
 	
   -512,384			     511,384
@@ -276,27 +278,27 @@ namespace Editor
 			if (gameInputState->mouseButtons[(int)PlatformMouseButton_Left].endedDown && 
 				gameInputState->mouseButtons[(int)PlatformMouseButton_Left].changed)
 			{
-				if (editorState->selected != NULL && entityOption == editorState->selected)
+				if (editorState->selectedOption != NULL && entityOption == editorState->selectedOption)
 				{
-					editorState->selected = NULL;
+					editorState->selectedOption = NULL;
 				}
 				else
 				{
-					editorState->selected = entityOption;
+					editorState->selectedOption = entityOption;
 				}
 			}
 			else
 			{
-				editorState->highlighted = entityOption;
+				editorState->highlightedOption = entityOption;
 			}			
 		}
 		
-		if (entityOption == editorState->selected)
+		if (entityOption == editorState->selectedOption)
 		{
 			GameRender::PushBitmap(gameRenderCommands, renderGroup, defaultBitmap, SELECTED, profileRectMin,
 				halfDim, GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Bottom);
 		}
-		else if(entityOption == editorState->highlighted)
+		else if(entityOption == editorState->highlightedOption)
 		{
 			GameRender::PushBitmap(gameRenderCommands, renderGroup, defaultBitmap, HIGHLIGHTED, profileRectMin,
 				halfDim, GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Bottom);
@@ -322,6 +324,81 @@ namespace Editor
 		}
 	}
 
+	void RenderEntityOptionsPanel(
+		GameInputState* gameInputState,
+		GameRender::GameRenderState* gameRenderSetup,
+		glm::vec3 screenMousePos,
+		EditorState* editor)
+	{
+		RenderSystem::GameRenderCommands* gameRenderCommands = gameRenderSetup->gameRenderCommands;
+		RenderSystem::RenderGroup* group = gameRenderSetup->renderGroup;
+		GameAssets* gameAssets = gameRenderSetup->gameAssets;
+
+		int btnWidth = 150;
+		int btnHeight = 20;
+
+		float halfWidth = gameRenderCommands->settings.dims.x / 2.0f;
+		float halfHeight = gameRenderCommands->settings.dims.y / 2.0f;
+
+		int numCol = 2;
+
+		int startX = -halfWidth;
+		int startY = halfHeight;
+
+		int curX = startX;
+		int curY = startY;
+
+		editor->highlightedOption = NULL;
+
+		int indexX = 0, indexY = 0;
+		for (int i = 0; i < editor->numOptions; i++)
+		{
+			curX = startX + btnWidth * indexX;
+			curY = startY - btnHeight * (indexY + 1);
+
+			EntityOption* entityOption = &editor->options[i];
+			RenderChoice(editor, gameInputState, gameRenderSetup, screenMousePos, entityOption, curX, curY, btnWidth, btnHeight);
+
+			IncrementButtonIndex(indexX, indexY, numCol);
+		}
+
+		int numSpecialButtons = indexY * numCol + indexX;
+		int numRow = (numSpecialButtons + (numCol - 1)) / numCol;
+
+
+		float thickness = 0.5;
+		curX = startX;
+		curY = startY;
+		float lineHeight = numRow * btnHeight;
+
+		for (int x = 0; x <= numCol; x++)
+		{
+			curX = startX + btnWidth * x;
+
+			glm::vec3 pos = glm::vec3(curX, curY, 0);
+			glm::vec3 end = pos;
+			end.y -= lineHeight;
+
+			GameRender::RenderLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_BLUE, pos, end, thickness);
+		}
+
+
+		curX = startX;
+		curY = startY;
+		float lineWidth = numCol * btnWidth;
+		for (int y = 0; y <= numRow; y++)
+		{
+			curY = startY - BTN_HEIGHT * y;
+
+			glm::vec3 pos = glm::vec3(curX, curY, 0);
+			glm::vec3 end = pos;
+			end.x += lineWidth;
+
+			GameRender::RenderLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_BLUE, pos, end, thickness);
+		}
+
+	}
+
 	void TickAndRenderEditorMenu(GameMemory* gameMemory,
 		GameInputState* gameInputState,
 		GameRender::GameRenderState* gameRenderSetup,
@@ -342,7 +419,7 @@ namespace Editor
 
 		glm::vec3 screenMousePos = UIUtil::PlatformMouseToScreenRenderPos(gameRenderCommands, gameInputState->mousePos);
 
-
+		editor->consumingMouse = false;
 
 		int numCol = 2;
 
@@ -355,23 +432,9 @@ namespace Editor
 		int curX = startX;
 		int curY = startY;
 
-		editor->highlighted = NULL;
-
-		int entityOptionIndex = 0;
-		editor->consumingMouse = false;
-
-
 		int indexX = 0, indexY = 0;
-		for (int i = 0; i < editor->numOptions; i++)
-		{
-			curX = startX + btnWidth * indexX;
-			curY = startY - btnHeight * (indexY + 1);
 
-			EntityOption* entityOption = &editor->options[i];
-			RenderChoice(editor, gameInputState, gameRenderSetup, screenMousePos, entityOption, curX, curY, btnWidth, btnHeight);
-
-			IncrementButtonIndex(indexX, indexY, numCol);
-		}
+		RenderEntityOptionsPanel(gameInputState, gameRenderSetup, screenMousePos, editor);
 
 		curX = startX + btnWidth * indexX;
 		curY = startY - btnHeight * (indexY + 1);
@@ -438,7 +501,7 @@ namespace Editor
 		curY = startY;
 		float lineHeight = numRow * btnHeight;
 
-		for (int x = 0; x < numCol; x++)
+		for (int x = 0; x <= numCol; x++)
 		{
 			curX = startX + btnWidth * x;
 
@@ -453,7 +516,7 @@ namespace Editor
 		curX = startX;
 		curY = startY;
 		float lineWidth = numCol * btnWidth;
-		for (int y = 0; y < numRow; y++)
+		for (int y = 0; y <= numRow; y++)
 		{
 			curY = startY - btnHeight * y;
 

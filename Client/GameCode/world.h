@@ -226,6 +226,32 @@ struct World
 		return NULL;
 	}
 	
+	void AddWorldBoundsAsHoles(std::vector<GeoCore::Polygon>& holes)
+	{
+		GeoCore::Polygon hole;
+
+		// a hole with 2 vertices is just a constrained edge
+		// putting the world borders as hard constraints
+		hole.vertices.clear();
+		hole.vertices.push_back(glm::vec3(min.x, min.y, 0));
+		hole.vertices.push_back(glm::vec3(min.x, max.y, 0));
+		holes.push_back(hole);
+
+		hole.vertices.clear();
+		hole.vertices.push_back(glm::vec3(min.x, max.y, 0));
+		hole.vertices.push_back(glm::vec3(max.x, max.y, 0));
+		holes.push_back(hole);
+
+		hole.vertices.clear();
+		hole.vertices.push_back(glm::vec3(max.x, max.y, 0));
+		hole.vertices.push_back(glm::vec3(max.x, min.y, 0));
+		holes.push_back(hole);
+
+		hole.vertices.clear();
+		hole.vertices.push_back(glm::vec3(max.x, min.y, 0));
+		hole.vertices.push_back(glm::vec3(min.x, min.y, 0));
+		holes.push_back(hole);
+	}
 
 	void CreateAreaA(World* world)
 	{
@@ -251,7 +277,7 @@ struct World
 		// clockwise
 		std::vector<GeoCore::Polygon> holes;
 
-		int testPathingCase = 3;
+		int testPathingCase = 2;
 		if (testPathingCase == 1)
 		{
 			vertices.push_back(glm::vec3(130, 0, 0));
@@ -298,29 +324,8 @@ struct World
 			hole.vertices.push_back(glm::vec3(192, 176, 0));
 			hole.vertices.push_back(glm::vec3(192, 128, 0));
 			holes.push_back(hole);
-
-			// a hole with 2 vertices is just a constrained edge
-			// putting the world borders as hard constraints
-			hole.vertices.clear();
-			hole.vertices.push_back(glm::vec3(world->min.x, world->min.y, 0));
-			hole.vertices.push_back(glm::vec3(world->min.x, world->max.y, 0));
-			holes.push_back(hole);
-
-			hole.vertices.clear();
-			hole.vertices.push_back(glm::vec3(world->min.x, world->max.y, 0));
-			hole.vertices.push_back(glm::vec3(world->max.x, world->max.y, 0));
-			holes.push_back(hole);
-
-			hole.vertices.clear();
-			hole.vertices.push_back(glm::vec3(world->max.x, world->max.y, 0));
-			hole.vertices.push_back(glm::vec3(world->max.x, world->min.y, 0));
-			holes.push_back(hole);
-
-			hole.vertices.clear();
-			hole.vertices.push_back(glm::vec3(world->max.x, world->min.y, 0));
-			hole.vertices.push_back(glm::vec3(world->min.x, world->min.y, 0));
-			holes.push_back(hole);
-
+			
+			world->AddWorldBoundsAsHoles(holes);		
 		}
 		else if (testPathingCase == 3)
 		{
@@ -355,28 +360,7 @@ struct World
 			}
 			holes.push_back(hole);
 
-
-			// a hole with 2 vertices is just a constrained edge
-			// putting the world borders as hard constraints
-			hole.vertices.clear();
-			hole.vertices.push_back(glm::vec3(world->min.x, world->min.y, 0));
-			hole.vertices.push_back(glm::vec3(world->min.x, world->max.y, 0));
-			holes.push_back(hole);
-
-			hole.vertices.clear();
-			hole.vertices.push_back(glm::vec3(world->min.x, world->max.y, 0));
-			hole.vertices.push_back(glm::vec3(world->max.x, world->max.y, 0));
-			holes.push_back(hole);
-
-			hole.vertices.clear();
-			hole.vertices.push_back(glm::vec3(world->max.x, world->max.y, 0));
-			hole.vertices.push_back(glm::vec3(world->max.x, world->min.y, 0));
-			holes.push_back(hole);
-
-			hole.vertices.clear();
-			hole.vertices.push_back(glm::vec3(world->max.x, world->min.y, 0));
-			hole.vertices.push_back(glm::vec3(world->min.x, world->min.y, 0));
-			holes.push_back(hole);
+			world->AddWorldBoundsAsHoles(holes);
 		}
 
 

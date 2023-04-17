@@ -880,6 +880,7 @@ namespace CDTriangulation
 
 		// 5.3.1 search for that triangle that "Contains" the beginning of the new edge constrainedEdge
 		DelaunayTriangle containingTriangle;
+		bool found = false;
 		for (int i = 0; i < triangles.size(); i++)
 		{
 			std::vector<DelaunayTriangleEdge> edges;
@@ -900,6 +901,7 @@ namespace CDTriangulation
 					IsPointOnTheLeftOfLineSegment(vEnd.pos, e1v0.pos, e1v1.pos)){
 						
 					containingTriangle = triangles[i];
+					found = true;
 					std::cout << "				containingTriangle " << containingTriangle.id << std::endl;
 					break;
 				}
@@ -915,6 +917,11 @@ namespace CDTriangulation
 			int a = 1;
 		}
 		
+		if (!found)
+		{
+			return intersectingEdges;
+		}
+
 		while (true)
 		{
 			if (Collision::IsPointInsideTriangle_Barycentric(
@@ -926,7 +933,7 @@ namespace CDTriangulation
 				break;
 			}
 
-	//		std::cout << "		curTriangle.id " << curTriangle.id << std::endl;
+			std::cout << "		curTriangle.id " << curTriangle.id << std::endl;
 
 			for (int i = 0; i < NUM_TRIANGLE_EDGES; i++)
 			{
