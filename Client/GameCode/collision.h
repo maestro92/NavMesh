@@ -89,7 +89,9 @@ namespace Collision
 	{
 		float u, v, w;
 		Barycentric(p0, p1, p2, testPoint, u, v, w);
-		return v >= 0.0f && w >= 0.0f && (v + w) <= 1.0f;
+
+		// to deal with float comparisions, in case v or w is like -0.000000001
+		return (Math::IsZero(v) || v >= 0.0f) && (Math::IsZero(w) || w >= 0.0f) && (v + w) <= 1.0f;
 	}
 
 

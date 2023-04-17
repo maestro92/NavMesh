@@ -360,30 +360,7 @@ namespace Editor
 		int entityOptionIndex = 0;
 		editor->consumingMouse = false;
 
-		/*
-		for (int y = 0; y < numRow; y++)
-		{
-			curY = startY - btnHeight * y;
 
-			for (int x = 0; x < numCol; x++)
-			{
-				if (entityOptionIndex >= editor->numOptions)
-				{
-					break;
-				}
-
-				curX = startX + btnWidth * x;
-
-				EntityOption* entityOption = &editor->options[entityOptionIndex];
-
-				// in UI render space, y starts from bottom
-				int minX = curX;
-				int minY = curY - btnHeight;
-				RenderChoice(editor, gameInputState, gameRenderSetup, screenMousePos, entityOption, curX, minY, btnWidth, btnHeight);
-				entityOptionIndex++;
-			}
-		}
-		*/
 		int indexX = 0, indexY = 0;
 		for (int i = 0; i < editor->numOptions; i++)
 		{
@@ -435,6 +412,14 @@ namespace Editor
 		RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
 			curX, curY, btnWidth, btnHeight, "Debug Triangle", EditorEvent::DEBUG_TRIANGLE, editor->highlightTriangle);
 		IncrementButtonIndex(indexX, indexY, numCol);
+
+
+		curX = startX + btnWidth * indexX;
+		curY = startY - btnHeight * (indexY + 1);
+		RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Hide Obstacles", EditorEvent::HIDE_OBSTACLES, editor->hideObstacles);
+		IncrementButtonIndex(indexX, indexY, numCol);
+
 
 
 		curX = startX + btnWidth * indexX;

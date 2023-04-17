@@ -18,7 +18,8 @@ enum EditorEvent {
 	SHOW_GRID_SIM_COORD,
 	DEBUG_TRIANGLE,
 	DEBUG_GRID,
-	TRIANGULATE
+	TRIANGULATE,
+	HIDE_OBSTACLES
 };
 
 struct EditorStateData
@@ -68,6 +69,8 @@ struct EditorState {
 	// get rid of this indirection
 	EditorStateData* coreData;
 	Editor::GridDisplayConfig gridConfig;
+
+	bool hideObstacles;
 
 	bool highlightTriangle;
 	bool highlightGrid;

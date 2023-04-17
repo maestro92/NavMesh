@@ -884,17 +884,28 @@ void RenderCDTriangulationDebug(
 	}
 	*/
 
-	for (int j = 0; j < triangulationDebug->debugConstrainedEdgePolygons.size(); j++)
+	/*
+	for (int j = 0; j < triangulationDebug->debugAllConstrainedEdges.size(); j++)
 	{
-		CDTriangulation::DebugConstrainedEdgePolygon* debugPolygon = &(triangulationDebug->debugConstrainedEdgePolygons[j]);
+		CDTriangulation::DelaunayTriangleEdge edge = triangulationDebug->debugAllConstrainedEdges[j];
 
-		for (int i = 0; i < debugPolygon->Edges.size(); i++)
-		{
-			CDTriangulation::DebugConstrainedEdge edge = debugPolygon->Edges[i];
+		CDTriangulation::Vertex v0 = triangulationDebug->GetVertexById(edge.vertices[0]);
+		CDTriangulation::Vertex v1 = triangulationDebug->GetVertexById(edge.vertices[1]);
 
-			GameRender::RenderLine(
-				gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, edge.vertices[0].pos, edge.vertices[1].pos, lineThickness);
-		}
+		GameRender::RenderLine(
+			gameRenderCommands, group, gameAssets, GameRender::COLOR_TEAL, v0.pos, v1.pos, 0.70);
+	}
+	*/
+
+	for (int j = 0; j < triangulationDebug->constrainedEdges.size(); j++)
+	{
+		CDTriangulation::DelaunayTriangleEdge edge = triangulationDebug->constrainedEdges[j];
+
+		CDTriangulation::Vertex v0 = triangulationDebug->GetVertexById(edge.vertices[0]);
+		CDTriangulation::Vertex v1 = triangulationDebug->GetVertexById(edge.vertices[1]);
+
+		GameRender::RenderLine(
+			gameRenderCommands, group, gameAssets, GameRender::COLOR_TEAL, v0.pos, v1.pos, 0.70);
 	}
 }
 
@@ -1091,6 +1102,7 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 	group.quads->masterBitmapArrayOffset = gameRenderCommands->numBitmaps;
 	group.quads->renderSetup = renderSetup;
 
+	EditorState* editor = &gameState->editorState;
 
 	for (int i = 0; i < world->numEntities; i++)
 	{
@@ -1105,7 +1117,11 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 				break;
 
 			case EntityFlag::OBSTACLE:
-				RenderEntityStaticModel(gameRenderCommands, &group, gameAssets, entity);
+
+				if (!editor->hideObstacles)
+				{
+					RenderEntityStaticModel(gameRenderCommands, &group, gameAssets, entity);
+				}
 				break;
 
 			case EntityFlag::PLAYER:
@@ -1130,7 +1146,7 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 	RenderVoronoiDebug(gameRenderCommands, &group, gameAssets, world->voronoiDebug);
 	
 	
-	EditorState* editor = &gameState->editorState;
+
 	
 	glm::vec3 rayOrigin = gameState->debugCameraEntity.pos;
 	glm::vec3 rayDir = MousePosToMousePickingRay(gameState->world.cameraSetup, gameRenderCommands, gameInputState->mousePos);
@@ -1264,12 +1280,12 @@ void LoadMap(World* world, string fileName)
 	}
 }
 
-void SaveMap(World* world)
+void SaveMap(World* world, string savedFileName)
 {
 	std::cout << "saving the map " << std::endl;
 	
 	ofstream myfile;
-	myfile.open("data.txt");
+	myfile.open(savedFileName);
 
 	Object worldObj;
 
@@ -1393,14 +1409,20 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		// intialize memory arena
 		platformAPI = gameMemory->platformAPI;
 
-		if (false)
+		int testCase = 2;
+
+		if (testCase == 0)
+		{
+			gameState->world.Init();
+		}
+		else if (testCase == 1)
 		{
 			gameState->world.LoadSampleMap();
 		//	SamplePathingLogic(&gameState->world);
 		}
-		else
+		else if (testCase == 2)
 		{
-			LoadMap(&gameState->world, "data.txt");
+			LoadMap(&gameState->world, "TestData/data.txt");
 		}
 
 
@@ -1465,7 +1487,7 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		editor->coreData->editorEvents.pop();
 		if (editorEvent == EditorEvent::SAVE)
 		{
-			SaveMap(&gameState->world);
+			SaveMap(&gameState->world, "TestData/Last Data.txt");
 		}
 		else if (editorEvent == EditorEvent::SHOW_GRID)
 		{
@@ -1498,7 +1520,13 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		else if (editorEvent == EditorEvent::TRIANGULATE)
 		{
 			std::cout << "Triangulate" << std::endl;
+
+			SaveMap(&gameState->world, "TestData/Last Data.txt");
 			TriangulateMap(&gameState->world);
+		}
+		else if (editorEvent == EditorEvent::HIDE_OBSTACLES)
+		{
+			editor->hideObstacles = !editor->hideObstacles;
 		}
 	}
 

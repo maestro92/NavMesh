@@ -193,7 +193,7 @@ struct World
 	void LoadSampleMap()
 	{
 		Init();
-	//	CreateAreaA(this);
+		CreateAreaA(this);
 	}
 
 
@@ -251,7 +251,7 @@ struct World
 		// clockwise
 		std::vector<GeoCore::Polygon> holes;
 
-		int testPathingCase = 2;
+		int testPathingCase = 3;
 		if (testPathingCase == 1)
 		{
 			vertices.push_back(glm::vec3(130, 0, 0));
@@ -298,8 +298,31 @@ struct World
 			hole.vertices.push_back(glm::vec3(192, 176, 0));
 			hole.vertices.push_back(glm::vec3(192, 128, 0));
 			holes.push_back(hole);
+
+			// a hole with 2 vertices is just a constrained edge
+			// putting the world borders as hard constraints
+			hole.vertices.clear();
+			hole.vertices.push_back(glm::vec3(world->min.x, world->min.y, 0));
+			hole.vertices.push_back(glm::vec3(world->min.x, world->max.y, 0));
+			holes.push_back(hole);
+
+			hole.vertices.clear();
+			hole.vertices.push_back(glm::vec3(world->min.x, world->max.y, 0));
+			hole.vertices.push_back(glm::vec3(world->max.x, world->max.y, 0));
+			holes.push_back(hole);
+
+			hole.vertices.clear();
+			hole.vertices.push_back(glm::vec3(world->max.x, world->max.y, 0));
+			hole.vertices.push_back(glm::vec3(world->max.x, world->min.y, 0));
+			holes.push_back(hole);
+
+			hole.vertices.clear();
+			hole.vertices.push_back(glm::vec3(world->max.x, world->min.y, 0));
+			hole.vertices.push_back(glm::vec3(world->min.x, world->min.y, 0));
+			holes.push_back(hole);
+
 		}
-		else
+		else if (testPathingCase == 3)
 		{
 			vertices.push_back(glm::vec3(world->min.x, world->min.y, 0));
 			vertices.push_back(glm::vec3(world->max.x, world->min.y, 0));
@@ -331,10 +354,30 @@ struct World
 				hole.vertices[i] += glm::vec3(158.268, 127.925, 0);
 			}
 			holes.push_back(hole);
-		}
-		
 
-		
+
+			// a hole with 2 vertices is just a constrained edge
+			// putting the world borders as hard constraints
+			hole.vertices.clear();
+			hole.vertices.push_back(glm::vec3(world->min.x, world->min.y, 0));
+			hole.vertices.push_back(glm::vec3(world->min.x, world->max.y, 0));
+			holes.push_back(hole);
+
+			hole.vertices.clear();
+			hole.vertices.push_back(glm::vec3(world->min.x, world->max.y, 0));
+			hole.vertices.push_back(glm::vec3(world->max.x, world->max.y, 0));
+			holes.push_back(hole);
+
+			hole.vertices.clear();
+			hole.vertices.push_back(glm::vec3(world->max.x, world->max.y, 0));
+			hole.vertices.push_back(glm::vec3(world->max.x, world->min.y, 0));
+			holes.push_back(hole);
+
+			hole.vertices.clear();
+			hole.vertices.push_back(glm::vec3(world->max.x, world->min.y, 0));
+			hole.vertices.push_back(glm::vec3(world->min.x, world->min.y, 0));
+			holes.push_back(hole);
+		}
 
 
 		CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->max, world->cdTriangulationGraph);

@@ -250,7 +250,10 @@ namespace CDTriangulation
 		std::vector<glm::vec3> vertices;
 		std::vector<GeoCore::Polygon> holes;
 		std::vector<std::vector<Vertex>> intersectingEdges;
-		std::vector<DebugConstrainedEdgePolygon> debugConstrainedEdgePolygons;
+	//	std::vector<DebugConstrainedEdgePolygon> debugConstrainedEdgePolygons;
+
+		std::vector<DelaunayTriangleEdge> constrainedEdges;
+		std::vector<DelaunayTriangleEdge> debugAllConstrainedEdges;
 
 		std::vector<DelaunayTriangle> triangles;
 		std::vector<DelaunayTriangle*> trianglesById;
@@ -302,6 +305,18 @@ namespace CDTriangulation
 	}
 	*/
 
+	int GetPointIndex(std::vector<Vertex>& vertexArray, glm::vec3 point)
+	{
+		for (int j = 0; j < vertexArray.size(); j++)
+		{
+			if (Math::Equals(vertexArray[j].pos, point))
+			{
+				return j;
+			}
+		}
+		return INVALID_INDEX;
+	}
+
 
 	// assume all points are between [0, 256]
 	void CreateAndAddVertices(
@@ -309,17 +324,35 @@ namespace CDTriangulation
 	{
 		for (int i = 0; i < points.size(); i++)
 		{
+			if (GetPointIndex(vertexArray, points[i]) != INVALID_INDEX)
+			{
+				continue;
+			}
+
 			Vertex vertex = { idCounter++, points[i] };
 			vertexArray.push_back(vertex);
-		//	std::cout << vertex.pos.x << " " << vertex.pos.y << std::endl;
 		}
 	}
 
 	// assume all points are between [0, 256]
 	void CreateAndAddVerticesForHole(
-		GeoCore::Polygon& hole, std::vector<Vertex>& vertexArray, int& idCounter)
+		GeoCore::Polygon& hole, std::vector<Vertex>& masterVertexArray, int& idCounter, 
+		std::vector<int>& holeVertices,
+		std::vector<int>& newlyAddedVertices)
 	{
-		CreateAndAddVertices(hole.vertices, vertexArray, idCounter);
+		for (int i = 0; i < hole.vertices.size(); i++)
+		{
+			int index = GetPointIndex(masterVertexArray, hole.vertices[i]);
+			if (index == INVALID_INDEX)
+			{
+				Vertex vertex = { idCounter++, hole.vertices[i] };
+				newlyAddedVertices.push_back(vertex.id);
+
+				index = masterVertexArray.size();
+				masterVertexArray.push_back(vertex);
+			}
+			holeVertices.push_back(masterVertexArray[index].id);
+		}
 	}
 
 
@@ -389,7 +422,7 @@ namespace CDTriangulation
 
 
 
-	DelaunayTriangle CreateSuperTriangle(std::vector<Vertex> vertices)
+	DelaunayTriangle CreateSuperTriangle(std::vector<Vertex>& vertices)
 	{
 		// create super triangle
 
@@ -845,18 +878,15 @@ namespace CDTriangulation
 		Vertex vStart = masterVertexArray[constrainedEdge.vertices[0]];
 		Vertex vEnd = masterVertexArray[constrainedEdge.vertices[1]];
 
-		// 5.3.1 search for that triangle that "Contains" the constrainedEdge
+		// 5.3.1 search for that triangle that "Contains" the beginning of the new edge constrainedEdge
 		DelaunayTriangle containingTriangle;
 		for (int i = 0; i < triangles.size(); i++)
 		{
 			std::vector<DelaunayTriangleEdge> edges;
-			if (triangles[i].id == 21)
-			{
-				int a = 1;
-			}
 
 			if (triangles[i].GetTwoEdgesThatCornersVertex(vStart.id, edges))
 			{
+				std::cout << "		Examining " << triangles[i].id << std::endl;
 				Vertex e0v0 = masterVertexArray[edges[0].vertices[0]];
 				Vertex e0v1 = masterVertexArray[edges[0].vertices[1]];
 
@@ -870,7 +900,7 @@ namespace CDTriangulation
 					IsPointOnTheLeftOfLineSegment(vEnd.pos, e1v0.pos, e1v1.pos)){
 						
 					containingTriangle = triangles[i];
-					std::cout << "containingTriangle " << containingTriangle.id << std::endl;
+					std::cout << "				containingTriangle " << containingTriangle.id << std::endl;
 					break;
 				}
 			}
@@ -879,6 +909,12 @@ namespace CDTriangulation
 		// 5.3.2 get all the triangle edges that intersects by the constrainedEdge
 		DelaunayTriangle curTriangle = containingTriangle;	
 		std::vector<IntersectedEdge> intersectingEdges;
+		
+		if (curTriangle.id == 26)
+		{
+			int a = 1;
+		}
+		
 		while (true)
 		{
 			if (Collision::IsPointInsideTriangle_Barycentric(
@@ -890,12 +926,17 @@ namespace CDTriangulation
 				break;
 			}
 
+	//		std::cout << "		curTriangle.id " << curTriangle.id << std::endl;
+
 			for (int i = 0; i < NUM_TRIANGLE_EDGES; i++)
 			{
 				DelaunayTriangleEdge edge = curTriangle.edges[i];
 
 				Vertex v0 = masterVertexArray[edge.vertices[0]];
 				Vertex v1 = masterVertexArray[edge.vertices[1]];
+
+			//	std::cout << "				Examining edge v0 " << v0.pos.x << " " << v0.pos.y << std::endl;
+			//	std::cout << "						" << v1.pos.x << " " << v1.pos.y << std::endl;
 
 				if (IsPointOnTheRightOfLineSegment(vEnd.pos, v0.pos, v1.pos)) {
 					
@@ -1051,6 +1092,54 @@ namespace CDTriangulation
 		}
 	}
 
+	void GetConstrainedEdgesFromHole(
+		std::vector<int> holeVertices, 
+		std::vector<Vertex>& masterVertexArray,
+		std::vector<DelaunayTriangle>& triangles,
+		std::vector<DelaunayTriangleEdge>& constrainedEdges,
+		std::vector<DelaunayTriangleEdge>& allConstrainedEdges)
+	{
+		for (int i = 0; i < holeVertices.size(); i++)
+		{
+			DelaunayTriangleEdge edge;
+
+			Vertex v0 = masterVertexArray[holeVertices[i]];
+			edge.vertices[0] = v0.id;
+
+			if (i == holeVertices.size() - 1)
+			{
+				Vertex v1 = masterVertexArray[holeVertices[0]];
+				edge.vertices[1] = v1.id;
+			}
+			else
+			{
+				Vertex v1 = masterVertexArray[holeVertices[i + 1]];
+				edge.vertices[1] = v1.id;
+			}
+
+			Vertex constrainedEdgeStart = masterVertexArray[edge.vertices[0]];
+			Vertex constrainedEdgeEnd = masterVertexArray[edge.vertices[1]];
+
+			std::vector<Vertex> constrainedVertices;
+			constrainedVertices.push_back(constrainedEdgeStart);
+			constrainedVertices.push_back(constrainedEdgeEnd);
+
+			allConstrainedEdges.push_back(edge);
+
+			if (!ContainsEdge(edge, triangles))
+			{
+				constrainedEdges.push_back(edge);
+			}
+
+			// if we only have one edge, we just return after creating the first edge
+			if (holeVertices.size() == 2)
+			{
+				break;
+			}
+		}
+	}
+
+
 	// https://www.habrador.com/tutorials/math/14-constrained-delaunay/
 	// https://forum.unity.com/threads/programming-tools-constrained-delaunay-triangulation.1066148/
 	// assume all points are in [0, 256] range
@@ -1085,10 +1174,7 @@ namespace CDTriangulation
 			verticesToAdd.push_back(masterVertexArray[i]);
 		}
 
-
-		// first add our super triangle to invalid list
-		// we using this vector as a stack
-		std::vector<int> triangleStack;
+		// also add the super triangle vertex to our master vertex array
 		for (int i = 0; i < NUM_TRIANGLE_VERTEX; i++)
 		{
 			superTriangle.vertices[i].id = idCounter++;
@@ -1099,98 +1185,69 @@ namespace CDTriangulation
 		superTriangle.GenerateEdges();
 
 
+		// first add our super triangle to invalid list
+		// we using this vector as a stack
+		std::vector<int> triangleStack;
 		std::vector<DelaunayTriangle> triangles;
 		triangles.push_back(superTriangle);
-
 
 
 		// add the points one at a time
 		for (int i = 0; i < verticesToAdd.size(); i++)
 		{
-			if (i == 4)
-			{
-		//		break;
-			}
-
-		//	std::cout << "i " << i << " " << verticesToAdd[i].pos.x << " " << verticesToAdd[i].pos.y << std::endl;
-
 			AddVertexToTriangulation(verticesToAdd[i], triangles, triangleCounter, triangleStack);
 		}
 
 		
 		// Holes creation:
 		// not doing the normalization yet. do it later
-		int holesStartingVertex = idCounter;
-
-		std::vector<std::vector<Vertex>> masterHoleVertices;
+		std::vector<std::vector<int>> masterHoleVertices;
 
 		// 5.2 add the hole points, and create new triangles
 		for (int j = 0; j < holes.size(); j++)
 		{
-			std::vector<Vertex> tempVertexList;
-			CreateAndAddVerticesForHole(holes[j], tempVertexList, idCounter);
+			std::vector<int> holeVertices;
+			std::vector<int> newlyAddedVertices;
+			CreateAndAddVerticesForHole (holes[j], masterVertexArray, idCounter, holeVertices, newlyAddedVertices);
 
-			for (int i = 0; i < tempVertexList.size(); i++)
+			for (int i = 0; i < newlyAddedVertices.size(); i++)
 			{
-				masterVertexArray.push_back(tempVertexList[i]);
-				AddVertexToTriangulation(tempVertexList[i], triangles, triangleCounter, triangleStack);
+				int vertexId = newlyAddedVertices[i];
+				Vertex vertex = masterVertexArray[vertexId];
+				AddVertexToTriangulation(vertex, triangles, triangleCounter, triangleStack);
 			}
-			masterHoleVertices.push_back(tempVertexList);
+			masterHoleVertices.push_back(holeVertices);
 		}
 
 		// 5.3 create the constrained edges
 		for (int j = 0; j < holes.size(); j++)
 		{
-
-			std::vector<Vertex> holeVertices = masterHoleVertices[j];
-
+			std::vector<int> holeVertices = masterHoleVertices[j];
 			std::vector<DelaunayTriangleEdge> constrainedEdges;
-			DebugConstrainedEdgePolygon debugConstrainedEdgePolygon;
+			std::vector<DelaunayTriangleEdge> allConstrainedEdges;
 
-			for (int i = 0; i < holeVertices.size(); i++)
+			GetConstrainedEdgesFromHole(holeVertices, masterVertexArray, triangles, constrainedEdges, allConstrainedEdges);
+
+			for (int ei = 0; ei < constrainedEdges.size(); ei++)
 			{
-				DebugConstrainedEdge debugConstrainedEdge;
-				DelaunayTriangleEdge edge;
-				edge.vertices[0] = holeVertices[i].id;
-
-				if (i == holeVertices.size() - 1)
-				{
-					edge.vertices[1] = holeVertices[0].id;
-				}
-				else
-				{
-					edge.vertices[1] = holeVertices[i + 1].id;
-				}
-
-				Vertex constrainedEdgeStart = masterVertexArray[edge.vertices[0]];
-				Vertex constrainedEdgeEnd = masterVertexArray[edge.vertices[1]];
-
-				std::vector<Vertex> constrainedVertices;
-				constrainedVertices.push_back(constrainedEdgeStart);
-				constrainedVertices.push_back(constrainedEdgeEnd);
-
-				debugConstrainedEdge.vertices = constrainedVertices;
-				debugConstrainedEdgePolygon.Edges.push_back(debugConstrainedEdge);
-
-				if (!ContainsEdge(edge, triangles))
-				{
-					constrainedEdges.push_back(edge);
-				}
-
-				// if we only have one edge, we just return after creating the first edge
-				if (holeVertices.size() == 2)
-				{
-					break;
-				}
+				debugState->constrainedEdges.push_back(constrainedEdges[ei]);
 			}
-			debugState->debugConstrainedEdgePolygons.push_back(debugConstrainedEdgePolygon);
 
+			for (int ei = 0; ei < allConstrainedEdges.size(); ei++)
+			{
+				debugState->debugAllConstrainedEdges.push_back(allConstrainedEdges[ei]);
+			}
 
+#if 1
 			// 5.3.1 search for triangle that contains the beginning of the new edge
 			for (int i = 0; i < constrainedEdges.size(); i++)
 			{
 				Vertex constrainedEdgeStart = masterVertexArray[constrainedEdges[i].vertices[0]];
 				Vertex constrainedEdgeEnd = masterVertexArray[constrainedEdges[i].vertices[1]];
+
+				std::cout << "start " << constrainedEdgeStart.id << " " << constrainedEdgeStart.pos.x << " " << constrainedEdgeStart.pos.y << std::endl;
+				std::cout << "End " << constrainedEdgeEnd.id << " " << constrainedEdgeEnd.pos.x << " " << constrainedEdgeEnd.pos.y << std::endl;
+
 
 				std::queue<IntersectedEdge> intersectedEdgesQueue;
 				{
@@ -1287,15 +1344,16 @@ namespace CDTriangulation
 
 				// 5.3.4 checking Delaunay constraint
 				CheckDelaunayCriteriaInNewlyCreatedEdges(constrainedEdges[i], newEdges, triangles);
-
 			}
+
+#endif
 		}
 		
 
 		// 5.4 identify all the triangles in the constraint
 
 
-
+		
 		// 6.0 remove all triangles that share an edge or vertices with the original super triangle
 		std::vector<int> removedTriangleIds;
 		int curIter = 0;
@@ -1319,7 +1377,7 @@ namespace CDTriangulation
 				triangles[i].TryRemoveNeighbor(removedTriangleIds[j]);
 			}
 		}
-
+		
 		debugState->triangles = triangles;
 		
 		int maxId = 0;
