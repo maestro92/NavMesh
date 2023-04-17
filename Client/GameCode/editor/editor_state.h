@@ -13,13 +13,10 @@ struct EntityOption
 
 enum EditorEvent {
 	SAVE,
-	SHOW_GRID,
-	SHOW_GRID_COORD,
-	SHOW_GRID_SIM_COORD,
-	DEBUG_TRIANGLE,
-	DEBUG_GRID,
 	TRIANGULATE,
-	HIDE_OBSTACLES
+	CLEAR_PATHING_START,
+	CLEAR_PATHING_END,
+	PATH,
 };
 
 struct EditorStateData
@@ -74,6 +71,10 @@ struct EditorState {
 
 	bool highlightTriangle;
 	bool highlightGrid;
+
+
+	bool choosingPathingStart;
+	bool choosingPathingEnd;
 
 	std::string mapCellDebugString;
 	HighlightGridCell hightlightMapCell;

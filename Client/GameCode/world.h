@@ -142,8 +142,8 @@ struct World
 	glm::vec3 yAxis;
 	glm::vec3 zAxis;
 
-	glm::ivec2 min;
-	glm::ivec2 max;
+	glm::ivec2 minSimPos;
+	glm::ivec2 maxSimPos;
 
 	Entity entities[1024];
 	int numEntities;
@@ -180,12 +180,12 @@ struct World
 		zAxis = glm::vec3(0.0, 0.0, 1.0);
 
 
-		min = glm::ivec2(0);
-		max = glm::ivec2(256, 256);
+		minSimPos = glm::ivec2(0);
+		maxSimPos = glm::ivec2(256, 256);
 
 		mapGrid.cellSize = 16;
-		mapGrid.dimX = max.x / mapGrid.cellSize;
-		mapGrid.dimY = max.y / mapGrid.cellSize;
+		mapGrid.dimX = maxSimPos.x / mapGrid.cellSize;
+		mapGrid.dimY = maxSimPos.y / mapGrid.cellSize;
 		int numCells = mapGrid.cellSize * mapGrid.cellSize;
 		mapGrid.grid = new MapCell[numCells];
 	}
@@ -193,7 +193,7 @@ struct World
 	void LoadSampleMap()
 	{
 		Init();
-		CreateAreaA(this);
+		CreateAreaA();
 	}
 
 
@@ -233,27 +233,55 @@ struct World
 		// a hole with 2 vertices is just a constrained edge
 		// putting the world borders as hard constraints
 		hole.vertices.clear();
-		hole.vertices.push_back(glm::vec3(min.x, min.y, 0));
-		hole.vertices.push_back(glm::vec3(min.x, max.y, 0));
+		hole.vertices.push_back(glm::vec3(minSimPos.x, minSimPos.y, 0));
+		hole.vertices.push_back(glm::vec3(minSimPos.x, maxSimPos.y, 0));
 		holes.push_back(hole);
 
 		hole.vertices.clear();
-		hole.vertices.push_back(glm::vec3(min.x, max.y, 0));
-		hole.vertices.push_back(glm::vec3(max.x, max.y, 0));
+		hole.vertices.push_back(glm::vec3(minSimPos.x, maxSimPos.y, 0));
+		hole.vertices.push_back(glm::vec3(maxSimPos.x, maxSimPos.y, 0));
 		holes.push_back(hole);
 
 		hole.vertices.clear();
-		hole.vertices.push_back(glm::vec3(max.x, max.y, 0));
-		hole.vertices.push_back(glm::vec3(max.x, min.y, 0));
+		hole.vertices.push_back(glm::vec3(maxSimPos.x, maxSimPos.y, 0));
+		hole.vertices.push_back(glm::vec3(maxSimPos.x, minSimPos.y, 0));
 		holes.push_back(hole);
 
 		hole.vertices.clear();
-		hole.vertices.push_back(glm::vec3(max.x, min.y, 0));
-		hole.vertices.push_back(glm::vec3(min.x, min.y, 0));
+		hole.vertices.push_back(glm::vec3(maxSimPos.x, minSimPos.y, 0));
+		hole.vertices.push_back(glm::vec3(minSimPos.x, minSimPos.y, 0));
 		holes.push_back(hole);
 	}
 
-	void CreateAreaA(World* world)
+	void SpatialPartitionTriangles()
+	{
+		// spatial partioning, adding triangles to grid cell
+//
+		for (int i = 0; i < cdTriangulationGraph->triangles.size(); i++)
+		{
+			CDTriangulation::DelaunayTriangle& triangle = cdTriangulationGraph->triangles[i];
+
+			for (int y = 0, yi = 0; yi < maxSimPos.y; y++, yi += mapGrid.cellSize)
+			{
+				for (int x = 0, xi = 0; xi < maxSimPos.x; x++, xi += mapGrid.cellSize)
+				{
+
+					glm::vec3 min = glm::vec3(xi, yi, 0);
+					glm::vec3 max = min + glm::vec3(mapGrid.cellSize, mapGrid.cellSize, 0);
+
+					GeoCore::AABB aabb = { min, max };
+
+					if (Collision::TestTriangleAABB2D(triangle.vertices[0].pos, triangle.vertices[1].pos, triangle.vertices[2].pos, aabb))
+					{
+						mapGrid.AddTriangle(triangle.id, x, y);
+					}
+				}
+			}
+		}
+	}
+
+
+	void CreateAreaA()
 	{
 		Entity* entity = NULL;
 		std::vector<Face> faces;
@@ -292,10 +320,10 @@ struct World
 		}
 		else if (testPathingCase == 2)
 		{
-			vertices.push_back(glm::vec3(world->min.x, world->min.y, 0));
-			vertices.push_back(glm::vec3(world->max.x, world->min.y, 0));
-			vertices.push_back(glm::vec3(world->max.x, world->max.y, 0));
-			vertices.push_back(glm::vec3(world->min.x, world->max.y, 0));
+			vertices.push_back(glm::vec3(min.x, min.y, 0));
+			vertices.push_back(glm::vec3(max.x, min.y, 0));
+			vertices.push_back(glm::vec3(max.x, max.y, 0));
+			vertices.push_back(glm::vec3(min.x, max.y, 0));
 
 
 			GeoCore::Polygon hole;
@@ -325,14 +353,14 @@ struct World
 			hole.vertices.push_back(glm::vec3(192, 128, 0));
 			holes.push_back(hole);
 			
-			world->AddWorldBoundsAsHoles(holes);		
+			AddWorldBoundsAsHoles(holes);		
 		}
 		else if (testPathingCase == 3)
 		{
-			vertices.push_back(glm::vec3(world->min.x, world->min.y, 0));
-			vertices.push_back(glm::vec3(world->max.x, world->min.y, 0));
-			vertices.push_back(glm::vec3(world->max.x, world->max.y, 0));
-			vertices.push_back(glm::vec3(world->min.x, world->max.y, 0));
+			vertices.push_back(glm::vec3(min.x, min.y, 0));
+			vertices.push_back(glm::vec3(max.x, min.y, 0));
+			vertices.push_back(glm::vec3(max.x, max.y, 0));
+			vertices.push_back(glm::vec3(min.x, max.y, 0));
 
 
 			GeoCore::Polygon hole;
@@ -360,42 +388,20 @@ struct World
 			}
 			holes.push_back(hole);
 
-			world->AddWorldBoundsAsHoles(holes);
+			AddWorldBoundsAsHoles(holes);
 		}
 
 
-		CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->max, world->cdTriangulationGraph);
-		CDTriangulation::MarkObstacles(world->cdTriangulationGraph, holes);
+		CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, maxSimPos, cdTriangulationGraph);
+		CDTriangulation::MarkObstacles(cdTriangulationGraph, holes);
 
 		if (testPathingCase == 1)
 		{
-			world->cdTriangulationGraph->trianglesById[5]->isObstacle = true;
-			world->cdTriangulationGraph->trianglesById[8]->isObstacle = true;
+			cdTriangulationGraph->trianglesById[5]->isObstacle = true;
+			cdTriangulationGraph->trianglesById[8]->isObstacle = true;
 		}
 
-		// spatial partioning, adding triangles to grid cell
-		//
-		for (int i = 0; i < world->cdTriangulationGraph->triangles.size(); i++)
-		{
-			CDTriangulation::DelaunayTriangle& triangle = world->cdTriangulationGraph->triangles[i];
-
-			for (int y = 0, yi = 0; yi < world->max.y; y++, yi += world->mapGrid.cellSize)
-			{
-				for (int x = 0, xi = 0; xi < world->max.x; x++, xi += world->mapGrid.cellSize)
-				{
-
-					glm::vec3 min = glm::vec3(xi, yi, 0);
-					glm::vec3 max = min + glm::vec3(world->mapGrid.cellSize, world->mapGrid.cellSize, 0);
-
-					GeoCore::AABB aabb = { min, max };
-
-					if (Collision::TestTriangleAABB2D(triangle.vertices[0].pos, triangle.vertices[1].pos, triangle.vertices[2].pos, aabb))
-					{
-						world->mapGrid.AddTriangle(triangle.id, x, y);
-					}
-				}
-			}
-		}
+		SpatialPartitionTriangles();
 	}
 
 	void InitEntity(Entity* entity, glm::vec3 pos, EntityFlag entityFlag, std::vector<glm::vec3> vertices)
@@ -415,7 +421,7 @@ struct World
 
 	bool IsValidSimPos(glm::vec3 pos)
 	{
-		return 0 <= pos.x && pos.x < max.x && 0 <= pos.y && pos.y < max.y;
+		return 0 <= pos.x && pos.x < maxSimPos.x && 0 <= pos.y && pos.y < maxSimPos.y;
 	}
 
 	void SimPos2GridCoord(glm::vec3 pos, int& cx, int& cy)

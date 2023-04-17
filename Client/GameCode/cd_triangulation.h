@@ -259,6 +259,8 @@ namespace CDTriangulation
 		std::vector<DelaunayTriangle*> trianglesById;
 		std::vector<Vertex> masterVertexList;
 
+		bool triangulated;
+
 		std::vector<Triangulation::Circle> circles;
 
 		DelaunayTriangle* highlightedTriangle;
@@ -267,6 +269,11 @@ namespace CDTriangulation
 		{
 			assert(0 <= id && id < masterVertexList.size());
 			return masterVertexList[id];
+		}
+
+		Graph()
+		{
+			triangulated = false;
 		}
 	};
 
@@ -1408,15 +1415,7 @@ namespace CDTriangulation
 
 		debugState->masterVertexList = masterVertexArray;
 
-		int a = 1;
-
-		/*
-		for (int i = 0; i < holeVertices.size(); i++)
-		{
-			masterVertexArray.push_back(holeVertices[i]);
-		}
-		*/
-
+		debugState->triangulated = true;
 
 	}
 }

@@ -30,7 +30,6 @@ namespace Editor
 	
 	*/
 
-
 	void InitEditorData(EditorState* editorState)
 	{
 		std::vector<glm::vec3> vertices;
@@ -137,14 +136,15 @@ namespace Editor
 	}
 
 
-	void RenderSpecialButton(EditorState* editorState,
+	bool RenderSpecialButton(EditorState* editorState,
 		GameInputState* gameInputState,
 		GameRender::GameRenderState* gameRenderState,
 		glm::vec3 screenMousePos,
 		int x, int y,
 		int width, int height,
-		std::string s, EditorEvent editorEventToPublish)
+		std::string s)
 	{
+		bool trigger = false;
 		RenderSystem::GameRenderCommands* gameRenderCommands = gameRenderState->gameRenderCommands;
 		RenderSystem::RenderGroup* renderGroup = gameRenderState->renderGroup;
 		GameAssets* gameAssets = gameRenderState->gameAssets;
@@ -170,7 +170,8 @@ namespace Editor
 
 			if (gameInputState->DidMouseLeftButtonClicked())
 			{
-				editorState->coreData->editorEvents.push(editorEventToPublish);
+				trigger = true;
+//				editorState->coreData->editorEvents.push(editorEventToPublish);
 			}			
 		}
 
@@ -192,18 +193,20 @@ namespace Editor
 
 		glm::vec3 pos = profileRectMin;
 		GameRender::DEBUGTextLine(s.c_str(), gameRenderState, pos, 1);
+		return trigger;
 	}
 
 
 
-	void RenderToggle(EditorState* editorState,
+	bool RenderToggle(EditorState* editorState,
 		GameInputState* gameInputState,
 		GameRender::GameRenderState* gameRenderState,
 		glm::vec3 screenMousePos,
 		int x, int y,
 		int width, int height,
-		std::string s, EditorEvent editorEventToPublish, bool currentState)
+		std::string s, bool currentState)
 	{
+		bool trigger = false;
 		RenderSystem::GameRenderCommands* gameRenderCommands = gameRenderState->gameRenderCommands;
 		RenderSystem::RenderGroup* renderGroup = gameRenderState->renderGroup;
 		GameAssets* gameAssets = gameRenderState->gameAssets;
@@ -229,7 +232,8 @@ namespace Editor
 
 			if (gameInputState->DidMouseLeftButtonClicked())
 			{
-				editorState->coreData->editorEvents.push(editorEventToPublish);
+				trigger = true;
+//				editorState->coreData->editorEvents.push(editorEventToPublish);
 			}
 		}
 
@@ -251,7 +255,9 @@ namespace Editor
 
 		glm::vec3 pos = profileRectMin;
 		GameRender::DEBUGTextLine(s.c_str(), gameRenderState, pos, 1);
+		return trigger;
 	}
+
 
 
 	void RenderChoice(
@@ -436,61 +442,142 @@ namespace Editor
 
 		RenderEntityOptionsPanel(gameInputState, gameRenderSetup, screenMousePos, editor);
 
-		curX = startX + btnWidth * indexX;
-		curY = startY - btnHeight * (indexY + 1);
-		RenderSpecialButton(editor, gameInputState, gameRenderSetup, screenMousePos, 
-			curX, curY, btnWidth, btnHeight, "Save", EditorEvent::SAVE);
-		IncrementButtonIndex(indexX, indexY, numCol);
 
 		curX = startX + btnWidth * indexX;
 		curY = startY - btnHeight * (indexY + 1);
-		RenderSpecialButton(editor, gameInputState, gameRenderSetup, screenMousePos, 
-			curX, curY, btnWidth, btnHeight, "Triangulate", EditorEvent::TRIANGULATE);
+		if (RenderSpecialButton(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Save"))
+		{
+			editor->coreData->editorEvents.push(EditorEvent::SAVE);
+		}
 		IncrementButtonIndex(indexX, indexY, numCol);
 
 
 		curX = startX + btnWidth * indexX;
 		curY = startY - btnHeight * (indexY + 1);
-		RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
-			curX, curY, btnWidth, btnHeight, "Show Grid", EditorEvent::SHOW_GRID, editor->gridConfig.showGrid);
+		if (RenderSpecialButton(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Triangulate"))
+		{
+			editor->coreData->editorEvents.push(EditorEvent::TRIANGULATE);
+		}
 		IncrementButtonIndex(indexX, indexY, numCol);
+
+
+		curX = startX + btnWidth * indexX;
+		curY = startY - btnHeight * (indexY + 1);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Show Grid", editor->gridConfig.showGrid))
+		{
+			editor->gridConfig.showGrid = !editor->gridConfig.showGrid;
+		}
+		IncrementButtonIndex(indexX, indexY, numCol);
+
 
 		if (editor->gridConfig.showGrid)
 		{
 			curX = startX + btnWidth * indexX;
 			curY = startY - btnHeight * (indexY + 1);
-			RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
-				curX, curY, btnWidth, btnHeight, "Show Grid Coord", EditorEvent::SHOW_GRID_COORD, editor->gridConfig.showCellGridCoord);
+			if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+				curX, curY, btnWidth, btnHeight, "Show Grid Coord", editor->gridConfig.showCellGridCoord))
+			{
+				editor->gridConfig.showCellGridCoord = !editor->gridConfig.showCellGridCoord;
+				editor->gridConfig.showCellSimCoord = false;
+			}
 			IncrementButtonIndex(indexX, indexY, numCol);
+
 
 			curX = startX + btnWidth * indexX;
 			curY = startY - btnHeight * (indexY + 1);
-			RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
-				curX, curY, btnWidth, btnHeight, "Show Grid Sim Pos", EditorEvent::SHOW_GRID_SIM_COORD, editor->gridConfig.showCellSimCoord);
+			if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+				curX, curY, btnWidth, btnHeight, "Show Grid Sim Pos", editor->gridConfig.showCellSimCoord))
+			{
+				editor->gridConfig.showCellSimCoord = !editor->gridConfig.showCellSimCoord;
+				editor->gridConfig.showCellGridCoord = false;
+			}
 			IncrementButtonIndex(indexX, indexY, numCol);
 		}
 
 		curX = startX + btnWidth * indexX;
 		curY = startY - btnHeight * (indexY + 1);
-		RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
-			curX, curY, btnWidth, btnHeight, "Debug Triangle", EditorEvent::DEBUG_TRIANGLE, editor->highlightTriangle);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Debug Triangle", editor->highlightTriangle))
+		{
+			editor->highlightTriangle = !editor->highlightTriangle;
+		}
 		IncrementButtonIndex(indexX, indexY, numCol);
 
 
 		curX = startX + btnWidth * indexX;
 		curY = startY - btnHeight * (indexY + 1);
-		RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
-			curX, curY, btnWidth, btnHeight, "Hide Obstacles", EditorEvent::HIDE_OBSTACLES, editor->hideObstacles);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Hide Obstacles", editor->hideObstacles))
+		{
+			editor->hideObstacles = !editor->hideObstacles;
+		}
 		IncrementButtonIndex(indexX, indexY, numCol);
-
 
 
 		curX = startX + btnWidth * indexX;
 		curY = startY - btnHeight * (indexY + 1);
-		RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
-			curX, curY, btnWidth, btnHeight, "Debug Grid", EditorEvent::DEBUG_GRID, editor->highlightGrid);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Debug Grid", editor->highlightGrid))
+		{
+			editor->highlightGrid = !editor->highlightGrid;
+		}
 		IncrementButtonIndex(indexX, indexY, numCol);
-		
+
+
+		curX = startX + btnWidth * indexX;
+		curY = startY - btnHeight * (indexY + 1);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Set Pathing Start", editor->choosingPathingStart))
+		{
+			editor->choosingPathingEnd = false;
+			editor->choosingPathingStart = !editor->choosingPathingStart;
+		}
+		IncrementButtonIndex(indexX, indexY, numCol);
+
+
+		curX = startX + btnWidth * indexX;
+		curY = startY - btnHeight * (indexY + 1);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Set Pathing End", editor->choosingPathingEnd))
+		{
+			editor->choosingPathingStart = false;
+			editor->choosingPathingEnd = !editor->choosingPathingEnd;
+		}
+		IncrementButtonIndex(indexX, indexY, numCol);
+
+
+		curX = startX + btnWidth * indexX;
+		curY = startY - btnHeight * (indexY + 1);
+		if (RenderSpecialButton(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Clear Pathing Start"))
+		{
+			editor->coreData->editorEvents.push(EditorEvent::CLEAR_PATHING_START);
+		}
+		IncrementButtonIndex(indexX, indexY, numCol);
+
+
+		curX = startX + btnWidth * indexX;
+		curY = startY - btnHeight * (indexY + 1);
+		if (RenderSpecialButton(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Clear Pathing End"))
+		{
+			editor->coreData->editorEvents.push(EditorEvent::CLEAR_PATHING_END);
+		}
+		IncrementButtonIndex(indexX, indexY, numCol);
+
+
+		curX = startX + btnWidth * indexX;
+		curY = startY - btnHeight * (indexY + 1);
+		if (RenderSpecialButton(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "PATH!"))
+		{
+			editor->coreData->editorEvents.push(EditorEvent::PATH);
+		}
+		IncrementButtonIndex(indexX, indexY, numCol);
+
 
 		int numSpecialButtons = indexY * numCol + indexX;
 		int numRow = (numSpecialButtons + (numCol - 1)) / numCol;
@@ -528,10 +615,4 @@ namespace Editor
 		}
 
 	}
-
-
-
-
-
-
 };

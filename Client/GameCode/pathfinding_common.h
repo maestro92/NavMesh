@@ -10,7 +10,10 @@ namespace PathFinding
 	struct DebugState
 	{
 		glm::vec3 start;
+		bool hasSetStartPos;
+
 		glm::vec3 end;
+		bool hasSetEndPos;
 
 		int startNodeId;
 		int endNodeId;

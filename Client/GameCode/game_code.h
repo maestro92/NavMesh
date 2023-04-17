@@ -501,19 +501,19 @@ void RenderGrid(EditorState* editorState, GameRender::GameRenderState* gameRende
 	if (config.showGrid)
 	{
 		float lineThickness = 0.1;
-		for (int xi = 0; xi < world->max.x; xi += world->mapGrid.cellSize)
+		for (int xi = 0; xi < world->maxSimPos.x; xi += world->mapGrid.cellSize)
 		{
 			glm::vec3 pos0 = glm::vec3(xi, 0, 0);
-			glm::vec3 pos1 = glm::vec3(xi, world->max.y, 0);
+			glm::vec3 pos1 = glm::vec3(xi, world->maxSimPos.y, 0);
 
 			GameRender::RenderLine(
 				gameRenderCommands, group, gameAssets, GameRender::HALF_TRANS_COLOR_WHITE, pos0, pos1, lineThickness);
 		}
 
-		for (int yi = 0; yi < world->max.y; yi += world->mapGrid.cellSize)
+		for (int yi = 0; yi < world->maxSimPos.y; yi += world->mapGrid.cellSize)
 		{
 			glm::vec3 pos0 = glm::vec3(0, yi, 0);
-			glm::vec3 pos1 = glm::vec3(world->max.x, yi, 0);
+			glm::vec3 pos1 = glm::vec3(world->maxSimPos.x, yi, 0);
 
 			GameRender::RenderLine(
 				gameRenderCommands, group, gameAssets, GameRender::HALF_TRANS_COLOR_WHITE, pos0, pos1, lineThickness);
@@ -521,9 +521,9 @@ void RenderGrid(EditorState* editorState, GameRender::GameRenderState* gameRende
 
 		if (config.showCellGridCoord)
 		{
-			for (int yi = 0, y = 0; yi < world->max.y; yi += world->mapGrid.cellSize, y++)
+			for (int yi = 0, y = 0; yi < world->maxSimPos.y; yi += world->mapGrid.cellSize, y++)
 			{
-				for (int xi = 0, x = 0; xi < world->max.x; xi += world->mapGrid.cellSize, x++)
+				for (int xi = 0, x = 0; xi < world->maxSimPos.x; xi += world->mapGrid.cellSize, x++)
 				{
 					std::string s = std::to_string(x) + " " + std::to_string(y);
 
@@ -535,9 +535,9 @@ void RenderGrid(EditorState* editorState, GameRender::GameRenderState* gameRende
 		}
 		else if (config.showCellSimCoord)
 		{
-			for (int yi = 0, y = 0; yi < world->max.y; yi += world->mapGrid.cellSize, y++)
+			for (int yi = 0, y = 0; yi < world->maxSimPos.y; yi += world->mapGrid.cellSize, y++)
 			{
-				for (int xi = 0, x = 0; xi < world->max.x; xi += world->mapGrid.cellSize, x++)
+				for (int xi = 0, x = 0; xi < world->maxSimPos.x; xi += world->mapGrid.cellSize, x++)
 				{
 					std::string s = std::to_string(xi) + " " + std::to_string(yi);
 
@@ -583,10 +583,10 @@ void RenderWorldBorders(
 
 	std::vector<glm::vec3> worldBorders;
 
-	worldBorders.push_back(glm::vec3(world->min.x, world->min.y, 0));
-	worldBorders.push_back(glm::vec3(world->max.x, world->min.y, 0));
-	worldBorders.push_back(glm::vec3(world->max.x, world->max.y, 0));
-	worldBorders.push_back(glm::vec3(world->min.x, world->max.y, 0));
+	worldBorders.push_back(glm::vec3(world->minSimPos.x, world->minSimPos.y, 0));
+	worldBorders.push_back(glm::vec3(world->maxSimPos.x, world->minSimPos.y, 0));
+	worldBorders.push_back(glm::vec3(world->maxSimPos.x, world->maxSimPos.y, 0));
+	worldBorders.push_back(glm::vec3(world->minSimPos.x, world->maxSimPos.y, 0));
 
 	float lineThickness = 0.5;
 	for (int i = 0; i < worldBorders.size(); i++)
@@ -614,7 +614,8 @@ void RenderSelectedEntityOption(
 	EditorState* editor,
 	GameRender::GameRenderState* gameRenderState,
 	GameInputState* gameInputState,
-	GameState* gameState)
+	GameState* gameState,
+	glm::vec3 groundIntersectionPoint)
 {
 	if (editor->consumingMouse)
 	{
@@ -629,64 +630,46 @@ void RenderSelectedEntityOption(
 		RenderSystem::RenderGroup* group = gameRenderState->renderGroup;
 
 
-		glm::vec3 rayOrigin = gameState->debugCameraEntity.pos;
-		glm::vec3 rayDir = MousePosToMousePickingRay(gameState->world.cameraSetup, gameRenderCommands, gameInputState->mousePos);
+		BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
+		LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
+		float lineThickness = 0.5;
 
-		glm::vec3 point;
-
-		Collision::Plane plane;
-		plane.dist = 0;
-		plane.normal = glm::vec3(0, 0, 1);
-
-		Collision::Ray ray = { rayOrigin, rayDir };
-
-		if (Collision::RayPlaneIntersection3D(
-			plane, ray, point))
+		EntityOption* option = editor->selectedOption;
+		for (int i = 0; i < option->vertices.size(); i++)
 		{
-
-			BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
-			LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
-			float lineThickness = 0.5;
-
-			EntityOption* option = editor->selectedOption;
-			for (int i = 0; i < option->vertices.size(); i++)
+			glm::vec3 pos0 = option->vertices[i];
+			glm::vec3 pos1;
+			if (i == option->vertices.size() - 1)
 			{
-				glm::vec3 pos0 = option->vertices[i];
-				glm::vec3 pos1;
-				if (i == option->vertices.size() - 1)
-				{
-					pos1 = option->vertices[0];
-				}
-				else
-				{
-					pos1 = option->vertices[i + 1];
-				}
+				pos1 = option->vertices[0];
+			}
+			else
+			{
+				pos1 = option->vertices[i + 1];
+			}
 					
-				pos0 += point;
-				pos1 += point;
+			pos0 += groundIntersectionPoint;
+			pos1 += groundIntersectionPoint;
 
-
-				GameRender::RenderLine(
-					gameRenderCommands, group, gameAssets, GameRender::HALF_TRANS_COLOR_RED, pos0, pos1, lineThickness);
-
-			}
-
-			if (gameInputState->DidMouseLeftButtonClicked())
-			{
-				gameState->world.AddObstacle(point, option->vertices);
-			}
+			GameRender::RenderLine(
+				gameRenderCommands, group, gameAssets, GameRender::SELECTED_ENTITY_COLOR, pos0, pos1, lineThickness);
 		}
 
-
+		if (gameInputState->DidMouseLeftButtonClicked())
+		{
+			gameState->world.AddObstacle(groundIntersectionPoint, option->vertices);
+		}
 	}
 
 }
 
-void RenderPathingDebug(
-	EditorState* editorState,
+void RenderPathingData(
+	EditorState* editor,
 	World* world,
 	GameRender::GameRenderState* gameRenderState,
-	PathFinding::DebugState* debugState)
+	GameInputState* gameInputState,
+	PathFinding::DebugState* debugState,
+	glm::vec3 groundIntersectionPoint)
 {
 	RenderSystem::GameRenderCommands* gameRenderCommands = gameRenderState->gameRenderCommands;
 	GameAssets* gameAssets = gameRenderState->gameAssets;
@@ -694,10 +677,56 @@ void RenderPathingDebug(
 	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
 	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
 
-	GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, debugState->start, 1);
-	GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, debugState->end, 1);
+	const float markerSize = 3;
 
-	
+	if (!editor->consumingMouse)
+	{
+		if (editor->choosingPathingStart)
+		{
+			glm::vec3 min = glm::vec3(-markerSize, -markerSize, 0) + groundIntersectionPoint;
+			glm::vec3 max = glm::vec3(markerSize, markerSize, 0) + groundIntersectionPoint;
+
+			GameRender::PushCube(gameRenderCommands, group, bitmap, GameRender::POTENTIAL_PATHING_START_COLOR, min, max, false);
+
+			if (gameInputState->DidMouseLeftButtonClicked())
+			{
+				debugState->hasSetStartPos = true;
+				debugState->start = groundIntersectionPoint;
+			}
+		}
+
+		if (editor->choosingPathingEnd)
+		{
+			glm::vec3 min = glm::vec3(-markerSize, -markerSize, 0) + groundIntersectionPoint;
+			glm::vec3 max = glm::vec3(markerSize, markerSize, 0) + groundIntersectionPoint;
+
+			GameRender::PushCube(gameRenderCommands, group, bitmap, GameRender::POTENTIAL_PATHING_END_COLOR, min, max, false);
+
+			if (gameInputState->DidMouseLeftButtonClicked())
+			{
+				debugState->hasSetEndPos = true;
+				debugState->end = groundIntersectionPoint;
+			}
+		}
+	}
+
+	if (debugState->hasSetStartPos)
+	{
+		glm::vec3 min = glm::vec3(-markerSize, -markerSize, 0) + debugState->start;
+		glm::vec3 max = glm::vec3(markerSize, markerSize, 0) + debugState->start;
+
+		GameRender::PushCube(gameRenderCommands, group, bitmap, GameRender::PATHING_START_COLOR, min, max, false);
+	}
+
+	if (debugState->hasSetEndPos)
+	{
+		glm::vec3 min = glm::vec3(-markerSize, -markerSize, 0) + debugState->end;
+		glm::vec3 max = glm::vec3(markerSize, markerSize, 0) + debugState->end;
+
+		GameRender::PushCube(gameRenderCommands, group, bitmap, GameRender::PATHING_END_COLOR, min, max, false);
+	}
+
+
 	for (int i = 1; i < debugState->waypoints.size(); i++)
 	{
 		glm::vec3 p0 = debugState->waypoints[i - 1];
@@ -1188,12 +1217,13 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 
 
 	RenderCDTriangulationDebug(editor, &gameRenderState, world->cdTriangulationGraph);
-	RenderPathingDebug(editor, world, &gameRenderState,world->pathingDebug);
+	RenderPathingData(editor, world, &gameRenderState, gameInputState, world->pathingDebug, groundIntersectionPoint);
 
-	RenderSelectedEntityOption(editor, &gameRenderState, gameInputState, gameState);
+	RenderSelectedEntityOption(editor, &gameRenderState, gameInputState, gameState, groundIntersectionPoint);
 
 	// render world borders
-	
+
+
 	InteractWithWorldEntities(gameState, gameInputState, gameRenderCommands, world);
 
 	RenderGrid(editor, &gameRenderState, world, groundIntersectionPoint);
@@ -1278,6 +1308,17 @@ void LoadMap(World* world, string fileName)
 		assert(world->numEntities == entity->id);
 		world->numEntities++;
 	}
+
+	world->pathingDebug->hasSetStartPos = GameIO::FindValue(obj, "hasPathingStart").get_bool();
+	float pathingStartX = GameIO::FindValue(obj, "pathingStartX").get_real();
+	float pathingStartY = GameIO::FindValue(obj, "pathingStartY").get_real();
+	world->pathingDebug->start = glm::vec3(pathingStartX, pathingStartY, 0);
+
+
+	world->pathingDebug->hasSetEndPos = GameIO::FindValue(obj, "hasPathingEnd").get_bool();
+	float pathingEndX = GameIO::FindValue(obj, "pathingEndX").get_real();
+	float pathingEndY = GameIO::FindValue(obj, "pathingEndY").get_real();
+	world->pathingDebug->end = glm::vec3(pathingEndX, pathingEndY, 0);
 }
 
 void SaveMap(World* world, string savedFileName)
@@ -1300,6 +1341,14 @@ void SaveMap(World* world, string savedFileName)
 
 	worldObj.push_back(Pair("entities", entityArray));
 
+	worldObj.push_back(Pair("hasPathingStart", world->pathingDebug->hasSetStartPos));
+	worldObj.push_back(Pair("pathingStartX", world->pathingDebug->start.x));
+	worldObj.push_back(Pair("pathingStartY", world->pathingDebug->start.y));
+
+	worldObj.push_back(Pair("hasPathingEnd", world->pathingDebug->hasSetEndPos));
+	worldObj.push_back(Pair("pathingEndX", world->pathingDebug->end.x));
+	worldObj.push_back(Pair("pathingEndY", world->pathingDebug->end.y));
+
 	write(worldObj, myfile, pretty_print);
 	myfile.close();
 	
@@ -1318,10 +1367,10 @@ void TriangulateMap(World* world)
 
 	float scale = 10;
 
-	vertices.push_back(glm::vec3(world->min.x, world->min.y, 0));
-	vertices.push_back(glm::vec3(world->max.x, world->min.y, 0));
-	vertices.push_back(glm::vec3(world->max.x, world->max.y, 0));
-	vertices.push_back(glm::vec3(world->min.x, world->max.y, 0));
+	vertices.push_back(glm::vec3(world->minSimPos.x, world->minSimPos.y, 0));
+	vertices.push_back(glm::vec3(world->maxSimPos.x, world->minSimPos.y, 0));
+	vertices.push_back(glm::vec3(world->maxSimPos.x, world->maxSimPos.y, 0));
+	vertices.push_back(glm::vec3(world->minSimPos.x, world->maxSimPos.y, 0));
 
 	// clockwise
 	std::vector<GeoCore::Polygon> holes;
@@ -1342,33 +1391,32 @@ void TriangulateMap(World* world)
 	
 	world->AddWorldBoundsAsHoles(holes);
 
-	CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->max, world->cdTriangulationGraph);
+	CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->maxSimPos, world->cdTriangulationGraph);
 	CDTriangulation::MarkObstacles(world->cdTriangulationGraph, holes);
+	world->SpatialPartitionTriangles();
+}
+
+void ExecutePathingLogic(World* world, glm::vec3 start, glm::vec3 end)
+{
+	if (world->cdTriangulationGraph->triangulated)
+	{
+		world->pathingDebug->dualGraph = new NavMesh::DualGraph(world->cdTriangulationGraph->triangles);
+		PathFinding::PathfindingResult pathingResult = PathFinding::FindPath(world->pathingDebug, world, start, end);
+		world->pathingDebug->waypoints = pathingResult.waypoints;
+	}
+	else
+	{
+		std::cout << "U have triangulated the map" << std::endl;
+	}
 }
 
 void SamplePathingLogic(World* world)
 {
-	glm::vec3 start = glm::vec3(50, 170, 0);
-	glm::vec3 end = glm::vec3(230, 210, 0);
+	glm::vec3 start = glm::vec3(20, 48, 0);
+	glm::vec3 end = glm::vec3(233, 212, 0);
 
-//	glm::vec3 start = glm::vec3(30, 120, 0);
-//	glm::vec3 end = glm::vec3(130, 0, 0);
-
-
-	world->pathingDebug->dualGraph = new NavMesh::DualGraph(world->cdTriangulationGraph->triangles);
-	PathFinding::PathfindingResult pathingResult = PathFinding::FindPath(world->pathingDebug, world, start, end);
-	world->pathingDebug->waypoints = pathingResult.waypoints;
-
-	/*
-	dualGraph = new NavMesh::DualGraph(polygons);
-
-	PathFinding::PathfindingResult pathingResult = PathFinding::FindPath(world->dualGraph, world->start, world->destination);
-	world->portals = pathingResult.portals;
-	world->waypoints = pathingResult.waypoints;
-	*/
+	ExecutePathingLogic(world, start, end);
 }
-
-
 
 
 extern DebugTable* globalDebugTable;
@@ -1411,7 +1459,7 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		// intialize memory arena
 		platformAPI = gameMemory->platformAPI;
 
-		int testCase = 0;
+		int testCase = 2;
 
 		if (testCase == 0)
 		{
@@ -1491,34 +1539,6 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		{
 			SaveMap(&gameState->world, "TestData/Last Data.txt");
 		}
-		else if (editorEvent == EditorEvent::SHOW_GRID)
-		{
-			editor->gridConfig.showGrid = !editor->gridConfig.showGrid;
-		}
-		else if (editorEvent == EditorEvent::SHOW_GRID_COORD)
-		{
-			editor->gridConfig.showCellGridCoord = !editor->gridConfig.showCellGridCoord;
-			if (editor->gridConfig.showCellGridCoord)
-			{
-				editor->gridConfig.showCellSimCoord = false;
-			}
-		}
-		else if (editorEvent == EditorEvent::SHOW_GRID_SIM_COORD)
-		{
-			editor->gridConfig.showCellSimCoord = !editor->gridConfig.showCellSimCoord;
-			if (editor->gridConfig.showCellSimCoord)
-			{
-				editor->gridConfig.showCellGridCoord = false;
-			}
-		}
-		else if (editorEvent == EditorEvent::DEBUG_TRIANGLE)
-		{
-			editor->highlightTriangle = !editor->highlightTriangle;
-		}
-		else if (editorEvent == EditorEvent::DEBUG_GRID)
-		{
-			editor->highlightGrid = !editor->highlightGrid;
-		}
 		else if (editorEvent == EditorEvent::TRIANGULATE)
 		{
 			std::cout << "Triangulate" << std::endl;
@@ -1526,9 +1546,26 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 			SaveMap(&gameState->world, "TestData/Last Data.txt");
 			TriangulateMap(&gameState->world);
 		}
-		else if (editorEvent == EditorEvent::HIDE_OBSTACLES)
+		else if (editorEvent == EditorEvent::CLEAR_PATHING_START)
 		{
-			editor->hideObstacles = !editor->hideObstacles;
+			gameState->world.pathingDebug->hasSetStartPos = false;	
+		}
+		else if (editorEvent == EditorEvent::CLEAR_PATHING_END)
+		{
+			gameState->world.pathingDebug->hasSetEndPos = false;
+		}
+		else if (editorEvent == EditorEvent::PATH)
+		{
+			if (gameState->world.pathingDebug->hasSetStartPos &&
+				gameState->world.pathingDebug->hasSetEndPos)
+			{
+				SaveMap(&gameState->world, "TestData/Last Data.txt");
+				ExecutePathingLogic(&gameState->world, gameState->world.pathingDebug->start, gameState->world.pathingDebug->end);
+			}
+			else
+			{
+				std::cout << "You havet set the start ane end destination" << std::endl;
+			}
 		}
 	}
 
@@ -1798,7 +1835,19 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 	ptr += size;
 
 
+	if (gameState->world.pathingDebug->hasSetStartPos)
+	{
+		glm::vec3 pos = gameState->world.pathingDebug->start;
+		size = sprintf(ptr, "start pos: %f %f\n", pos.x, pos.y);
+		ptr += size;
+	}
 
+	if (gameState->world.pathingDebug->hasSetEndPos)
+	{
+		glm::vec3 pos = gameState->world.pathingDebug->end;
+		size = sprintf(ptr, "end pos: %f %f\n", pos.x, pos.y);
+		ptr += size;
+	}
 
 	GameRender::DEBUGTextLine(buffer, &gameRenderState, startPos, 1);
 
