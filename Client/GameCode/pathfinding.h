@@ -42,7 +42,8 @@ namespace PathFinding
 
 		// this is to remeber the path
 		int fromPolygonNodeId;
-		int cost;
+		int cost;		// g(n) + f(n)
+		int costFromStartNode; // this is g(n)
 	};
 
 	class AStarSearchNodeComparison
@@ -65,10 +66,10 @@ namespace PathFinding
 		return glm::distance2(pos0, pos1);
 	}
 
-	std::vector<int> AStarSearch(NavMesh::DualGraph* dualGraph, NavMesh::DualGraphNode* polygonNode0, NavMesh::DualGraphNode* polygonNode1)
+	std::vector<int> AStarSearch(NavMesh::DualGraph* dualGraph, NavMesh::DualGraphNode* startNode, NavMesh::DualGraphNode* destNode)
 	{
-		std::cout << "start" << polygonNode0->GetId() << std::endl;
-		std::cout << "end" << polygonNode1->GetId() << std::endl;
+		std::cout << "start" << startNode->GetId() << std::endl;
+		std::cout << "end" << destNode->GetId() << std::endl;
 
 
 		// from triangle 0, do a bfs with a distance heuristic until u reach triangle1
@@ -76,7 +77,7 @@ namespace PathFinding
 
 		std::unordered_map<int, AStarSearchNode> visited;
 
-		AStarSearchNode node = { polygonNode0->GetId(), -1, 0};
+		AStarSearchNode node = { startNode->GetId(), -1, 0, 0};
 		q.push(node);
 	
 
@@ -88,7 +89,7 @@ namespace PathFinding
 
 			visited[curNode.polygonNodeId] = curNode;
 
-			if (curNode.polygonNodeId == polygonNode1->GetId())
+			if (curNode.polygonNodeId == destNode->GetId())
 			{
 				destinationNode = curNode;
 				break;
@@ -126,8 +127,9 @@ namespace PathFinding
 					continue;
 				}
 
-				int heuristicCost = HeuristicCost(neighbor->center, polygonNode1->center);
-				q.push({ neighborId, curPolygonId, heuristicCost });
+				int costFromStartNode = curNode.costFromStartNode + HeuristicCost(polygonNode->center, neighbor->center);
+				int totalCost = costFromStartNode + HeuristicCost(neighbor->center, destNode->center);
+				q.push({ neighborId, curPolygonId, totalCost, costFromStartNode });
 			}
 		}
 		
@@ -206,27 +208,6 @@ namespace PathFinding
 		v1 = graph->GetVertexById(id1);
 	}
 
-
-	// points are counter clock-wise in ZX plane
-	void TrySetPortalPoints(
-		std::vector<CDTriangulation::DelaunayTriangleEdge> edges, 
-		int index, 
-		CDTriangulation::Graph* graph, 
-		glm::vec3& p0, 
-		glm::vec3& p1)
-	{
-		if (0 <= index && index < edges.size())
-		{
-			CDTriangulation::DelaunayTriangleEdge edge = edges[index];
-
-			CDTriangulation::Vertex v0, v1;
-			GetEdgeVertices(edge, graph, v0, v1);
-
-			p0 = v0.pos;
-			p1 = v1.pos;
-		}
-	}
-	
 
 	
 	// http://digestingduck.blogspot.com/2010/03/simple-stupid-funnel-algorithm.html
@@ -309,6 +290,22 @@ namespace PathFinding
 			}
 
 
+			vec = portalLeftPoint;
+			std::cout << "		LeftIndex2 to " << leftIndex << std::endl;
+			std::cout << "		Left Point2 is " << vec.x << " " << vec.y << " " << vec.z << std::endl << std::endl;
+
+			vec = portalRightPoint;
+			std::cout << "		RightIndex2 to " << rightIndex << std::endl;
+			std::cout << "		right point2 is " << vec.x << " " << vec.y << " " << vec.z << std::endl << std::endl;
+
+
+			vec = newPortalLeftPoint;
+			std::cout << "		newPortalLeftPoint is " << vec.x << " " << vec.y << " " << vec.z << std::endl << std::endl;
+
+			vec = newPortalRightPoint;
+			std::cout << "		newPortalRightPoint is " << vec.x << " " << vec.y << " " << vec.z << std::endl << std::endl;
+
+
 			dirL = portalLeftPoint - portalApex;
 			dirR = portalRightPoint - portalApex;
 
@@ -319,19 +316,23 @@ namespace PathFinding
 			glm::vec3 dirNewR = newPortalRightPoint - portalApex;
 			// we first check if the new newPortalRight is counter-clockwise of portalRightPoint
 			// if not, the sign of the cross product will be different, and we just ignore
-
 			float temp = Math::TriArea_XYPlane(dirR, dirNewR);
 
+			// when dirNewR is counter-clockwise of dirR, that means the funnel is getting more narrow
 			if (Math::TriArea_XYPlane(dirR, dirNewR) >= 0)
 			{
+				// if portalApex and portalRightPoint, that means we just had a crossover and we just reset the portal
 				// we then want to check that it's not counter-clockwise of portalLeftPoint
-				if (Math::TriArea_XYPlane(dirNewR, dirL) > 0)
+				// 
+				if (Math::Equals(portalApex, portalRightPoint) || Math::TriArea_XYPlane(dirNewR, dirL) > 0)
 				{
 					portalRightPoint = newPortalRightPoint;
 					rightIndex = i;
 				}
 				else
 				{	
+					std::cout << "	########### right crossing over left happening " << std::endl;
+
 					// right over left, insert left to path
 					results.push_back(portalLeftPoint);
 
@@ -339,14 +340,17 @@ namespace PathFinding
 					portalApex = portalLeftPoint;
 					apexIndex = leftIndex;
 
-					leftIndex = i + 1;
-					// we either restart on leftIndex Edge or rightIndex Edge
-					TrySetPortalPoints(portals, leftIndex, graph, portalRightPoint, portalLeftPoint);
-					rightIndex = leftIndex;
+					// reset the portal. We just reset the portal to itself
+					// we will update the left and right point in the next iteration
+					portalRightPoint = portalApex;
+					portalLeftPoint = portalApex;
+
+					leftIndex = apexIndex;
+					rightIndex = apexIndex;
 
 					// reset the index
-					i = leftIndex;
-					std::cout << "	resetting to " << i << std::endl;
+					i = apexIndex;
+					std::cout << "		resetting to " << i << std::endl;
 					continue;
 				}
 			}
@@ -358,16 +362,20 @@ namespace PathFinding
 
 			// we first check if the new newPortalLeft is clockwise of portalLeftPoint
 			// if not, the sign of the cross product will be different, and we just ignore
+			// when dirNewL is clockwise of dirL, that means the funnel is getting more narrow
 			if (Math::TriArea_XYPlane(dirNewL, dirL) >= 0)
 			{
 				// we then want to check that it's not clockwise of portalRightPoint
-				if (Math::TriArea_XYPlane(dirR, dirNewL) > 0)
+				if (Math::Equals(portalApex, portalLeftPoint) || Math::TriArea_XYPlane(dirR, dirNewL) > 0)
 				{
 					portalLeftPoint = newPortalLeftPoint;
 					leftIndex = i;
+				//	std::cout << "	resetting to " << i << std::endl;
 				}
 				else
 				{
+					std::cout << "	########### left crossing over right happening " << std::endl;
+
 					// right over left, insert left to path
 					results.push_back(portalRightPoint);
 
@@ -375,17 +383,21 @@ namespace PathFinding
 					portalApex = portalRightPoint;
 					apexIndex = rightIndex;
 
-					rightIndex = i + 1;
-					TrySetPortalPoints(portals, rightIndex, graph, portalRightPoint, portalLeftPoint);
-					leftIndex = rightIndex;
 
-					// reset the index
-					i = rightIndex;
+					// reset the portal. We just reset the portal to itself
+					// we will update the left and right point in the next iteration
+					portalRightPoint = portalApex;
+					portalLeftPoint = portalApex;
+					leftIndex = apexIndex;
+					rightIndex = apexIndex;
+
+					i = apexIndex;
 					std::cout << "	resetting to " << i << std::endl;
 					continue;
 				}
 			}
 		}
+
 		std::cout << " >>>>>> ending " << apexIndex << " " << portals.size() << std::endl;
 		std::cout << "		portalRightPoint " << portalRightPoint.x << " " << portalRightPoint.y << std::endl;
 		std::cout << "		portalLeftPoint " << portalLeftPoint.x << " " << portalLeftPoint.y << std::endl;
