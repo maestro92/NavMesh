@@ -40,8 +40,21 @@ namespace Editor
 		EntityOption option;
 		int numOptions = 0;
 
+		option.clear();
+		option.name = "Agent 2";
+		option.isAgent = true;
+		option.agentRadius = 2;
+		editorState->options[numOptions++] = option;
+
+		option.clear();
+		option.name = "Agent 5";
+		option.isAgent = true;
+		option.agentRadius = 5;
+		editorState->options[numOptions++] = option;
+
 		// because these are obstacles, they are in counter clockwise order
 		//
+		option.clear();
 		option.name = "Square";		
 		vertices.clear();
 		vertices.push_back(glm::vec3(-1.0, 1.0, 0.0));
@@ -51,7 +64,7 @@ namespace Editor
 		option.vertices = vertices;
 		editorState->options[numOptions++] = option;
 
-
+		option.clear();
 		option.name = "Concave";
 		vertices.clear();
 		vertices.push_back(glm::vec3(1.0, -3.0, 0.0));
@@ -65,6 +78,7 @@ namespace Editor
 		editorState->options[numOptions++] = option;
 
 
+		option.clear();
 		option.name = "4 point star";
 		vertices.clear();
 		vertices.push_back(glm::vec3(1.0, -1.0, 0.0));
@@ -79,6 +93,7 @@ namespace Editor
 		editorState->options[numOptions++] = option;
 
 
+		option.clear();
 		option.name = "Hexagon";
 		vertices.clear();
 		vertices.push_back(glm::vec3(0.0, -4.0, 0.0));
@@ -90,7 +105,8 @@ namespace Editor
 		option.vertices = vertices;
 		editorState->options[numOptions++] = option;
 
-		
+
+		option.clear();
 		option.name = "Mineral";
 		vertices.clear();
 		vertices.push_back(glm::vec3(-1.0, 0.5, 0.0));
@@ -101,6 +117,7 @@ namespace Editor
 		editorState->options[numOptions++] = option;
 		
 
+		option.clear();
 		option.name = "long wall";
 		vertices.clear();
 		vertices.push_back(glm::vec3(-10.0, 1.0, 0.0));
@@ -111,6 +128,7 @@ namespace Editor
 		editorState->options[numOptions++] = option;
 
 
+		option.clear();
 		option.name = "tall wall";
 		vertices.clear();
 		vertices.push_back(glm::vec3(-1.0, 10.0, 0.0));
@@ -577,6 +595,18 @@ namespace Editor
 			editor->coreData->editorEvents.push(EditorEvent::PATH);
 		}
 		IncrementButtonIndex(indexX, indexY, numCol);
+
+
+		curX = startX + btnWidth * indexX;
+		curY = startY - btnHeight * (indexY + 1);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Test Real Time", editor->testRealTime))
+		{
+			editor->testRealTime = !editor->testRealTime;
+			editor->coreData->editorEvents.push(EditorEvent::TEST_REALTIME);
+		}
+		IncrementButtonIndex(indexX, indexY, numCol);
+
 
 
 		int numSpecialButtons = indexY * numCol + indexX;

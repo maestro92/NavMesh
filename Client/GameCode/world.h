@@ -22,16 +22,15 @@ struct Face
 
 enum EntityFlag
 {
-	STATIC,
-	GROUND,
-	PLAYER,
+	AGENT,
 	OBSTACLE
 };
 
 struct Entity
 {
 	EntityFlag flag;
-	
+	float agentRadius;
+
 	int id;
 	glm::vec3 pos;
 	glm::vec3 dim;
@@ -164,6 +163,7 @@ struct World
 	MapGrid mapGrid;
 
 	WorldCameraSetup cameraSetup;
+	float agentRadius;
 
 	void Init()
 	{
@@ -404,11 +404,14 @@ struct World
 		SpatialPartitionTriangles();
 	}
 
-	void InitEntity(Entity* entity, glm::vec3 pos, EntityFlag entityFlag, std::vector<glm::vec3> vertices)
+	void AddAgent(glm::vec3 pos, float radius)
 	{
+		int id = numEntities++;
+		Entity* entity = &entities[id];
+		entity->id = id;
 		entity->pos = pos;
-		entity->vertices = vertices;
-		entity->flag = entityFlag;
+		entity->agentRadius = radius;
+		entity->flag = EntityFlag::AGENT;
 	}
 
 	void AddObstacle(glm::vec3 pos, std::vector<glm::vec3> vertices)
@@ -416,7 +419,9 @@ struct World
 		int id = numEntities++;
 		Entity* entity = &entities[id];
 		entity->id = id;
-		InitEntity(entity, pos, OBSTACLE, vertices);
+		entity->pos = pos;
+		entity->vertices = vertices;
+		entity->flag = EntityFlag::OBSTACLE;
 	}
 
 	bool IsValidSimPos(glm::vec3 pos)
@@ -431,20 +436,6 @@ struct World
 	}
 };
 
-
-
-
-void initPlayerEntity(Entity* entity, glm::vec3 pos)
-{
-	entity->pos = pos;
-	entity->flag = EntityFlag::PLAYER;
-	entity->min = glm::vec3(-10, -10, -10);
-	entity->max = glm::vec3(10, 10, 10);
-
-	entity->xAxis = glm::vec3(1.0, 0.0, 0.0);
-	entity->yAxis = glm::vec3(0.0, 1.0, 0.0);
-	entity->zAxis = glm::vec3(0.0, 0.0, 1.0);
-}
 
 // the list of vertices are in no particular order.
 std::vector<glm::vec3> GetCubeVertices(glm::vec3 min, glm::vec3 max)

@@ -8,7 +8,21 @@
 struct EntityOption
 {
 	std::string name;
+
+	// agent
+	bool isAgent;
+	float agentRadius;
+
+	// obstacles
 	std::vector<glm::vec3> vertices;
+
+	void clear()
+	{
+		name.clear();
+		vertices.clear();
+		isAgent = false;
+		agentRadius = -1;
+	}
 };
 
 enum EditorEvent {
@@ -17,6 +31,7 @@ enum EditorEvent {
 	CLEAR_PATHING_START,
 	CLEAR_PATHING_END,
 	PATH,
+	TEST_REALTIME
 };
 
 struct EditorStateData
@@ -78,6 +93,8 @@ struct EditorState {
 
 	std::string mapCellDebugString;
 	HighlightGridCell hightlightMapCell;
+
+	bool testRealTime;
 
 	Entity* draggedEntity;
 	glm::vec3 draggedPivot;

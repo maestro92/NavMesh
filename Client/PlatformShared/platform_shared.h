@@ -138,7 +138,10 @@ struct GameInputState
 			mouseButtons[GameInputMouseButton::PlatformMouseButton_Left].changed;
 	}
 
-
+	bool DidMouseRightButtonClicked() {
+		return !mouseButtons[GameInputMouseButton::PlatformMouseButton_Right].endedDown &&
+			mouseButtons[GameInputMouseButton::PlatformMouseButton_Right].changed;
+	}
 
 	/*
 	// For debugging only;

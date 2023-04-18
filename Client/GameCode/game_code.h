@@ -364,7 +364,7 @@ glm::mat4 GetCameraMatrix(const glm::vec3& eye, const glm::vec3& center, const g
 	return result;
 }
 
-void RenderEntityPlayerModel(
+void RenderAgentEntity(
 	RenderSystem::GameRenderCommands* gameRenderCommands,
 	RenderSystem::RenderGroup* renderGroup,
 	GameAssets* gameAssets,
@@ -373,15 +373,11 @@ void RenderEntityPlayerModel(
 	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
 	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
 
-	glm::vec3 offset = glm::vec3(1, 1, 1);
-
-	glm::vec3 min = entity->pos + entity->min - offset;
-	glm::vec3 max = entity->pos + entity->max + offset;
-
-	GameRender::PushCube(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_RED, min, max, true);
+	GameRender::RenderCircle(
+		gameRenderCommands, renderGroup, gameAssets, GameRender::COLOR_RED, entity->pos, entity->agentRadius, 0.5);
 }
 
-void RenderEntityStaticModel(
+void RenderObstacleEntity(
 	RenderSystem::GameRenderCommands* gameRenderCommands,
 	RenderSystem::RenderGroup* renderGroup,
 	GameAssets* gameAssets,
@@ -635,30 +631,49 @@ void RenderSelectedEntityOption(
 		float lineThickness = 0.5;
 
 		EntityOption* option = editor->selectedOption;
-		for (int i = 0; i < option->vertices.size(); i++)
-		{
-			glm::vec3 pos0 = option->vertices[i];
-			glm::vec3 pos1;
-			if (i == option->vertices.size() - 1)
-			{
-				pos1 = option->vertices[0];
-			}
-			else
-			{
-				pos1 = option->vertices[i + 1];
-			}
-					
-			pos0 += groundIntersectionPoint;
-			pos1 += groundIntersectionPoint;
 
-			GameRender::RenderLine(
-				gameRenderCommands, group, gameAssets, GameRender::SELECTED_ENTITY_COLOR, pos0, pos1, lineThickness);
+		if (option->isAgent)
+		{
+			BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
+			LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
+
+			GameRender::RenderCircle(
+				gameRenderCommands, group, gameAssets, GameRender::SELECTED_ENTITY_COLOR, groundIntersectionPoint, option->agentRadius, 0.5);
+		
+			if (gameInputState->DidMouseLeftButtonClicked())
+			{
+				gameState->world.AddAgent(groundIntersectionPoint, option->agentRadius);
+			}		
+		}
+		else
+		{
+			for (int i = 0; i < option->vertices.size(); i++)
+			{
+				glm::vec3 pos0 = option->vertices[i];
+				glm::vec3 pos1;
+				if (i == option->vertices.size() - 1)
+				{
+					pos1 = option->vertices[0];
+				}
+				else
+				{
+					pos1 = option->vertices[i + 1];
+				}
+
+				pos0 += groundIntersectionPoint;
+				pos1 += groundIntersectionPoint;
+
+				GameRender::RenderLine(
+					gameRenderCommands, group, gameAssets, GameRender::SELECTED_ENTITY_COLOR, pos0, pos1, lineThickness);
+			}
+
+			if (gameInputState->DidMouseLeftButtonClicked())
+			{
+				gameState->world.AddObstacle(groundIntersectionPoint, option->vertices);
+			}
 		}
 
-		if (gameInputState->DidMouseLeftButtonClicked())
-		{
-			gameState->world.AddObstacle(groundIntersectionPoint, option->vertices);
-		}
+
 	}
 
 }
@@ -977,28 +992,18 @@ glm::vec3 UpdateEntityViewDirection(Entity* entity, GameInputState* gameInputSta
 	return newViewDir;
 }
 
-void InteractWithWorldEntities(GameState* gameState, GameInputState* gameInputState, RenderSystem::GameRenderCommands* gameRenderCommands, World* world)
+void InteractWithWorldEntities(GameState* gameState, 
+	GameInputState* gameInputState, 
+	RenderSystem::GameRenderCommands* gameRenderCommands, 
+	World* world, 
+	glm::vec3 groundIntersectionPoint)
 {
 	glm::vec3 rayOrigin = gameState->debugCameraEntity.pos;
 	glm::vec3 rayDir = MousePosToMousePickingRay(gameState->world.cameraSetup, gameRenderCommands, gameInputState->mousePos);
 
 	EditorState* editorState = &gameState->editorState;
 
-	Collision::Plane plane;
-	plane.dist = 0;
-	plane.normal = glm::vec3(0, 0, 1);
-
-	Collision::Ray ray = { rayOrigin, rayDir };
-	glm::vec3 intersectionPoint;
-
 	if (editorState->IsInSelectionMode())
-	{
-		return;
-	}
-
-
-	if (!Collision::RayPlaneIntersection3D(
-		plane, ray, intersectionPoint))
 	{
 		return;
 	}
@@ -1019,7 +1024,7 @@ void InteractWithWorldEntities(GameState* gameState, GameInputState* gameInputSt
 					absolutePos.push_back(entity->pos + entity->vertices[j]);
 				}
 
-				if (Collision::IsPointInsidePolygon2D(intersectionPoint, absolutePos))
+				if (Collision::IsPointInsidePolygon2D(groundIntersectionPoint, absolutePos))
 				{
 				//	std::cout << "entity id " << entity->id << std::endl;
 
@@ -1032,7 +1037,7 @@ void InteractWithWorldEntities(GameState* gameState, GameInputState* gameInputSt
 						else
 						{
 							editorState->draggedEntity = entity;
-							editorState->draggedPivot = intersectionPoint - editorState->draggedEntity->pos;
+							editorState->draggedPivot = groundIntersectionPoint - editorState->draggedEntity->pos;
 						}
 
 					}					
@@ -1044,7 +1049,7 @@ void InteractWithWorldEntities(GameState* gameState, GameInputState* gameInputSt
 
 	if (editorState->draggedEntity != NULL)
 	{
-		editorState->draggedEntity->pos = intersectionPoint - editorState->draggedPivot;
+		editorState->draggedEntity->pos = groundIntersectionPoint - editorState->draggedPivot;
 	}
 
 
@@ -1138,28 +1143,16 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 		Entity* entity = &world->entities[i];
 		switch (entity->flag)
 		{
-			case EntityFlag::STATIC:				
-				break;
-
-			case EntityFlag::GROUND:
-				// RenderEntityGroundModel(gameRenderCommands, &group, gameAssets, entity);
-				break;
-
 			case EntityFlag::OBSTACLE:
 
 				if (!editor->hideObstacles)
 				{
-					RenderEntityStaticModel(gameRenderCommands, &group, gameAssets, entity);
+					RenderObstacleEntity(gameRenderCommands, &group, gameAssets, entity);
 				}
 				break;
 
-			case EntityFlag::PLAYER:
-				/*
-				if (debugModeState->cameraDebugMode)
-				{
-					RenderEntityPlayerModel(gameRenderCommands, &group, gameAssets, entity);
-				}
-				*/
+			case EntityFlag::AGENT:
+				RenderAgentEntity(gameRenderCommands, &group, gameAssets, entity);
 				break;
 		}	
 	}
@@ -1224,13 +1217,33 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 	// render world borders
 
 
-	InteractWithWorldEntities(gameState, gameInputState, gameRenderCommands, world);
+	InteractWithWorldEntities(gameState, gameInputState, gameRenderCommands, world, groundIntersectionPoint);
+
 
 	RenderGrid(editor, &gameRenderState, world, groundIntersectionPoint);
 	RenderWorldBorders(&gameRenderState, world);
 
 	GameRender::RenderCoordinateSystem(gameRenderCommands, &group, gameAssets);
 }
+
+void TestRealTimeTick(
+	GameState* gameState,
+	GameInputState* gameInputState,
+	RenderSystem::GameRenderCommands* gameRenderCommands,
+	glm::vec3 groundIntersectionPoint)
+{
+	EditorState* editorState = &gameState->editorState;
+	World* world = &gameState->world;
+
+	if (editorState->testRealTime)
+	{
+		if (gameInputState->DidMouseRightButtonClicked())
+		{
+
+		}
+	}
+}
+
 
 Object SerializeEntity(Entity* entity)
 {
@@ -1240,19 +1253,27 @@ Object SerializeEntity(Entity* entity)
 	entityObj.push_back(Pair("x", entity->pos.x));
 	entityObj.push_back(Pair("y", entity->pos.y));
 
-	Array verticesArray;
-	for (int i = 0; i < entity->vertices.size(); i++)
+	if (entity->flag == EntityFlag::OBSTACLE)
 	{
-		glm::vec3 pos = entity->vertices[i];
-		Object pointObj;
+		Array verticesArray;
+		for (int i = 0; i < entity->vertices.size(); i++)
+		{
+			glm::vec3 pos = entity->vertices[i];
+			Object pointObj;
 
-		pointObj.push_back(Pair("x", pos.x));
-		pointObj.push_back(Pair("y", pos.y));
-		pointObj.push_back(Pair("z", pos.z));
+			pointObj.push_back(Pair("x", pos.x));
+			pointObj.push_back(Pair("y", pos.y));
+			pointObj.push_back(Pair("z", pos.z));
 
-		verticesArray.push_back(pointObj);
+			verticesArray.push_back(pointObj);
+		}
+		entityObj.push_back(Pair("vertices", verticesArray));
 	}
-	entityObj.push_back(Pair("vertices", verticesArray));
+	else if (entity->flag == EntityFlag::AGENT)
+	{
+		entityObj.push_back(Pair("agentRadius", entity->agentRadius));
+	}
+
 
 	return entityObj;
 }
@@ -1272,19 +1293,27 @@ void DeserializeEntity(Entity* entity, const mObject& obj)
 		entity->pos = glm::vec3(x, y, 0);
 	}
 
-	const mArray& vertices = GameIO::FindValue(obj, "vertices").get_array();
-	
-	for (int i = 0; i < vertices.size(); i++)
+	if (entityFlag == EntityFlag::OBSTACLE)
 	{
-		const mObject pointObj = vertices[i].get_obj();
+		const mArray& vertices = GameIO::FindValue(obj, "vertices").get_array();
 
-		float x = GameIO::FindValue(pointObj, "x").get_real();
-		float y = GameIO::FindValue(pointObj, "y").get_real();
-		float z = GameIO::FindValue(pointObj, "z").get_real();
+		for (int i = 0; i < vertices.size(); i++)
+		{
+			const mObject pointObj = vertices[i].get_obj();
 
-		glm::vec3 pos = glm::vec3(x, y, z);
+			float x = GameIO::FindValue(pointObj, "x").get_real();
+			float y = GameIO::FindValue(pointObj, "y").get_real();
+			float z = GameIO::FindValue(pointObj, "z").get_real();
 
-		entity->vertices.push_back(pos);
+			glm::vec3 pos = glm::vec3(x, y, z);
+
+			entity->vertices.push_back(pos);
+		}
+	}
+	else if (entityFlag == EntityFlag::AGENT)
+	{
+		float agentRadius = GameIO::FindValue(obj, "agentRadius").get_real();
+		entity->agentRadius = agentRadius;
 	}
 }
 
@@ -1472,7 +1501,7 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		}
 		else if (testCase == 2)
 		{
-			LoadMap(&gameState->world, "TestData/data.txt");
+			LoadMap(&gameState->world, "TestData/data2.txt");
 		}
 
 
@@ -1566,6 +1595,10 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 			{
 				std::cout << "You havet set the start ane end destination" << std::endl;
 			}
+		}
+		else if (editorEvent == EditorEvent::CLEAR_PATHING_END)
+		{
+			gameState->world.pathingDebug->hasSetEndPos = false;
 		}
 	}
 
