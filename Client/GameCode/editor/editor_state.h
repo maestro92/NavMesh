@@ -94,7 +94,7 @@ struct EditorState {
 	std::string mapCellDebugString;
 	HighlightGridCell hightlightMapCell;
 
-	bool testRealTime;
+	bool isInSimMode;
 
 	Entity* draggedEntity;
 	glm::vec3 draggedPivot;

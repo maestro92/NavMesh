@@ -30,12 +30,16 @@ enum EntityFlag
 struct Entity
 {
 	EntityFlag flag;
-	float agentRadius;
 
 	int id;
 	glm::vec3 pos;
 	glm::vec3 dim;
 	glm::vec3 velocity;
+
+
+	float agentRadius;
+	glm::vec3 destination;
+
 
 	std::vector<glm::vec3> vertices;
 

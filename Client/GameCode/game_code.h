@@ -14,7 +14,7 @@
 #include <iostream>
 #include "editor/editor.h"
 #include "pathfinding.h"
-
+#include "simulation.h"
 
 
 #include "json_spirit\json_spirit.h"
@@ -375,8 +375,9 @@ void RenderAgentEntity(
 	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
 
 	EditorState* editor = &gameState->editorState;
+	SimulationState* simState = &gameState->simState;
 
-	if (editor->draggedEntity == entity)
+	if (editor->draggedEntity == entity || simState->selectedEntity == entity)
 	{
 		GameRender::RenderCircle(
 			gameRenderCommands, renderGroup, gameAssets, GameRender::DRAGGED_ENTITY_COLOR, entity->pos, entity->agentRadius, 0.5);
@@ -1016,7 +1017,7 @@ glm::vec3 UpdateEntityViewDirection(Entity* entity, GameInputState* gameInputSta
 	return newViewDir;
 }
 
-void InteractWithWorldEntities(GameState* gameState, 
+void EditorInteractWithWorldEntities(GameState* gameState, 
 	GameInputState* gameInputState, 
 	RenderSystem::GameRenderCommands* gameRenderCommands, 
 	World* world, 
@@ -1269,31 +1270,17 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 	// render world borders
 
 
-	InteractWithWorldEntities(gameState, gameInputState, gameRenderCommands, world, groundIntersectionPoint);
+	EditorInteractWithWorldEntities(gameState, gameInputState, gameRenderCommands, world, groundIntersectionPoint);
 
+	if (editor->isInSimMode)
+	{
+		Sim::SimModeTick(&gameState->simState, gameInputState, gameRenderCommands, world, groundIntersectionPoint);
+	}
 
 	RenderGrid(editor, &gameRenderState, world, groundIntersectionPoint);
 	RenderWorldBorders(&gameRenderState, world);
 
 	GameRender::RenderCoordinateSystem(gameRenderCommands, &group, gameAssets);
-}
-
-void TestRealTimeTick(
-	GameState* gameState,
-	GameInputState* gameInputState,
-	RenderSystem::GameRenderCommands* gameRenderCommands,
-	glm::vec3 groundIntersectionPoint)
-{
-	EditorState* editorState = &gameState->editorState;
-	World* world = &gameState->world;
-
-	if (editorState->testRealTime)
-	{
-		if (gameInputState->DidMouseRightButtonClicked())
-		{
-
-		}
-	}
 }
 
 

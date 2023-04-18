@@ -172,6 +172,8 @@
     <ClInclude Include="math.h" />
     <ClInclude Include="pathfinding.h" />
     <ClInclude Include="pathfinding_common.h" />
+    <ClInclude Include="simulation.h" />
+    <ClInclude Include="simulation_state.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="triangulation.h" />
     <ClInclude Include="ui_util.h" />

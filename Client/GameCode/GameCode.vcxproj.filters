@@ -99,6 +99,12 @@
     <ClInclude Include="pathfinding_common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="simulation_state.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="simulation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">

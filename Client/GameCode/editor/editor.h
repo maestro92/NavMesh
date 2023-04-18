@@ -636,9 +636,9 @@ namespace Editor
 
 		gridLayoutHelper.GetElementPosition(curX, curY);
 		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
-			curX, curY, btnWidth, btnHeight, "Test Real Time", editor->testRealTime))
+			curX, curY, btnWidth, btnHeight, "Enter SimMode", editor->isInSimMode))
 		{
-			editor->testRealTime = !editor->testRealTime;
+			editor->isInSimMode = !editor->isInSimMode;
 			editor->coreData->editorEvents.push(EditorEvent::TEST_REALTIME);
 		}
 		gridLayoutHelper.IncrementElementCount();
