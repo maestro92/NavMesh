@@ -8,17 +8,6 @@
 namespace Sim
 {
 
-	void SimModeTick(SimulationState* simState,
-		GameInputState* gameInputState,
-		RenderSystem::GameRenderCommands* gameRenderCommands,
-		World* world,
-		glm::vec3 groundIntersectionPoint)
-	{
-		InteractWorldEntities(simState, gameInputState, gameRenderCommands, world, groundIntersectionPoint);
-
-		SetDestination(simState, gameInputState, groundIntersectionPoint);
-
-	}
 
 	void SetDestination(SimulationState* simState,
 		GameInputState* gameInputState,
@@ -32,6 +21,9 @@ namespace Sim
 			}
 		}
 	}
+
+
+
 
 
 	void InteractWorldEntities(SimulationState* simState,
@@ -91,5 +83,17 @@ namespace Sim
 				simState->selectedEntity = candidate;
 			}
 		}
+	}
+
+	void SimModeTick(SimulationState* simState,
+		GameInputState* gameInputState,
+		RenderSystem::GameRenderCommands* gameRenderCommands,
+		World* world,
+		glm::vec3 groundIntersectionPoint)
+	{
+		InteractWorldEntities(simState, gameInputState, gameRenderCommands, world, groundIntersectionPoint);
+
+		SetDestination(simState, gameInputState, groundIntersectionPoint);
+
 	}
 }
