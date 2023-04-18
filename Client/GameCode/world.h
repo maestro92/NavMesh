@@ -23,7 +23,8 @@ struct Face
 enum EntityFlag
 {
 	AGENT,
-	OBSTACLE
+	OBSTACLE,
+	REMOVED
 };
 
 struct Entity
@@ -422,6 +423,11 @@ struct World
 		entity->pos = pos;
 		entity->vertices = vertices;
 		entity->flag = EntityFlag::OBSTACLE;
+	}
+
+	void RemoveEntity(Entity* entity)
+	{
+		entity->flag = EntityFlag::REMOVED;
 	}
 
 	bool IsValidSimPos(glm::vec3 pos)

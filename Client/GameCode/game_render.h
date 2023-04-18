@@ -8,7 +8,7 @@ namespace GameRender
 	glm::vec4 HALF_TRANS_COLOR_WHITE = glm::vec4(1, 1, 1, 0.5);
 	glm::vec4 HALF_TRANS_COLOR_RED = glm::vec4(1, 0, 0, 0.5);
 
-
+	glm::vec4 DRAGGED_ENTITY_COLOR = glm::vec4(1, 1, 0, 1);
 	glm::vec4 SELECTED_ENTITY_COLOR = glm::vec4(1, 0, 0, 0.25);
 	glm::vec4 POTENTIAL_PATHING_START_COLOR = glm::vec4(1, 0, 0, 0.25);
 	glm::vec4 POTENTIAL_PATHING_END_COLOR = glm::vec4(0, 1, 0, 0.25);

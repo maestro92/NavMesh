@@ -367,24 +367,39 @@ glm::mat4 GetCameraMatrix(const glm::vec3& eye, const glm::vec3& center, const g
 void RenderAgentEntity(
 	RenderSystem::GameRenderCommands* gameRenderCommands,
 	RenderSystem::RenderGroup* renderGroup,
+	GameState* gameState,
 	GameAssets* gameAssets,
 	Entity* entity)
 {
 	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
 	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
 
-	GameRender::RenderCircle(
-		gameRenderCommands, renderGroup, gameAssets, GameRender::COLOR_RED, entity->pos, entity->agentRadius, 0.5);
+	EditorState* editor = &gameState->editorState;
+
+	if (editor->draggedEntity == entity)
+	{
+		GameRender::RenderCircle(
+			gameRenderCommands, renderGroup, gameAssets, GameRender::DRAGGED_ENTITY_COLOR, entity->pos, entity->agentRadius, 0.5);
+	}
+	else
+	{
+		GameRender::RenderCircle(
+			gameRenderCommands, renderGroup, gameAssets, GameRender::COLOR_RED, entity->pos, entity->agentRadius, 0.5);
+	}
 }
 
 void RenderObstacleEntity(
 	RenderSystem::GameRenderCommands* gameRenderCommands,
 	RenderSystem::RenderGroup* renderGroup,
+	GameState* gameState,
 	GameAssets* gameAssets,
 	Entity* entity)
 {
 	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Wall);
 	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
+
+	EditorState* editor = &gameState->editorState;
+	bool isDragged = editor->draggedEntity == entity;
 
 	float lineThickness = 0.5;
 	glm::vec3 translate = entity->pos;
@@ -404,8 +419,17 @@ void RenderObstacleEntity(
 		pos0 += translate;
 		pos1 += translate;
 
-		GameRender::RenderLine(
-			gameRenderCommands, renderGroup, gameAssets, GameRender::COLOR_RED, pos0, pos1, lineThickness);
+
+		if (editor->draggedEntity == entity)
+		{
+			GameRender::RenderLine(
+				gameRenderCommands, renderGroup, gameAssets, GameRender::DRAGGED_ENTITY_COLOR, pos0, pos1, lineThickness);
+		}
+		else
+		{
+			GameRender::RenderLine(
+				gameRenderCommands, renderGroup, gameAssets, GameRender::COLOR_RED, pos0, pos1, lineThickness);
+		}
 	}
 
 
@@ -998,9 +1022,6 @@ void InteractWithWorldEntities(GameState* gameState,
 	World* world, 
 	glm::vec3 groundIntersectionPoint)
 {
-	glm::vec3 rayOrigin = gameState->debugCameraEntity.pos;
-	glm::vec3 rayDir = MousePosToMousePickingRay(gameState->world.cameraSetup, gameRenderCommands, gameInputState->mousePos);
-
 	EditorState* editorState = &gameState->editorState;
 
 	if (editorState->IsInSelectionMode())
@@ -1008,7 +1029,10 @@ void InteractWithWorldEntities(GameState* gameState,
 		return;
 	}
 
-//	std::cout << "intersectionPoint " << intersectionPoint.x << " " << intersectionPoint.y << " " << intersectionPoint.z << std::endl;
+	if (!editorState->isEditingEntities)
+	{
+		return;
+	}
 
 	for (int i = 0; i < world->numEntities; i++)
 	{
@@ -1050,7 +1074,15 @@ void InteractWithWorldEntities(GameState* gameState,
 	if (editorState->draggedEntity != NULL)
 	{
 		editorState->draggedEntity->pos = groundIntersectionPoint - editorState->draggedPivot;
+
+		if (gameInputState->del.endedDown)
+		{
+			world->RemoveEntity(editorState->draggedEntity);
+			editorState->draggedEntity = NULL;
+		}
+
 	}
+
 
 
 }
@@ -1147,12 +1179,12 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 
 				if (!editor->hideObstacles)
 				{
-					RenderObstacleEntity(gameRenderCommands, &group, gameAssets, entity);
+					RenderObstacleEntity(gameRenderCommands, &group, gameState, gameAssets, entity);
 				}
 				break;
 
 			case EntityFlag::AGENT:
-				RenderAgentEntity(gameRenderCommands, &group, gameAssets, entity);
+				RenderAgentEntity(gameRenderCommands, &group, gameState, gameAssets, entity);
 				break;
 		}	
 	}

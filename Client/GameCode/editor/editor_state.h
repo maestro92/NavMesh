@@ -86,7 +86,7 @@ struct EditorState {
 
 	bool highlightTriangle;
 	bool highlightGrid;
-
+	bool isEditingEntities;
 
 	bool choosingPathingStart;
 	bool choosingPathingEnd;

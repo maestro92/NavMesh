@@ -111,7 +111,6 @@ struct GameInputState
 {
 	double dtForFrame;
 
-	GameButtonState buttons[GameInputMouseButton::PlatformMouseButton_Count];
 	struct
 	{
 		GameButtonState moveUp;
@@ -122,7 +121,7 @@ struct GameInputState
 		GameButtonState zoomIn;
 		GameButtonState zoomOut;
 
-		bool drawingShapeMode;
+		GameButtonState del;
 	};
 
 	GameButtonState mouseButtons[PlatformMouseButton_Count];
@@ -142,12 +141,6 @@ struct GameInputState
 		return !mouseButtons[GameInputMouseButton::PlatformMouseButton_Right].endedDown &&
 			mouseButtons[GameInputMouseButton::PlatformMouseButton_Right].changed;
 	}
-
-	/*
-	// For debugging only;
-	double mouseX, mouseY, mouseZ;
-	bool shiftDown, altDown, controlDown;
-	*/
 };
 
 

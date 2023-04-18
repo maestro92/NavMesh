@@ -316,7 +316,10 @@ void SDLProcessPendingEvents(GameInputState* game_input_state)
 					{
 					//	SDLProcessKeyboardEvent(&game_input_state->zoomOut, isDown);
 					}
-
+					else if (keyCode == SDLK_DELETE)
+					{
+						SDLProcessKeyboardEvent(&game_input_state->del, isDown);
+					}
 					/*
 					else if (keyCode == SDLK_i)
 					{
@@ -344,10 +347,6 @@ void SDLProcessPendingEvents(GameInputState* game_input_state)
 					}
 					*/
 
-					else if (keyCode == SDLK_1)
-					{
-						game_input_state->drawingShapeMode = !game_input_state->drawingShapeMode;
-					}
 
 					else if (keyCode == SDLK_x)
 					{
@@ -392,24 +391,6 @@ void SDLProcessPendingEvents(GameInputState* game_input_state)
 
 		}
 		
-	}
-}
-
-
-
-void syncInputs(GameInputState* old_input_state, GameInputState* new_input_state)
-{
-	for (int i = 0; i < 4; i++)
-	{
-		new_input_state->buttons[i].endedDown = old_input_state->buttons[i].endedDown;
-	}
-}
-
-void debugInputs(GameInputState* new_input_state)
-{
-	for (int i = 0; i < 1; i++)
-	{
-		std::cout << new_input_state->buttons[i].endedDown << std::endl;
 	}
 }
 

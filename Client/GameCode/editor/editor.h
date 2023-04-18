@@ -189,7 +189,6 @@ namespace Editor
 			if (gameInputState->DidMouseLeftButtonClicked())
 			{
 				trigger = true;
-//				editorState->coreData->editorEvents.push(editorEventToPublish);
 			}			
 		}
 
@@ -251,7 +250,6 @@ namespace Editor
 			if (gameInputState->DidMouseLeftButtonClicked())
 			{
 				trigger = true;
-//				editorState->coreData->editorEvents.push(editorEventToPublish);
 			}
 		}
 
@@ -278,13 +276,14 @@ namespace Editor
 
 
 
-	void RenderChoice(
+	bool RenderChoice(
 		EditorState* editorState,
 		GameInputState* gameInputState,
 		GameRender::GameRenderState* gameRenderState,
 		glm::vec3 screenMousePos,
 		EntityOption* entityOption, int x, int y, int width, int height)
 	{
+		bool trigger = false;
 		RenderSystem::GameRenderCommands* gameRenderCommands = gameRenderState->gameRenderCommands;
 		RenderSystem::RenderGroup* renderGroup = gameRenderState->renderGroup;
 		GameAssets* gameAssets = gameRenderState->gameAssets;
@@ -299,8 +298,7 @@ namespace Editor
 		if (Collision::IsPointInsideRect({ profileRectMin, profileRectMax }, screenMousePos))
 		{
 			editorState->consumingMouse = true;
-			if (gameInputState->mouseButtons[(int)PlatformMouseButton_Left].endedDown && 
-				gameInputState->mouseButtons[(int)PlatformMouseButton_Left].changed)
+			if (gameInputState->DidMouseLeftButtonClicked())
 			{
 				if (editorState->selectedOption != NULL && entityOption == editorState->selectedOption)
 				{
@@ -310,6 +308,7 @@ namespace Editor
 				{
 					editorState->selectedOption = entityOption;
 				}
+				trigger = true;
 			}
 			else
 			{
@@ -333,20 +332,49 @@ namespace Editor
 				halfDim, GameRender::AlignmentMode::Left, GameRender::AlignmentMode::Bottom);
 		}
 
-
 		glm::vec3 pos = profileRectMin;
 		GameRender::DEBUGTextLine(entityOption->name.c_str(), gameRenderState, pos, 1);
+		return trigger;
 	}
 
-	void IncrementButtonIndex(int& indexX, int& indexY, int numCol)
+
+
+	struct GridLayoutHelper
 	{
-		indexX++;
-		if (indexX == numCol)
+		int startX;
+		int startY;
+		int indexX;
+		int indexY;
+		int btnWidth;
+		int btnHeight;
+		int numCol;
+
+		void GetElementPosition(int& curX, int& curY)
 		{
-			indexY++;
-			indexX = 0;
+			curX = startX + btnWidth * indexX;
+			curY = startY - btnHeight * (indexY + 1);
 		}
-	}
+
+		void IncrementElementCount()
+		{
+			indexX++;
+			if (indexX == numCol)
+			{
+				indexY++;
+				indexX = 0;
+			}
+		}
+
+		int GetNumElements()
+		{
+			return indexY * numCol + indexX;
+		}
+
+		int GetNumRow()
+		{
+			return indexY + (indexX != 0);
+		} 
+	};
 
 	void RenderEntityOptionsPanel(
 		GameInputState* gameInputState,
@@ -358,44 +386,49 @@ namespace Editor
 		RenderSystem::RenderGroup* group = gameRenderSetup->renderGroup;
 		GameAssets* gameAssets = gameRenderSetup->gameAssets;
 
+		editor->highlightedOption = NULL;
+
 		int btnWidth = 150;
 		int btnHeight = 20;
 
 		float halfWidth = gameRenderCommands->settings.dims.x / 2.0f;
 		float halfHeight = gameRenderCommands->settings.dims.y / 2.0f;
 
-		int numCol = 2;
 
 		int startX = -halfWidth;
 		int startY = halfHeight;
+		int indexX = 0, indexY = 0;
+		GridLayoutHelper gridLayoutHelper =
+		{
+			startX, startY,
+			indexX,	indexY,
+			btnWidth, btnHeight,
+			2
+		};
 
 		int curX = startX;
 		int curY = startY;
 
-		editor->highlightedOption = NULL;
-
-		int indexX = 0, indexY = 0;
 		for (int i = 0; i < editor->numOptions; i++)
 		{
-			curX = startX + btnWidth * indexX;
-			curY = startY - btnHeight * (indexY + 1);
+			gridLayoutHelper.GetElementPosition(curX, curY);
 
 			EntityOption* entityOption = &editor->options[i];
-			RenderChoice(editor, gameInputState, gameRenderSetup, screenMousePos, entityOption, curX, curY, btnWidth, btnHeight);
+			if (RenderChoice(editor, gameInputState, gameRenderSetup, screenMousePos, entityOption, curX, curY, btnWidth, btnHeight))
+			{
+				editor->isEditingEntities = false;
+			}
 
-			IncrementButtonIndex(indexX, indexY, numCol);
+			gridLayoutHelper.IncrementElementCount();
 		}
-
-		int numSpecialButtons = indexY * numCol + indexX;
-		int numRow = (numSpecialButtons + (numCol - 1)) / numCol;
 
 
 		float thickness = 0.5;
 		curX = startX;
 		curY = startY;
-		float lineHeight = numRow * btnHeight;
+		float lineHeight = gridLayoutHelper.GetNumRow() * btnHeight;
 
-		for (int x = 0; x <= numCol; x++)
+		for (int x = 0; x <= gridLayoutHelper.numCol; x++)
 		{
 			curX = startX + btnWidth * x;
 
@@ -409,8 +442,8 @@ namespace Editor
 
 		curX = startX;
 		curY = startY;
-		float lineWidth = numCol * btnWidth;
-		for (int y = 0; y <= numRow; y++)
+		float lineWidth = gridLayoutHelper.numCol * btnWidth;
+		for (int y = 0; y <= gridLayoutHelper.GetNumRow(); y++)
 		{
 			curY = startY - BTN_HEIGHT * y;
 
@@ -422,6 +455,8 @@ namespace Editor
 		}
 
 	}
+
+
 
 	void TickAndRenderEditorMenu(GameMemory* gameMemory,
 		GameInputState* gameInputState,
@@ -445,180 +480,178 @@ namespace Editor
 
 		editor->consumingMouse = false;
 
-		int numCol = 2;
+		RenderEntityOptionsPanel(gameInputState, gameRenderSetup, screenMousePos, editor);
 
+
+
+		int numCol = 2;
 		int btnWidth = 200;
 		int btnHeight = 20;
-
+		int indexX = 0, indexY = 0;
 		int startX = halfWidth - numCol * btnWidth;
 		int startY = halfHeight;
+		GridLayoutHelper gridLayoutHelper =
+		{
+			startX,	startY,
+			indexX, indexY,
+			btnWidth, btnHeight,
+			numCol
+		};
 
 		int curX = startX;
 		int curY = startY;
 
-		int indexX = 0, indexY = 0;
-
-		RenderEntityOptionsPanel(gameInputState, gameRenderSetup, screenMousePos, editor);
-
-
-		curX = startX + btnWidth * indexX;
-		curY = startY - btnHeight * (indexY + 1);
+		gridLayoutHelper.GetElementPosition(curX, curY);
 		if (RenderSpecialButton(editor, gameInputState, gameRenderSetup, screenMousePos,
 			curX, curY, btnWidth, btnHeight, "Save"))
 		{
 			editor->coreData->editorEvents.push(EditorEvent::SAVE);
 		}
-		IncrementButtonIndex(indexX, indexY, numCol);
+		gridLayoutHelper.IncrementElementCount();
+
+		
+		gridLayoutHelper.GetElementPosition(curX, curY);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Edit Entities", editor->isEditingEntities))
+		{
+			editor->isEditingEntities = !editor->isEditingEntities;
+		}
+		gridLayoutHelper.IncrementElementCount();
 
 
-		curX = startX + btnWidth * indexX;
-		curY = startY - btnHeight * (indexY + 1);
+		gridLayoutHelper.GetElementPosition(curX, curY);
 		if (RenderSpecialButton(editor, gameInputState, gameRenderSetup, screenMousePos,
 			curX, curY, btnWidth, btnHeight, "Triangulate"))
 		{
 			editor->coreData->editorEvents.push(EditorEvent::TRIANGULATE);
 		}
-		IncrementButtonIndex(indexX, indexY, numCol);
+		gridLayoutHelper.IncrementElementCount();
 
 
-		curX = startX + btnWidth * indexX;
-		curY = startY - btnHeight * (indexY + 1);
+		gridLayoutHelper.GetElementPosition(curX, curY);
 		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
 			curX, curY, btnWidth, btnHeight, "Show Grid", editor->gridConfig.showGrid))
 		{
 			editor->gridConfig.showGrid = !editor->gridConfig.showGrid;
 		}
-		IncrementButtonIndex(indexX, indexY, numCol);
+		gridLayoutHelper.IncrementElementCount();
+
 
 
 		if (editor->gridConfig.showGrid)
 		{
-			curX = startX + btnWidth * indexX;
-			curY = startY - btnHeight * (indexY + 1);
+			gridLayoutHelper.GetElementPosition(curX, curY);
 			if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
 				curX, curY, btnWidth, btnHeight, "Show Grid Coord", editor->gridConfig.showCellGridCoord))
 			{
 				editor->gridConfig.showCellGridCoord = !editor->gridConfig.showCellGridCoord;
 				editor->gridConfig.showCellSimCoord = false;
 			}
-			IncrementButtonIndex(indexX, indexY, numCol);
+			gridLayoutHelper.IncrementElementCount();
 
 
-			curX = startX + btnWidth * indexX;
-			curY = startY - btnHeight * (indexY + 1);
+			gridLayoutHelper.GetElementPosition(curX, curY);
 			if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
 				curX, curY, btnWidth, btnHeight, "Show Grid Sim Pos", editor->gridConfig.showCellSimCoord))
 			{
 				editor->gridConfig.showCellSimCoord = !editor->gridConfig.showCellSimCoord;
 				editor->gridConfig.showCellGridCoord = false;
 			}
-			IncrementButtonIndex(indexX, indexY, numCol);
+			gridLayoutHelper.IncrementElementCount();
 		}
 
-		curX = startX + btnWidth * indexX;
-		curY = startY - btnHeight * (indexY + 1);
+		gridLayoutHelper.GetElementPosition(curX, curY);
 		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
 			curX, curY, btnWidth, btnHeight, "Debug Triangle", editor->highlightTriangle))
 		{
 			editor->highlightTriangle = !editor->highlightTriangle;
 		}
-		IncrementButtonIndex(indexX, indexY, numCol);
+		gridLayoutHelper.IncrementElementCount();
 
 
-		curX = startX + btnWidth * indexX;
-		curY = startY - btnHeight * (indexY + 1);
+		gridLayoutHelper.GetElementPosition(curX, curY);
 		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
 			curX, curY, btnWidth, btnHeight, "Hide Obstacles", editor->hideObstacles))
 		{
 			editor->hideObstacles = !editor->hideObstacles;
 		}
-		IncrementButtonIndex(indexX, indexY, numCol);
+		gridLayoutHelper.IncrementElementCount();
 
 
-		curX = startX + btnWidth * indexX;
-		curY = startY - btnHeight * (indexY + 1);
+		gridLayoutHelper.GetElementPosition(curX, curY);
 		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
 			curX, curY, btnWidth, btnHeight, "Debug Grid", editor->highlightGrid))
 		{
 			editor->highlightGrid = !editor->highlightGrid;
 		}
-		IncrementButtonIndex(indexX, indexY, numCol);
+		gridLayoutHelper.IncrementElementCount();
 
 
-		curX = startX + btnWidth * indexX;
-		curY = startY - btnHeight * (indexY + 1);
+		gridLayoutHelper.GetElementPosition(curX, curY);
 		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
 			curX, curY, btnWidth, btnHeight, "Set Pathing Start", editor->choosingPathingStart))
 		{
 			editor->choosingPathingEnd = false;
 			editor->choosingPathingStart = !editor->choosingPathingStart;
 		}
-		IncrementButtonIndex(indexX, indexY, numCol);
+		gridLayoutHelper.IncrementElementCount();
 
 
-		curX = startX + btnWidth * indexX;
-		curY = startY - btnHeight * (indexY + 1);
+		gridLayoutHelper.GetElementPosition(curX, curY);
 		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
 			curX, curY, btnWidth, btnHeight, "Set Pathing End", editor->choosingPathingEnd))
 		{
 			editor->choosingPathingStart = false;
 			editor->choosingPathingEnd = !editor->choosingPathingEnd;
 		}
-		IncrementButtonIndex(indexX, indexY, numCol);
+		gridLayoutHelper.IncrementElementCount();
 
 
-		curX = startX + btnWidth * indexX;
-		curY = startY - btnHeight * (indexY + 1);
+		gridLayoutHelper.GetElementPosition(curX, curY);
 		if (RenderSpecialButton(editor, gameInputState, gameRenderSetup, screenMousePos,
 			curX, curY, btnWidth, btnHeight, "Clear Pathing Start"))
 		{
 			editor->coreData->editorEvents.push(EditorEvent::CLEAR_PATHING_START);
 		}
-		IncrementButtonIndex(indexX, indexY, numCol);
+		gridLayoutHelper.IncrementElementCount();
 
 
-		curX = startX + btnWidth * indexX;
-		curY = startY - btnHeight * (indexY + 1);
+		gridLayoutHelper.GetElementPosition(curX, curY);
 		if (RenderSpecialButton(editor, gameInputState, gameRenderSetup, screenMousePos,
 			curX, curY, btnWidth, btnHeight, "Clear Pathing End"))
 		{
 			editor->coreData->editorEvents.push(EditorEvent::CLEAR_PATHING_END);
 		}
-		IncrementButtonIndex(indexX, indexY, numCol);
+		gridLayoutHelper.IncrementElementCount();
 
 
-		curX = startX + btnWidth * indexX;
-		curY = startY - btnHeight * (indexY + 1);
+		gridLayoutHelper.GetElementPosition(curX, curY);
 		if (RenderSpecialButton(editor, gameInputState, gameRenderSetup, screenMousePos,
 			curX, curY, btnWidth, btnHeight, "PATH!"))
 		{
 			editor->coreData->editorEvents.push(EditorEvent::PATH);
 		}
-		IncrementButtonIndex(indexX, indexY, numCol);
+		gridLayoutHelper.IncrementElementCount();
 
 
-		curX = startX + btnWidth * indexX;
-		curY = startY - btnHeight * (indexY + 1);
+		gridLayoutHelper.GetElementPosition(curX, curY);
 		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
 			curX, curY, btnWidth, btnHeight, "Test Real Time", editor->testRealTime))
 		{
 			editor->testRealTime = !editor->testRealTime;
 			editor->coreData->editorEvents.push(EditorEvent::TEST_REALTIME);
 		}
-		IncrementButtonIndex(indexX, indexY, numCol);
+		gridLayoutHelper.IncrementElementCount();
 
-
-
-		int numSpecialButtons = indexY * numCol + indexX;
-		int numRow = (numSpecialButtons + (numCol - 1)) / numCol;
 
 
 		float thickness = 0.5;
 		curX = startX;
 		curY = startY;
-		float lineHeight = numRow * btnHeight;
+		int temp = gridLayoutHelper.GetNumRow();
+		float lineHeight = gridLayoutHelper.GetNumRow() * btnHeight;
 
-		for (int x = 0; x <= numCol; x++)
+		for (int x = 0; x <= gridLayoutHelper.numCol; x++)
 		{
 			curX = startX + btnWidth * x;
 
@@ -632,8 +665,8 @@ namespace Editor
 		
 		curX = startX;
 		curY = startY;
-		float lineWidth = numCol * btnWidth;
-		for (int y = 0; y <= numRow; y++)
+		float lineWidth = gridLayoutHelper.numCol * btnWidth;
+		for (int y = 0; y <= gridLayoutHelper.GetNumRow(); y++)
 		{
 			curY = startY - btnHeight * y;
 
