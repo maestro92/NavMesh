@@ -1034,13 +1034,21 @@ void InteractWithWorldEntities(GameState* gameState,
 		return;
 	}
 
+	bool done = false;
+	Entity* candidate = NULL;
 	for (int i = 0; i < world->numEntities; i++)
 	{
 		Entity* entity = &world->entities[i];
+
+		if (done)
+		{
+			break;
+		}
+
 		switch (entity->flag)
 		{
 			case EntityFlag::OBSTACLE:
-	
+			{
 				std::vector<glm::vec3> absolutePos;
 
 				for (int j = 0; j < entity->vertices.size(); j++)
@@ -1050,24 +1058,36 @@ void InteractWithWorldEntities(GameState* gameState,
 
 				if (Collision::IsPointInsidePolygon2D(groundIntersectionPoint, absolutePos))
 				{
-				//	std::cout << "entity id " << entity->id << std::endl;
+					candidate = entity;
+					done = true;
 
-					if (gameInputState->DidMouseLeftButtonClicked())
-					{
-						if (editorState->draggedEntity == entity)
-						{
-							editorState->draggedEntity = NULL;
-						}
-						else
-						{
-							editorState->draggedEntity = entity;
-							editorState->draggedPivot = groundIntersectionPoint - editorState->draggedEntity->pos;
-						}
-
-					}					
 				}
+			} break;
 
-				break;
+			case EntityFlag::AGENT:
+			{
+				if (Collision::IsPointInsideCircle(glm::vec2(groundIntersectionPoint), entity->agentRadius, glm::vec2(entity->pos)))
+				{
+					candidate = entity;
+					done = true;
+				}
+			} break;
+		}
+	}
+
+	if (candidate != NULL)
+	{
+		if (gameInputState->DidMouseLeftButtonClicked())
+		{
+			if (editorState->draggedEntity == candidate)
+			{
+				editorState->draggedEntity = NULL;
+			}
+			else
+			{
+				editorState->draggedEntity = candidate;
+				editorState->draggedPivot = groundIntersectionPoint - editorState->draggedEntity->pos;
+			}
 		}
 	}
 
