@@ -437,8 +437,10 @@ namespace PathFinding
 			return result;
 		}
 
+
 		debugState->startNodeId = node0->GetId();
 		debugState->endNodeId = node1->GetId();
+
 
 		result.valid = true;
 		if (node0 == node1)

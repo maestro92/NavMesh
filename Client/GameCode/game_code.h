@@ -387,6 +387,16 @@ void RenderAgentEntity(
 		GameRender::RenderCircle(
 			gameRenderCommands, renderGroup, gameAssets, GameRender::COLOR_RED, entity->pos, entity->agentRadius, 0.5);
 	}
+
+	for (int i = 1; i < entity->waypoints.size(); i++)
+	{
+		glm::vec3 p0 = entity->waypoints[i - 1];
+		glm::vec3 p1 = entity->waypoints[i];
+
+		GameRender::RenderPoint(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_GREEN, p1, 0.5);
+		GameRender::PushDashedLine(gameRenderCommands, renderGroup, gameAssets, GameRender::COLOR_GREEN, p0, p1, 0.5);
+	}
+
 }
 
 void RenderObstacleEntity(
@@ -1212,16 +1222,9 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 
 
 
-
-
-	
-
-
 	RenderTriangulationDebug(gameRenderCommands, &group, gameAssets, world->triangulationDebug);
 	RenderVoronoiDebug(gameRenderCommands, &group, gameAssets, world->voronoiDebug);
 	
-	
-
 	
 	glm::vec3 rayOrigin = gameState->debugCameraEntity.pos;
 	glm::vec3 rayDir = MousePosToMousePickingRay(gameState->world.cameraSetup, gameRenderCommands, gameInputState->mousePos);
@@ -1638,6 +1641,13 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		else if (editorEvent == EditorEvent::CLEAR_PATHING_END)
 		{
 			gameState->world.pathingDebug->hasSetEndPos = false;
+		}
+		else if (editorEvent == EditorEvent::ENTER_SIM_MODE)
+		{
+			TriangulateMap(&gameState->world);
+
+			World* world = &gameState->world;
+			world->pathingDebug->dualGraph = new NavMesh::DualGraph(world->cdTriangulationGraph->triangles);
 		}
 	}
 

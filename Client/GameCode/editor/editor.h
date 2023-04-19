@@ -639,7 +639,7 @@ namespace Editor
 			curX, curY, btnWidth, btnHeight, "Enter SimMode", editor->isInSimMode))
 		{
 			editor->isInSimMode = !editor->isInSimMode;
-			editor->coreData->editorEvents.push(EditorEvent::TEST_REALTIME);
+			editor->coreData->editorEvents.push(EditorEvent::ENTER_SIM_MODE);
 		}
 		gridLayoutHelper.IncrementElementCount();
 

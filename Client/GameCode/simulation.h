@@ -3,7 +3,7 @@
 #include "simulation.h"
 #include "game_state.h"
 #include "world.h"
-
+#include "pathfinding.h"
 
 namespace Sim
 {
@@ -11,19 +11,20 @@ namespace Sim
 
 	void SetDestination(SimulationState* simState,
 		GameInputState* gameInputState,
+		World* world,
 		glm::vec3 groundIntersectionPoint)
 	{
-		if (simState->selectedEntity != NULL)
+		Entity* entity = simState->selectedEntity;
+		if (entity != NULL)
 		{
 			if (gameInputState->DidMouseRightButtonClicked())
 			{
-				simState->selectedEntity->destination = groundIntersectionPoint;
+				entity->destination = groundIntersectionPoint;
+				PathFinding::PathfindingResult pathingResult = PathFinding::FindPath(world->pathingDebug, world, entity->pos, entity->destination);
+				entity->waypoints = pathingResult.waypoints;
 			}
 		}
 	}
-
-
-
 
 
 	void InteractWorldEntities(SimulationState* simState,
@@ -93,7 +94,20 @@ namespace Sim
 	{
 		InteractWorldEntities(simState, gameInputState, gameRenderCommands, world, groundIntersectionPoint);
 
-		SetDestination(simState, gameInputState, groundIntersectionPoint);
+		SetDestination(simState, gameInputState, world, groundIntersectionPoint);
 
+
+		for (int i = 0; i < world->numEntities; i++)
+		{
+			Entity* entity = &world->entities[i];
+			switch (entity->flag)
+			{
+				case EntityFlag::AGENT:
+				{
+
+
+				} break;
+			}
+		}
 	}
 }

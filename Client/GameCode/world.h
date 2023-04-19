@@ -39,7 +39,7 @@ struct Entity
 
 	float agentRadius;
 	glm::vec3 destination;
-
+	std::vector<glm::vec3> waypoints;
 
 	std::vector<glm::vec3> vertices;
 

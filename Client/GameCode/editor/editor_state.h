@@ -31,7 +31,7 @@ enum EditorEvent {
 	CLEAR_PATHING_START,
 	CLEAR_PATHING_END,
 	PATH,
-	TEST_REALTIME
+	ENTER_SIM_MODE
 };
 
 struct EditorStateData
