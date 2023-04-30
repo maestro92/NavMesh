@@ -30,6 +30,11 @@ namespace NavMesh
 		}
 	};
 
+	struct Portal {
+		glm::vec3 left;
+		glm::vec3 right;
+	};
+
 	struct DualGraph
 	{
 		std::vector<DualGraphNode> nodes;
@@ -99,12 +104,24 @@ namespace NavMesh
 		}
 		*/
 
-		std::vector<CDTriangulation::DelaunayTriangleEdge> GetPortalList(std::vector<int> nodeIds)
+
+		void GetEdgeVertices(
+			CDTriangulation::DelaunayTriangleEdge edge,
+			CDTriangulation::Graph* graph,
+			Portal& portal)
 		{
-			std::vector<CDTriangulation::DelaunayTriangleEdge> portals;
+			int id0 = edge.vertices[0];
+			portal.right = graph->GetVertexById(id0).pos;
+
+			int id1 = edge.vertices[1];
+			portal.left = graph->GetVertexById(id1).pos;
+		}
+
+		void AddToPortalList(CDTriangulation::Graph* graph, std::vector<int> nodeIds, std::vector<Portal>& portals)
+		{
 			for (int i = 1; i < nodeIds.size(); i++)
 			{
-				int nodeId0 = nodeIds[i-1];
+				int nodeId0 = nodeIds[i - 1];
 				int nodeId1 = nodeIds[i];
 
 				DualGraphNode* node0 = GetNode(nodeId0);
@@ -114,13 +131,13 @@ namespace NavMesh
 				{
 					if (triangle->neighbors[ni] == nodeId1)
 					{
-						portals.push_back(triangle->edges[ni]);
+						Portal portal;
+						GetEdgeVertices(triangle->edges[ni], graph, portal);
+						portals.push_back(portal);
 					}
 				}
 			}
-			return portals;
 		}
-		
 	};
 
 };

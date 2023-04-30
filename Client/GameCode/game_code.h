@@ -789,12 +789,9 @@ void RenderPathingData(
 
 	for (int i = 0; i < debugState->portals.size(); i++)
 	{
-		CDTriangulation::DelaunayTriangleEdge edge = debugState->portals[i];
+		NavMesh::Portal portal = debugState->portals[i];
 
-		CDTriangulation::Vertex v0 = world->cdTriangulationGraph->GetVertexById(edge.vertices[0]);
-		CDTriangulation::Vertex v1 = world->cdTriangulationGraph->GetVertexById(edge.vertices[1]);
-
-		GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_TEAL, v0.pos, v1.pos, 0.5);
+		GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_TEAL, portal.left, portal.right, 0.5);
 
 	}
 

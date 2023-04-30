@@ -20,6 +20,6 @@ namespace PathFinding
 
 		NavMesh::DualGraph* dualGraph;
 		std::vector<glm::vec3> waypoints;
-		std::vector<CDTriangulation::DelaunayTriangleEdge> portals;
+		std::vector<NavMesh::Portal> portals;
 	};
 }
