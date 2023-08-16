@@ -27,29 +27,16 @@ enum EntityFlag
 	REMOVED
 };
 
-struct Entity
+struct CameraEntity
 {
-	EntityFlag flag;
-
-	int id;
-	glm::vec3 pos;
-	glm::vec3 dim;
-	glm::vec3 velocity;
-
-
-	float agentRadius;
-	glm::vec3 destination;
-	std::vector<glm::vec3> waypoints;
-
-	std::vector<glm::vec3> vertices;
-
-	// For AABB physics, in object space
-	glm::vec3 min;
-	glm::vec3 max;
-
+	// consider storing these 4 as a matrix?
+	// then add accessors
+	glm::vec3 position;
+	// camera is viewing along -zAxis
 	glm::vec3 xAxis;
 	glm::vec3 yAxis;
 	glm::vec3 zAxis;
+
 	float pitch;
 	void SetViewDirection(glm::vec3 viewDirection)
 	{
@@ -69,11 +56,28 @@ struct Entity
 		yAxis = glm::vec3(cameraMatrix[1][0], cameraMatrix[1][1], cameraMatrix[1][2]);
 		zAxis = glm::vec3(cameraMatrix[2][0], cameraMatrix[2][1], cameraMatrix[2][2]);
 	}
+};
 
-//	Entity* groundEntity;
-	// For Rendering
-	// TODO: change this model index
-//	std::vector<Face> model;
+struct Entity
+{
+	EntityFlag flag;
+
+	int id;
+	glm::vec3 pos;
+	glm::vec3 dim;
+	glm::vec3 velocity;
+
+	glm::vec3 facingDirection;
+
+	float agentRadius;
+	glm::vec3 destination;
+	std::vector<glm::vec3> waypoints;
+
+	std::vector<glm::vec3> vertices;
+
+	// For AABB physics, in object space
+	glm::vec3 min;
+	glm::vec3 max;
 };
 
 struct PlayerEntity
@@ -310,7 +314,7 @@ struct World
 		// clockwise
 		std::vector<GeoCore::Polygon> holes;
 
-		int testPathingCase = 2;
+		int testPathingCase = 0;
 		if (testPathingCase == 1)
 		{
 			vertices.push_back(glm::vec3(130, 0, 0));
@@ -417,6 +421,7 @@ struct World
 		entity->pos = pos;
 		entity->agentRadius = radius;
 		entity->flag = EntityFlag::AGENT;
+		entity->facingDirection = glm::vec3(1, 0, 0);
 	}
 
 	void AddObstacle(glm::vec3 pos, std::vector<glm::vec3> vertices)
@@ -427,6 +432,7 @@ struct World
 		entity->pos = pos;
 		entity->vertices = vertices;
 		entity->flag = EntityFlag::OBSTACLE;
+		entity->facingDirection = glm::vec3(1, 0, 0);
 	}
 
 	void RemoveEntity(Entity* entity)

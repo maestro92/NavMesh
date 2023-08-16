@@ -369,6 +369,7 @@ void RenderAgentEntity(
 	RenderSystem::RenderGroup* renderGroup,
 	GameState* gameState,
 	GameAssets* gameAssets,
+	World* world,
 	Entity* entity)
 {
 	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
@@ -377,16 +378,35 @@ void RenderAgentEntity(
 	EditorState* editor = &gameState->editorState;
 	SimulationState* simState = &gameState->simState;
 
+	glm::vec4 color;
 	if (editor->draggedEntity == entity || simState->selectedEntity == entity)
 	{
-		GameRender::RenderCircle(
-			gameRenderCommands, renderGroup, gameAssets, GameRender::DRAGGED_ENTITY_COLOR, entity->pos, entity->agentRadius, 0.5);
+		color = GameRender::DRAGGED_ENTITY_COLOR;
 	}
 	else
 	{
-		GameRender::RenderCircle(
-			gameRenderCommands, renderGroup, gameAssets, GameRender::COLOR_RED, entity->pos, entity->agentRadius, 0.5);
+		color = GameRender::COLOR_RED;
 	}
+
+	float thickness = 0.5;
+
+	GameRender::RenderCircle(
+		gameRenderCommands, renderGroup, gameAssets, color, entity->pos, entity->agentRadius, thickness);
+
+	float arrowThickness = 0.2;
+	glm::vec3 arrowApex = entity->pos + entity->facingDirection * entity->agentRadius;
+
+	glm::vec3 perp = glm::cross(entity->facingDirection, world->zAxis);
+	glm::vec3 leftArrowEnd = entity->pos + perp * entity->agentRadius;
+	glm::vec3 rightArrowEnd = entity->pos - perp * entity->agentRadius;
+
+	GameRender::RenderLine(
+		gameRenderCommands, renderGroup, gameAssets, color, leftArrowEnd, arrowApex, arrowThickness);
+	GameRender::RenderLine(
+		gameRenderCommands, renderGroup, gameAssets, color, rightArrowEnd, arrowApex, arrowThickness);
+	GameRender::RenderLine(
+		gameRenderCommands, renderGroup, gameAssets, color, entity->pos, arrowApex, arrowThickness);
+
 
 	for (int i = 1; i < entity->waypoints.size(); i++)
 	{
@@ -874,9 +894,9 @@ void RenderCDTriangulationDebug(
 	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
 
 	float thickness = 0.2f;
-	for (int i = 0; i < triangulationDebug->vertices.size(); i++)
+	for (int i = 0; i < triangulationDebug->rawInputVertices.size(); i++)
 	{
-		GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_GREEN, triangulationDebug->vertices[i], 1);
+		GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_GREEN, triangulationDebug->rawInputVertices[i], 1);
 	}
 
 	for (int j = 0; j < triangulationDebug->holes.size(); j++)
@@ -991,7 +1011,7 @@ struct PlayerMoveData
 	glm::vec3 velocity;
 };
 
-
+/*
 glm::vec3 UpdateEntityViewDirection(Entity* entity, GameInputState* gameInputState, glm::ivec2 windowDimensions)
 {
 	float angleXInDeg = 0;
@@ -1023,6 +1043,7 @@ glm::vec3 UpdateEntityViewDirection(Entity* entity, GameInputState* gameInputSta
 	newViewDir = glm::normalize(newViewDir);
 	return newViewDir;
 }
+*/
 
 void EditorInteractWithWorldEntities(GameState* gameState, 
 	GameInputState* gameInputState, 
@@ -1119,11 +1140,10 @@ void EditorInteractWithWorldEntities(GameState* gameState,
 void WorldTickAndRender(GameState* gameState, TransientState* transientState, GameAssets* gameAssets,
 	GameInputState* gameInputState, RenderSystem::GameRenderCommands* gameRenderCommands, glm::ivec2 windowDimensions, DebugModeState* debugModeState)
 {
-	Entity* controlledEntity = &gameState->debugCameraEntity;
-
+	
 	World* world = &gameState->world;
 	
-	controlledEntity = &gameState->debugCameraEntity;
+	CameraEntity* controlledEntity = &gameState->cameraEntity;
 
 
 	glm::vec3 newViewDir = controlledEntity->GetViewDirection();
@@ -1157,11 +1177,11 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 
 
 	float dt = 0.1f;// FIXED_UPDATE_TIME_S;
-	controlledEntity->pos += pmove.velocity * dt;
+	controlledEntity->position += pmove.velocity * dt;
 
 
 	// Update camera matrix
-	glm::vec3 center = controlledEntity->pos + newViewDir;
+	glm::vec3 center = controlledEntity->position + newViewDir;
 	glm::vec3 supportUpVector = glm::vec3(0, 1, 0);
 	if (glm::dot(newViewDir, supportUpVector) == 1)
 	{
@@ -1169,12 +1189,12 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 	}
 
 
-	glm::mat4 cameraMatrix = GetCameraMatrix(controlledEntity->pos, center, supportUpVector);
+	glm::mat4 cameraMatrix = GetCameraMatrix(controlledEntity->position, center, supportUpVector);
 	controlledEntity->SetOrientation(cameraMatrix);
 
 	globalDebugCameraMat = cameraMatrix;
 
-	glm::mat4 cameraTransform = glm::translate(controlledEntity->pos);// *cameraRot;
+	glm::mat4 cameraTransform = glm::translate(controlledEntity->position);// *cameraRot;
 	glm::mat4 cameraProj = glm::perspective(45.0f, windowDimensions.x / (float)windowDimensions.y, 0.5f, 5000.0f);
 
 	world->cameraSetup.proj = cameraProj;
@@ -1212,7 +1232,7 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 				break;
 
 			case EntityFlag::AGENT:
-				RenderAgentEntity(gameRenderCommands, &group, gameState, gameAssets, entity);
+				RenderAgentEntity(gameRenderCommands, &group, gameState, gameAssets, world, entity);
 				break;
 		}	
 	}
@@ -1223,7 +1243,7 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 	RenderVoronoiDebug(gameRenderCommands, &group, gameAssets, world->voronoiDebug);
 	
 	
-	glm::vec3 rayOrigin = gameState->debugCameraEntity.pos;
+	glm::vec3 rayOrigin = gameState->cameraEntity.position;
 	glm::vec3 rayDir = MousePosToMousePickingRay(gameState->world.cameraSetup, gameRenderCommands, gameInputState->mousePos);
 
 	glm::vec3 groundIntersectionPoint;
@@ -1311,8 +1331,9 @@ Object SerializeEntity(Entity* entity)
 	else if (entity->flag == EntityFlag::AGENT)
 	{
 		entityObj.push_back(Pair("agentRadius", entity->agentRadius));
+		entityObj.push_back(Pair("facingDirectionX", entity->facingDirection.x));
+		entityObj.push_back(Pair("facingDirectionY", entity->facingDirection.y));
 	}
-
 
 	return entityObj;
 }
@@ -1353,6 +1374,11 @@ void DeserializeEntity(Entity* entity, const mObject& obj)
 	{
 		float agentRadius = GameIO::FindValue(obj, "agentRadius").get_real();
 		entity->agentRadius = agentRadius;
+
+		float x = GameIO::FindValue(obj, "facingDirectionX").get_real();
+		float y = GameIO::FindValue(obj, "facingDirectionY").get_real();
+
+		entity->facingDirection = glm::vec3(x, y, 0);
 	}
 }
 
@@ -1381,7 +1407,6 @@ void LoadMap(World* world, string fileName)
 	float pathingStartX = GameIO::FindValue(obj, "pathingStartX").get_real();
 	float pathingStartY = GameIO::FindValue(obj, "pathingStartY").get_real();
 	world->pathingDebug->start = glm::vec3(pathingStartX, pathingStartY, 0);
-
 
 	world->pathingDebug->hasSetEndPos = GameIO::FindValue(obj, "hasPathingEnd").get_bool();
 	float pathingEndX = GameIO::FindValue(obj, "pathingEndX").get_real();
@@ -1421,6 +1446,13 @@ void SaveMap(World* world, string savedFileName)
 	myfile.close();
 	
 }
+
+void SetupForPathing(World* world)
+{
+	world->cdTriangulationGraph->SetupForPathingFinding();
+}
+
+
 
 void TriangulateMap(World* world)
 {
@@ -1540,21 +1572,17 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		}
 		else if (testCase == 2)
 		{
-			LoadMap(&gameState->world, "TestData/data2.txt");
+			LoadMap(&gameState->world, "TestData/data3.txt");
 		}
 
 
-		gameState->debugCameraEntity = {};
-		gameState->debugCameraEntity.pos = glm::vec3(0, -90, 400);
+		gameState->cameraEntity = {};
+		gameState->cameraEntity.position = glm::vec3(0, -90, 400);
 
-		gameState->debugCameraEntity.xAxis = glm::normalize(glm::vec3(1.0, 0.0, 0.0));
-		gameState->debugCameraEntity.yAxis = glm::normalize(glm::vec3(0.0, 0.96, 0.25));
-		gameState->debugCameraEntity.zAxis = glm::normalize(glm::vec3(0.0, -0.25, 0.96));
+		gameState->cameraEntity.xAxis = glm::normalize(glm::vec3(1.0, 0.0, 0.0));
+		gameState->cameraEntity.yAxis = glm::normalize(glm::vec3(0.0, 0.96, 0.25));
+		gameState->cameraEntity.zAxis = glm::normalize(glm::vec3(0.0, -0.25, 0.96));
 		
-
-		gameState->debugCameraEntity.min = glm::vec3(-10, -10, -10);
-		gameState->debugCameraEntity.max = glm::vec3(10, 10, 10);
-
 		gameState->mouseIsDebugMode = false;
 
 
@@ -1613,6 +1641,7 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 
 			SaveMap(&gameState->world, "TestData/Last Data.txt");
 			TriangulateMap(&gameState->world);
+			SetupForPathing(&gameState->world);
 		}
 		else if (editorEvent == EditorEvent::CLEAR_PATHING_START)
 		{
@@ -1837,21 +1866,21 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 	size = sprintf(ptr, "\n");
 	ptr += size;
 
-	size = sprintf(ptr, "CameraPos is %f %f %f\n", gameState->debugCameraEntity.pos.x, gameState->debugCameraEntity.pos.y, gameState->debugCameraEntity.pos.z);
+	size = sprintf(ptr, "CameraPos is %f %f %f\n", gameState->cameraEntity.position.x, gameState->cameraEntity.position.y, gameState->cameraEntity.position.z);
 	ptr += size;
 
-	size = sprintf(ptr, "xDir is %f %f %f\n", gameState->debugCameraEntity.xAxis.x, gameState->debugCameraEntity.xAxis.y, gameState->debugCameraEntity.xAxis.z);
+	size = sprintf(ptr, "xDir is %f %f %f\n", gameState->cameraEntity.xAxis.x, gameState->cameraEntity.xAxis.y, gameState->cameraEntity.xAxis.z);
 	ptr += size;
 
-	size = sprintf(ptr, "yDir is %f %f %f\n", gameState->debugCameraEntity.yAxis.x, gameState->debugCameraEntity.yAxis.y, gameState->debugCameraEntity.yAxis.z);
+	size = sprintf(ptr, "yDir is %f %f %f\n", gameState->cameraEntity.yAxis.x, gameState->cameraEntity.yAxis.y, gameState->cameraEntity.yAxis.z);
 	ptr += size;
 
-	size = sprintf(ptr, "zDir is %f %f %f\n", gameState->debugCameraEntity.zAxis.x, gameState->debugCameraEntity.zAxis.y, gameState->debugCameraEntity.zAxis.z);
+	size = sprintf(ptr, "zDir is %f %f %f\n", gameState->cameraEntity.zAxis.x, gameState->cameraEntity.zAxis.y, gameState->cameraEntity.zAxis.z);
 	ptr += size;
 
-	size = sprintf(ptr, "viewDir is %f %f %f\n", gameState->debugCameraEntity.GetViewDirection().x, 
-		gameState->debugCameraEntity.GetViewDirection().y, 
-		gameState->debugCameraEntity.GetViewDirection().z);
+	size = sprintf(ptr, "viewDir is %f %f %f\n", gameState->cameraEntity.GetViewDirection().x,
+		gameState->cameraEntity.GetViewDirection().y,
+		gameState->cameraEntity.GetViewDirection().z);
 	ptr += size;
 
 

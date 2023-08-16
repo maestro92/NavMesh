@@ -476,7 +476,7 @@ int main(int argc, char *argv[])
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC | SDL_INIT_AUDIO);
 
 
-	glm::ivec2 windowDimensions = glm::ivec2(1024, 768);
+	glm::ivec2 windowDimensions = glm::ivec2(1366, 768);
 
 
 	SDL_Window* window = SDL_CreateWindow("FaceOff 2", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowDimensions.x, windowDimensions.y,

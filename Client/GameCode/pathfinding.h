@@ -255,16 +255,16 @@ namespace PathFinding
 
 		results.push_back(start);
 
-		std::cout << "portalApex " << portalApex.x << " " << portalApex.y << std::endl;
-		std::cout << "		portalRightPoint " << portalRightPoint.x << " " << portalRightPoint.y << std::endl;
-		std::cout << "		portalLeftPoint " << portalLeftPoint.x << " " << portalLeftPoint.y << std::endl;
+		// std::cout << "portalApex " << portalApex.x << " " << portalApex.y << std::endl;
+		// std::cout << "		portalRightPoint " << portalRightPoint.x << " " << portalRightPoint.y << std::endl;
+		// std::cout << "		portalLeftPoint " << portalLeftPoint.x << " " << portalLeftPoint.y << std::endl;
 
 		int apexIndex = 0, leftIndex = 0, rightIndex = 0;
 		glm::vec3 dirL, dirR;
 
 		for (int i = 1; i < portals.size(); i++)
 		{
-			std::cout << "checking edges " << i << std::endl;
+			// std::cout << "checking edges " << i << std::endl;
 			
 			// now we check edges 
 			NavMesh::Portal portal = portals[i];

@@ -31,11 +31,22 @@ namespace CDTriangulation
 
 	struct DelaunayTriangleEdge {
 		int vertices[2];
+		bool isConstrained;
+
+		DelaunayTriangleEdge()
+		{
+			isConstrained = false;
+		}
 
 		friend bool operator==(const DelaunayTriangleEdge& l, const DelaunayTriangleEdge& r)
 		{
 			return l.vertices[0] == r.vertices[0] && l.vertices[1] == r.vertices[1] ||
 				l.vertices[0] == r.vertices[1] && l.vertices[1] == r.vertices[0];
+		}
+
+		friend bool operator!=(const DelaunayTriangleEdge& l, const DelaunayTriangleEdge& r)
+		{
+			return !(l == r);
 		}
 	};
 
@@ -56,7 +67,8 @@ namespace CDTriangulation
 		bool isObstacle;
 
 		DelaunayTriangleEdge edges[NUM_TRIANGLE_EDGES];
-		
+		float halfWidths[NUM_TRIANGLE_VERTEX];
+
 		DelaunayTriangle()
 		{
 			isObstacle = false;
@@ -82,6 +94,11 @@ namespace CDTriangulation
 				}
 			}
 			return true;
+		}
+
+		friend bool operator!=(const DelaunayTriangle& l, const DelaunayTriangle& r)
+		{
+			return !(l == r);
 		}
 
 		glm::vec3 GetCenter()
@@ -159,6 +176,38 @@ namespace CDTriangulation
 			return false;
 		}
 
+		// e0 -> v2
+		// e1 -> v0
+		// e2 -> v1
+		bool TryGetOppositeVertex(const DelaunayTriangleEdge& edge, Vertex& vertex) const
+		{
+			for (int i = 0; i < NUM_TRIANGLE_EDGES; i++)
+			{
+				if (edges[i] == edge)
+				{
+					vertex = vertices[(i + 2) % 3];
+					return true;
+				}
+			}
+			return false;
+		}
+
+		// v0 -> e1
+		// v1 -> e2
+		// v2 -> e0
+		bool TryGetOppositeEdge(const Vertex& vertex, DelaunayTriangleEdge& edge) const
+		{
+			for (int i = 0; i < NUM_TRIANGLE_VERTEX; i++)
+			{
+				if (vertices[i].id == vertex.id)
+				{
+					edge = edges[(i + 1) % 3];
+					return true;
+				}
+			}
+			return false;
+		}
+
 		bool ContainsEdge(const DelaunayTriangleEdge& edge) const
 		{
 			for (int i = 0; i < NUM_TRIANGLE_EDGES; i++)
@@ -181,6 +230,19 @@ namespace CDTriangulation
 				}
 			}
 			return INVALID_INDEX;
+		}
+
+		std::vector<DelaunayTriangleEdge> GetOtherEdges(DelaunayTriangleEdge edge)
+		{
+			std::vector<DelaunayTriangleEdge> otherEdges;
+			for (int i = 0; i < NUM_TRIANGLE_EDGES; i++)
+			{
+				if (edges[i] != edge)
+				{
+					otherEdges.push_back(edges[i]);
+				}
+			}
+			return otherEdges;
 		}
 
 		void GenerateEdges()
@@ -247,7 +309,8 @@ namespace CDTriangulation
 
 	struct Graph
 	{
-		std::vector<glm::vec3> vertices;
+		std::vector<glm::vec3> rawInputVertices;
+		
 		std::vector<GeoCore::Polygon> holes;
 		std::vector<std::vector<Vertex>> intersectingEdges;
 	//	std::vector<DebugConstrainedEdgePolygon> debugConstrainedEdgePolygons;
@@ -258,6 +321,8 @@ namespace CDTriangulation
 		std::vector<DelaunayTriangle> triangles;
 		std::vector<DelaunayTriangle*> trianglesById;
 		std::vector<Vertex> masterVertexList;
+
+
 
 		bool triangulated;
 
@@ -271,10 +336,209 @@ namespace CDTriangulation
 			return masterVertexList[id];
 		}
 
+		DelaunayTriangle* GetTriangleById(int id)
+		{
+			return trianglesById[id];
+		}
+
 		Graph()
 		{
 			triangulated = false;
 		}
+
+		void SetupForPathingFinding()
+		{
+			// compute the HalfWidth
+			for (int i = 0; i < triangles.size(); i++)
+			{
+				CalculateWidthForTriangle(&triangles[i]);
+			}
+		}
+
+		void CalculateWidthForTriangle(DelaunayTriangle* triangle)
+		{
+			for (int i = 0; i < NUM_TRIANGLE_VERTEX; i++)
+			{
+				int ic = i;
+				int ia = (i + 1) % NUM_TRIANGLE_VERTEX;
+				int ib = (i + 2) % NUM_TRIANGLE_VERTEX;
+
+				Vertex va = triangle->vertices[ia];
+				Vertex vb = triangle->vertices[ib];
+				Vertex vc = triangle->vertices[ic];
+
+
+				DelaunayTriangleEdge ea;
+				triangle->TryGetOppositeEdge(va, ea);
+					
+				DelaunayTriangleEdge eb;
+				triangle->TryGetOppositeEdge(vb, eb);
+
+				DelaunayTriangleEdge ec;
+				triangle->TryGetOppositeEdge(vc, ec);
+
+
+				float halfWidth = CalculateWidthForVertex(triangle, ea, eb, ec, va, vb, vc);
+				triangle->halfWidths[i] = halfWidth;
+
+				std::cout << ">>>> halfWidth " << halfWidth << std::endl;
+			}
+		}
+
+
+		// https://skatgame.net/mburo/ps/thesis_demyen_2006.pdf
+		// this calcualtes the width for vertexC,
+		// ea and eb corners vertexC
+		//
+		// also note that va is the vertex opposite of ea
+		// vb is the vertex opposite of eb
+		// same with vc and ec
+		float CalculateWidthForVertex(DelaunayTriangle* triangle, 
+			DelaunayTriangleEdge ea, DelaunayTriangleEdge eb, DelaunayTriangleEdge ec,
+			Vertex va, Vertex vb, Vertex vc)
+		{
+			assert(ea.vertices[1] == eb.vertices[0]);
+			assert(ea.vertices[1] == vc.id);
+
+			std::cout << ">>>> Calculating vertex for " << vc.id << std::endl;
+
+			float lengthA = Length(ea);
+			float lengthB = Length(eb);
+
+			// best distance so far
+			float curLargestWidth = std::min(lengthA, lengthB);
+
+			if (Math::IsObtuseOrRight(vc.pos, va.pos, vb.pos) || Math::IsObtuseOrRight(vc.pos, vb.pos, va.pos))
+			{
+				std::cout << "   Distance " << std::endl;
+				return curLargestWidth;
+			}
+			else if (ec.isConstrained)	
+			{
+				std::cout << "   DistanceBetweenEdgeAndVertex " << std::endl;
+				// if ec is a constrained edge in DelaunayTriangle
+				return DistanceBetweenEdgeAndVertex(ec, vc);
+			}
+			else
+			{
+				std::cout << "   SearchWidth " << std::endl;
+				return SearchWidth(triangle, vc, ec, curLargestWidth);
+			}
+		}
+
+		float Length(DelaunayTriangleEdge edge)
+		{
+			Vertex v0 = GetVertexById(edge.vertices[0]);
+			Vertex v1 = GetVertexById(edge.vertices[1]);
+
+			glm::vec3 len = v0.pos - v1.pos;
+			return glm::length(len);
+		}
+
+		float DistanceBetweenEdgeAndVertex(DelaunayTriangleEdge edge, Vertex v)
+		{
+			Vertex va = GetVertexById(edge.vertices[0]);
+			Vertex vb = GetVertexById(edge.vertices[1]);
+
+			float t;
+			glm::vec3 closestPoint;
+			Math::ClosestPointBetweenPointSegment(v.pos, va.pos, vb.pos, t, closestPoint);
+
+			glm::vec3 len = v.pos - closestPoint;
+			return glm::length(len);
+		}
+
+		// we are searching the closest point on edge to vertex v
+		float SearchWidth(DelaunayTriangle* triangle, Vertex v, DelaunayTriangleEdge edge, float curLargestWidth)
+		{
+			Vertex v0 = GetVertexById(edge.vertices[0]);
+			Vertex v1 = GetVertexById(edge.vertices[1]);
+
+			if (Math::IsObtuseOrRight(v.pos, v0.pos, v1.pos) && Math::IsObtuseOrRight(v.pos, v1.pos, v0.pos))
+			{
+				return curLargestWidth;
+			}
+
+			float distance2 = DistanceBetweenEdgeAndVertex(edge, v);
+			if (distance2 > curLargestWidth)
+			{
+				return curLargestWidth;	// Essentially case 1
+			}
+			else if (edge.isConstrained)
+			{
+				return distance2; // Essentially case 2
+			}
+			else
+			{
+				int triangleId = FindOppositeTriangle(triangle, edge);
+				if (triangleId != INVALID_INDEX)
+				{
+					DelaunayTriangle* oppositeTriangle = GetTriangleById(triangleId);
+
+					std::vector<DelaunayTriangleEdge> otherEdges = oppositeTriangle->GetOtherEdges(edge);
+					curLargestWidth = SearchWidth(oppositeTriangle, v, otherEdges[0], curLargestWidth);
+
+					return SearchWidth(oppositeTriangle, v, otherEdges[1], curLargestWidth);
+				}
+				else
+				{
+					return curLargestWidth;
+				}
+			}
+		}
+
+		// optimize this
+		int FindOppositeTriangle(DelaunayTriangle* triangle, DelaunayTriangleEdge edge)
+		{
+			for (int i = 0; i < triangles.size(); i++)
+			{
+				if (triangles[i].id == triangle->id)
+				{
+					continue;
+				}
+				else
+				{
+					if (triangles[i].ContainsEdge(edge))
+					{
+						return triangles[i].id;
+					}
+				}
+			}
+			return INVALID_INDEX;
+		}
+
+		/*
+		void CalculateWidthForTriangle(DelaunayTriangle* triangle)
+		{
+			for (int i = 0; i < NUM_TRIANGLE_VERTEX; i++)
+			{
+
+			
+				Vertex centerVertex = triangle->vertices[i];
+				std::vector<DelaunayTriangleEdge> edges;
+				triangle->GetTwoEdgesThatCornersVertex(centerVertex.id, edges);
+
+				Vertex v0, v1;
+				bool valid = true;
+				if (!triangle->TryGetOppositeVertex(edges[0], v0))
+				{
+					valid = false;
+				}
+				
+				if (!triangle->TryGetOppositeVertex(edges[1], v1))
+				{
+					valid = false;
+				}
+
+				if (valid)
+				{
+					float width = CalculateWidthForVertex(triangle, edges[0], edges[1], )
+				}
+				
+			}
+		}
+		*/
+
 	};
 
 	/*
@@ -737,9 +1001,18 @@ namespace CDTriangulation
 		}
 	}
 
+	void MarkConstrainedEdge(DelaunayTriangle* triangle, DelaunayTriangleEdge edge)
+	{
+		for (int i = 0; i < NUM_TRIANGLE_EDGES; i++)
+		{
+			if (triangle->edges[i] == edge)
+			{
+				triangle->edges[i].isConstrained = true;
+			}
+		}
+	}
 
-
-	bool ContainsEdge(DelaunayTriangleEdge edge, std::vector<DelaunayTriangle>& triangles)
+	bool ContainsEdge(DelaunayTriangleEdge edge, std::vector<DelaunayTriangle>& triangles, DelaunayTriangle* &containingTriangle)
 	{
 		for (int i = 0; i < triangles.size(); i++)
 		{
@@ -747,6 +1020,7 @@ namespace CDTriangulation
 			{
 				if (triangles[i].edges[j] == edge)
 				{
+					containingTriangle = &triangles[i];
 					return true;
 				}
 			}
@@ -1106,7 +1380,7 @@ namespace CDTriangulation
 		}
 	}
 
-	void GetConstrainedEdgesFromHole(
+	void MarkAndGetConstrainedEdgesFromHole(
 		std::vector<int> holeVertices, 
 		std::vector<Vertex>& masterVertexArray,
 		std::vector<DelaunayTriangle>& triangles,
@@ -1140,9 +1414,14 @@ namespace CDTriangulation
 
 			allConstrainedEdges.push_back(edge);
 
-			if (!ContainsEdge(edge, triangles))
+			DelaunayTriangle* containingTriangle = NULL;
+			if (!ContainsEdge(edge, triangles, containingTriangle))
 			{
 				constrainedEdges.push_back(edge);
+			}
+			else
+			{
+				MarkConstrainedEdge(containingTriangle, edge);
 			}
 
 			// if we only have one edge, we just return after creating the first edge
@@ -1163,7 +1442,7 @@ namespace CDTriangulation
 		glm::ivec2 mapSize,
 		Graph* debugState)
 	{
-		debugState->vertices = points;
+		debugState->rawInputVertices = points;
 		debugState->holes = holes;
 
 		int triangleCounter = 0;
@@ -1233,6 +1512,7 @@ namespace CDTriangulation
 			masterHoleVertices.push_back(holeVertices);
 		}
 
+#if 1
 		// 5.3 create the constrained edges
 		for (int j = 0; j < holes.size(); j++)
 		{
@@ -1240,7 +1520,7 @@ namespace CDTriangulation
 			std::vector<DelaunayTriangleEdge> constrainedEdges;
 			std::vector<DelaunayTriangleEdge> allConstrainedEdges;
 
-			GetConstrainedEdgesFromHole(holeVertices, masterVertexArray, triangles, constrainedEdges, allConstrainedEdges);
+			MarkAndGetConstrainedEdgesFromHole(holeVertices, masterVertexArray, triangles, constrainedEdges, allConstrainedEdges);
 
 			for (int ei = 0; ei < constrainedEdges.size(); ei++)
 			{
@@ -1252,7 +1532,7 @@ namespace CDTriangulation
 				debugState->debugAllConstrainedEdges.push_back(allConstrainedEdges[ei]);
 			}
 
-#if 1
+
 			// 5.3.1 search for triangle that contains the beginning of the new edge
 			for (int i = 0; i < constrainedEdges.size(); i++)
 			{
@@ -1360,9 +1640,9 @@ namespace CDTriangulation
 				CheckDelaunayCriteriaInNewlyCreatedEdges(constrainedEdges[i], newEdges, triangles);
 			}
 
-#endif
+
 		}
-		
+#endif	
 
 		// 5.4 identify all the triangles in the constraint
 

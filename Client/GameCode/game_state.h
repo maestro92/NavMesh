@@ -12,7 +12,7 @@ struct GameState
 
 	World world;
 
-	Entity debugCameraEntity;
+	CameraEntity cameraEntity;
 
 	bool mouseIsDebugMode;
 

@@ -152,6 +152,38 @@ namespace Math
 		return angle;
 	}
 
+	bool IsObtuse(glm::vec3 vA, glm::vec3 vB, glm::vec3 vC)
+	{
+		float angleB = CalculateInteriorAngle(vA, vB, vC);
+		return angleB > 90;
+	}
 
+	bool IsObtuseOrRight(glm::vec3 vA, glm::vec3 vB, glm::vec3 vC)
+	{
+		float angleB = CalculateInteriorAngle(vA, vB, vC);
+		return angleB >= 90;
+	}
 
+	bool IsAcute(glm::vec3 vA, glm::vec3 vB, glm::vec3 vC)
+	{
+		float angleB = CalculateInteriorAngle(vA, vB, vC);
+		return angleB < 90;
+	}
+
+	void ClosestPointBetweenPointSegment(glm::vec3 point, glm::vec3 lineA, glm::vec3 lineB, float& t, glm::vec3& closestPoint)
+	{
+		glm::vec3 ab = lineB - lineA;
+
+		t = glm::dot(point - lineA, ab) / glm::dot(ab, ab);
+
+		if (t < 0.0f)
+		{
+			t = 0.0f;
+		}
+		if (t > 1.0f)
+		{
+			t = 1.0f;
+		}
+		closestPoint = lineA + t * ab;
+	}
 }
