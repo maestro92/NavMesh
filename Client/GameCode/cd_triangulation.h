@@ -373,7 +373,7 @@ namespace CDTriangulation
 
 		void CalculateWidthForTriangle(DelaunayTriangle* triangle)
 		{
-			if (triangle->id == 62)
+			if (triangle->id == 11)
 			{
 				int a = 1;
 			}
@@ -1038,6 +1038,11 @@ namespace CDTriangulation
 	{
 		for (int i = 0; i < triangles.size(); i++)
 		{
+			if (triangles[i].id == 11)
+			{
+				int a = 1;
+			}
+
 			for (int j = 0; j < NUM_TRIANGLE_EDGES; j++)
 			{
 				if (triangles[i].edges[j] == edge)
@@ -1049,6 +1054,26 @@ namespace CDTriangulation
 		}
 		return false;
 	}
+
+	void FindAndMarkConstrainedEdges(DelaunayTriangleEdge edge, std::vector<DelaunayTriangle>& triangles)
+	{
+		for (int i = 0; i < triangles.size(); i++)
+		{
+			if (triangles[i].id == 11)
+			{
+				int a = 1;
+			}
+
+			for (int j = 0; j < NUM_TRIANGLE_EDGES; j++)
+			{
+				if (triangles[i].edges[j] == edge)
+				{
+					triangles[i].edges[j].isConstrained = true;
+				}
+			}
+		}
+	}
+
 
 	void AddVertexToTriangulation(Vertex curVertex, 
 		std::vector<DelaunayTriangle>& triangles, 
@@ -1462,12 +1487,7 @@ namespace CDTriangulation
 		for (int i = 0; i < allConstrainedEdges.size(); i++)
 		{
 			DelaunayTriangleEdge constrainedEdge = allConstrainedEdges[i];
-
-			DelaunayTriangle* containingTriangle = NULL;
-			if (ContainsEdge(constrainedEdge, triangles, containingTriangle))
-			{
-				MarkConstrainedEdge(containingTriangle, constrainedEdge);
-			}
+			FindAndMarkConstrainedEdges(constrainedEdge, triangles);
 		}
 	}
 
