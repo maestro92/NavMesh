@@ -68,43 +68,6 @@ namespace NavMesh
 			return nodesById[id];
 		}
 
-		/*
-		bool AreNeighbors(NavMeshPolygon* p0, NavMeshPolygon* p1, std::vector<Edge>& sharedEdges)
-		{
-			for (int i = 0; i < p0->vertices.size(); i++)
-			{
-				Edge edge0 = p0->GetEdge(i);
-
-				for (int j = 0; j < p1->vertices.size(); j++)
-				{
-					Edge edge1 = p1->GetEdge(j);
-
-					if (edge0 == edge1)
-					{
-						sharedEdges.push_back(edge0);
-						return true;
-					}
-				}
-			}
-
-			return false;
-		}
-		
-
-		void DedupAddPortal(std::vector<Edge>& portals, Edge edge)
-		{
-			for (int i = 0; i < portals.size(); i++)
-			{
-				if (portals[i] == edge)
-				{
-					return;
-				}
-			}
-			portals.push_back(edge);
-		}
-		*/
-
-
 		void GetEdgeVertices(
 			CDTriangulation::DelaunayTriangleEdge edge,
 			CDTriangulation::Graph* graph,
@@ -137,6 +100,12 @@ namespace NavMesh
 					}
 				}
 			}
+		}
+
+		glm::vec3 GetNodeCenter(int nodeId)
+		{
+			DualGraphNode* node = GetNode(nodeId);
+			return node->center;
 		}
 	};
 

@@ -20,6 +20,8 @@ namespace CDTriangulation
 	const int NUM_TRIANGLE_EDGES = 3;
 	const int INVALID_NEIGHBOR = -1;
 	const int INVALID_INDEX = -1;
+	const int INVALID_VERTEX_INDEX = -1;
+	const int INVALID_EDGE_INDEX = -1;
 
 
 	// Just has a DebugId for conveniences
@@ -36,6 +38,19 @@ namespace CDTriangulation
 		DelaunayTriangleEdge()
 		{
 			isConstrained = false;
+		}
+
+		static DelaunayTriangleEdge GetInvalidEdge()
+		{
+			DelaunayTriangleEdge edge;
+			edge.vertices[0] = INVALID_VERTEX_INDEX;
+			edge.vertices[1] = INVALID_VERTEX_INDEX;
+			return edge;
+		}
+
+		static bool IsValidEdge(DelaunayTriangleEdge edge)
+		{
+			return edge.vertices[0] != INVALID_VERTEX_INDEX && edge.vertices[1] != INVALID_VERTEX_INDEX;
 		}
 
 		friend bool operator==(const DelaunayTriangleEdge& l, const DelaunayTriangleEdge& r)
@@ -149,11 +164,11 @@ namespace CDTriangulation
 			}
 		}
 
-		bool GetTwoEdgesThatCornersVertex(int id, std::vector<DelaunayTriangleEdge>& output) const
+		bool GetTwoEdgesThatCornersVertex(int vertexId, std::vector<DelaunayTriangleEdge>& output) const
 		{
 			for (int i = 0; i < NUM_TRIANGLE_VERTEX; i++)
 			{
-				if (vertices[i].id == id)
+				if (vertices[i].id == vertexId)
 				{
 					DelaunayTriangleEdge a;
 					if (i == 0)
@@ -175,6 +190,7 @@ namespace CDTriangulation
 
 			return false;
 		}
+
 
 		// e0 -> v2
 		// e1 -> v0
@@ -357,6 +373,12 @@ namespace CDTriangulation
 
 		void CalculateWidthForTriangle(DelaunayTriangle* triangle)
 		{
+			if (triangle->id == 62)
+			{
+				int a = 1;
+			}
+
+			std::cout << ">>>> triangle " << triangle->id << std::endl;
 			for (int i = 0; i < NUM_TRIANGLE_VERTEX; i++)
 			{
 				int ic = i;
@@ -381,7 +403,7 @@ namespace CDTriangulation
 				float halfWidth = CalculateWidthForVertex(triangle, ea, eb, ec, va, vb, vc);
 				triangle->halfWidths[i] = halfWidth;
 
-				std::cout << ">>>> halfWidth " << halfWidth << std::endl;
+				std::cout << "			halfWidth " << halfWidth << std::endl;
 			}
 		}
 
@@ -408,7 +430,7 @@ namespace CDTriangulation
 			// best distance so far
 			float curLargestWidth = std::min(lengthA, lengthB);
 
-			if (Math::IsObtuseOrRight(vc.pos, va.pos, vb.pos) || Math::IsObtuseOrRight(vc.pos, vb.pos, va.pos))
+			if (Math::IsObtuseOrRight(vc.pos, va.pos, vb.pos) || Math::IsObtuseOrRight(va.pos, vb.pos, vc.pos))
 			{
 				std::cout << "   Distance " << std::endl;
 				return curLargestWidth;
@@ -454,7 +476,7 @@ namespace CDTriangulation
 			Vertex v0 = GetVertexById(edge.vertices[0]);
 			Vertex v1 = GetVertexById(edge.vertices[1]);
 
-			if (Math::IsObtuseOrRight(v.pos, v0.pos, v1.pos) && Math::IsObtuseOrRight(v.pos, v1.pos, v0.pos))
+			if (Math::IsObtuseOrRight(v.pos, v0.pos, v1.pos) && Math::IsObtuseOrRight(v0.pos, v1.pos, v.pos))
 			{
 				return curLargestWidth;
 			}
@@ -1168,7 +1190,7 @@ namespace CDTriangulation
 
 			if (triangles[i].GetTwoEdgesThatCornersVertex(vStart.id, edges))
 			{
-				std::cout << "		Examining " << triangles[i].id << std::endl;
+				// std::cout << "		Examining " << triangles[i].id << std::endl;
 				Vertex e0v0 = masterVertexArray[edges[0].vertices[0]];
 				Vertex e0v1 = masterVertexArray[edges[0].vertices[1]];
 
@@ -1432,6 +1454,22 @@ namespace CDTriangulation
 		}
 	}
 
+	void MarkHoleOverlappingEdgesConstrained(
+		std::vector<Vertex>& masterVertexArray,
+		std::vector<DelaunayTriangle>& triangles,
+		std::vector<DelaunayTriangleEdge>& allConstrainedEdges)
+	{
+		for (int i = 0; i < allConstrainedEdges.size(); i++)
+		{
+			DelaunayTriangleEdge constrainedEdge = allConstrainedEdges[i];
+
+			DelaunayTriangle* containingTriangle = NULL;
+			if (ContainsEdge(constrainedEdge, triangles, containingTriangle))
+			{
+				MarkConstrainedEdge(containingTriangle, constrainedEdge);
+			}
+		}
+	}
 
 	// https://www.habrador.com/tutorials/math/14-constrained-delaunay/
 	// https://forum.unity.com/threads/programming-tools-constrained-delaunay-triangulation.1066148/
@@ -1513,6 +1551,7 @@ namespace CDTriangulation
 		}
 
 #if 1
+
 		// 5.3 create the constrained edges
 		for (int j = 0; j < holes.size(); j++)
 		{
@@ -1539,8 +1578,8 @@ namespace CDTriangulation
 				Vertex constrainedEdgeStart = masterVertexArray[constrainedEdges[i].vertices[0]];
 				Vertex constrainedEdgeEnd = masterVertexArray[constrainedEdges[i].vertices[1]];
 
-				std::cout << "start " << constrainedEdgeStart.id << " " << constrainedEdgeStart.pos.x << " " << constrainedEdgeStart.pos.y << std::endl;
-				std::cout << "End " << constrainedEdgeEnd.id << " " << constrainedEdgeEnd.pos.x << " " << constrainedEdgeEnd.pos.y << std::endl;
+			//	std::cout << "start " << constrainedEdgeStart.id << " " << constrainedEdgeStart.pos.x << " " << constrainedEdgeStart.pos.y << std::endl;
+			//	std::cout << "End " << constrainedEdgeEnd.id << " " << constrainedEdgeEnd.pos.x << " " << constrainedEdgeEnd.pos.y << std::endl;
 
 
 				std::queue<IntersectedEdge> intersectedEdgesQueue;
@@ -1643,6 +1682,10 @@ namespace CDTriangulation
 
 		}
 #endif	
+
+
+		MarkHoleOverlappingEdgesConstrained(masterVertexArray, triangles, debugState->debugAllConstrainedEdges);
+
 
 		// 5.4 identify all the triangles in the constraint
 

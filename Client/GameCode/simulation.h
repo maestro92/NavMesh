@@ -20,7 +20,9 @@ namespace Sim
 			if (gameInputState->DidMouseRightButtonClicked())
 			{
 				entity->destination = groundIntersectionPoint;
-				PathFinding::PathfindingResult pathingResult = PathFinding::FindPath(world->pathingDebug, world, entity->pos, entity->destination);
+
+				float diameter = entity->agentRadius * 2;
+				PathFinding::PathfindingResult pathingResult = PathFinding::FindPath(world->pathingDebug, diameter, world, entity->pos, entity->destination);
 				entity->waypoints = pathingResult.waypoints;
 			}
 		}

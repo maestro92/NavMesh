@@ -35,6 +35,12 @@ namespace PathFinding
 		std::vector<NavMesh::Portal> portals;
 	};
 
+	struct AStarSearchResult
+	{
+		bool reachedOriginalGoal;
+		std::vector<int> nodePath;
+	};
+
 
 	struct AStarSearchNode
 	{
@@ -44,6 +50,18 @@ namespace PathFinding
 		int fromPolygonNodeId;
 		int cost;		// g(n) + f(n)
 		int costFromStartNode; // this is g(n)
+		CDTriangulation::DelaunayTriangleEdge sourceEdge;
+
+		AStarSearchNode() {}
+
+		AStarSearchNode(int polygonNodeIdIn, int fromPolygonNodeIdIn, int costIn, int costFromStartNodeIn, CDTriangulation::DelaunayTriangleEdge sourceEdgeIn)
+		{
+			polygonNodeId = polygonNodeIdIn;
+			fromPolygonNodeId = fromPolygonNodeIdIn;
+			cost = costIn;
+			costFromStartNode = costFromStartNodeIn;
+			sourceEdge = sourceEdgeIn;
+		}
 	};
 
 	class AStarSearchNodeComparison
@@ -67,7 +85,48 @@ namespace PathFinding
 		return glm::fastLength(len);
 	}
 
-	std::vector<int> AStarSearch(NavMesh::DualGraph* dualGraph, 
+	bool CheckTunnelWidth(CDTriangulation::DelaunayTriangle* curTriangle, 
+		CDTriangulation::DelaunayTriangleEdge sourceEdge,
+		CDTriangulation::DelaunayTriangle* neighbor, 
+		CDTriangulation::DelaunayTriangleEdge dstEdge,
+		float agentDiameter)
+	{
+	
+		std::cout << ">>>> curTriangle " << curTriangle->id << ", neighbor is " << neighbor->id << std::endl;
+		for (int i = 0; i < CDTriangulation::NUM_TRIANGLE_VERTEX; i++)
+		{
+			std::cout << "	curTriangle " << curTriangle->halfWidths[i] << std::endl;
+		}
+
+		if (!CDTriangulation::DelaunayTriangleEdge::IsValidEdge(sourceEdge))
+		{
+			return true;
+		}
+
+		int edgeIndex0 = curTriangle->GetEdgeIndex(sourceEdge);
+
+		int edgeIndex1 = (edgeIndex0 - 1 + 3) % CDTriangulation::NUM_TRIANGLE_EDGES;
+		CDTriangulation::DelaunayTriangleEdge edge1 = curTriangle->edges[edgeIndex1];
+		if (dstEdge == edge1)
+		{
+			float halfWidth = curTriangle->halfWidths[edgeIndex0];
+			return agentDiameter <= halfWidth;
+		}
+
+		edgeIndex1 = (edgeIndex0 + 1) % CDTriangulation::NUM_TRIANGLE_EDGES;
+		edge1 = curTriangle->edges[edgeIndex1];
+		if (dstEdge == edge1)
+		{
+			float halfWidth = curTriangle->halfWidths[edgeIndex1];
+			return agentDiameter <= halfWidth;
+		}
+
+		return true;
+	}
+
+
+	AStarSearchResult AStarSearch(NavMesh::DualGraph* dualGraph,
+		float agentDiameter, 
 		NavMesh::DualGraphNode* startNode, glm::vec3 start, 
 		NavMesh::DualGraphNode* destNode, glm::vec3 end)
 	{
@@ -75,16 +134,21 @@ namespace PathFinding
 		std::cout << "end" << destNode->GetId() << std::endl;
 
 
-		// from triangle 0, do a bfs with a distance heuristic until u reach triangle1
+		AStarSearchResult result;
+		result.reachedOriginalGoal = false;
+
+		// from triangle 0, do a bfs with a distance heuristic until u reach triangle 1
 		std::priority_queue<AStarSearchNode, std::vector<AStarSearchNode>, AStarSearchNodeComparison> q;
 
 		std::unordered_map<int, AStarSearchNode> visited;
 
-		AStarSearchNode node = { startNode->GetId(), -1, 0, 0};
+		CDTriangulation::DelaunayTriangleEdge edge = CDTriangulation::DelaunayTriangleEdge::GetInvalidEdge();
+		AStarSearchNode node = AStarSearchNode(startNode->GetId(), -1, 0, 0, edge);
 		q.push(node);
 	
 
 		AStarSearchNode destinationNode;
+		float curClosestDist = FLT_MAX;
 		while (!q.empty())
 		{
 			AStarSearchNode curAStarNode = q.top();
@@ -92,9 +156,11 @@ namespace PathFinding
 
 			visited[curAStarNode.polygonNodeId] = curAStarNode;
 
+
 			if (curAStarNode.polygonNodeId == destNode->GetId())
 			{
 				destinationNode = curAStarNode;
+				result.reachedOriginalGoal = true;
 				break;
 			}
 
@@ -111,6 +177,13 @@ namespace PathFinding
 			else
 			{
 				fromPos = curGraphNode->center;
+			}
+
+			float distToDest = HeuristicCost(fromPos, end);
+			if (distToDest < curClosestDist)
+			{
+				curClosestDist = distToDest;
+				destinationNode = curAStarNode;
 			}
 
 			// go through neighbors
@@ -138,7 +211,14 @@ namespace PathFinding
 					continue;
 				}
 
-				float cost1= HeuristicCost(fromPos, neighbor->center);
+				CDTriangulation::DelaunayTriangleEdge edge = triangle->edges[i];
+
+				if (!CheckTunnelWidth(triangle, curAStarNode.sourceEdge, neighbor->triangle, edge, agentDiameter))
+				{
+					continue;
+				}
+
+				float cost1 = HeuristicCost(fromPos, neighbor->center);
 				float cost2 = HeuristicCost(neighbor->center, end);
 
 				int costFromStartNode = curAStarNode.costFromStartNode + HeuristicCost(fromPos, neighbor->center);
@@ -150,9 +230,7 @@ namespace PathFinding
 
 				std::cout << "			totalCost " << totalCost << std::endl;
 
-
-
-				q.push({ neighborId, curPolygonId, totalCost, costFromStartNode });
+				q.push(AStarSearchNode(neighborId, curPolygonId, totalCost, costFromStartNode, edge));
 			}
 		}
 		
@@ -179,7 +257,9 @@ namespace PathFinding
 			i1--;
 		}
 
-		return polygonNodesPath;
+		result.nodePath = polygonNodesPath;
+
+		return result;
 	}
 
 	/*
@@ -463,7 +543,7 @@ namespace PathFinding
 	}
 	
 
-	PathfindingResult FindPath(PathFinding::DebugState* debugState, World* world, glm::vec3 start, glm::vec3 goal)
+	PathfindingResult FindPath(PathFinding::DebugState* debugState, float agentDiameter, World* world, glm::vec3 start, glm::vec3 goal)
 	{
 		NavMesh::DualGraph* dualGraph = debugState->dualGraph;
 
@@ -503,30 +583,37 @@ namespace PathFinding
 			result.waypoints.push_back(goal);
 			*/
 
-			
-			std::vector<int> aStarNodeIds = AStarSearch(dualGraph, node0, start, node1, goal);
-			
-			
-			/*
-			for (int i = 0; i < aStarNodeIds.size(); i++)
+			AStarSearchResult aStarResult = AStarSearch(dualGraph, agentDiameter, node0, start, node1, goal);
+
+				/*
+				for (int i = 0; i < aStarNodeIds.size(); i++)
+				{
+					std::cout << aStarNodeIds[i] << std::endl;
+				}
+
+
+				result.portals = dualGraph->GetPortalList(aStarNodeIds);
+
+				for (int i = 0; i < result.portals.size(); i++)
+				{
+					std::cout << result.portals[i].vertices[0] << " " << result.portals[i].vertices[1] << std::endl;
+				}
+
+
+				debugState->portals = result.portals;
+
+				result.waypoints.push_back(start);
+				*/
+
+				// AStarSearch may not get u to goal because agent may not fit in, so u may get a different destination.
+			glm::vec3 finalDestination = goal;
+			if (!aStarResult.reachedOriginalGoal)
 			{
-				std::cout << aStarNodeIds[i] << std::endl;
+				int index = aStarResult.nodePath.size() - 1;
+				finalDestination = dualGraph->GetNodeCenter(aStarResult.nodePath[index]);
 			}
 
-			
-			result.portals = dualGraph->GetPortalList(aStarNodeIds);
-			
-			for (int i = 0; i < result.portals.size(); i++)
-			{
-				std::cout << result.portals[i].vertices[0] << " " << result.portals[i].vertices[1] << std::endl;
-			}
-			
-
-			debugState->portals = result.portals;
-
-			result.waypoints.push_back(start);
-			*/
-			FunnelResult funnelResult = Funnel(dualGraph, world->cdTriangulationGraph, aStarNodeIds, start, goal);
+			FunnelResult funnelResult = Funnel(dualGraph, world->cdTriangulationGraph, aStarResult.nodePath, start, finalDestination);
 			
 			result.portals = funnelResult.portals;
 			debugState->portals = result.portals;

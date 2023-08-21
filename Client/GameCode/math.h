@@ -161,6 +161,9 @@ namespace Math
 	bool IsObtuseOrRight(glm::vec3 vA, glm::vec3 vB, glm::vec3 vC)
 	{
 		float angleB = CalculateInteriorAngle(vA, vB, vC);
+
+		std::cout << "interior angle " << angleB << std::endl;
+
 		return angleB >= 90;
 	}
 

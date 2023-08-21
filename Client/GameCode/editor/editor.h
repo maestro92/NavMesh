@@ -52,6 +52,13 @@ namespace Editor
 		option.agentRadius = 5;
 		editorState->options[numOptions++] = option;
 
+		option.clear();
+		option.name = "Agent 10";
+		option.isAgent = true;
+		option.agentRadius = 10;
+		editorState->options[numOptions++] = option;
+
+
 		// because these are obstacles, they are in counter clockwise order
 		//
 		option.clear();

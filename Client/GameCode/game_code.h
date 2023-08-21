@@ -407,16 +407,18 @@ void RenderAgentEntity(
 	GameRender::RenderLine(
 		gameRenderCommands, renderGroup, gameAssets, color, entity->pos, arrowApex, arrowThickness);
 
-
-	for (int i = 1; i < entity->waypoints.size(); i++)
+	
+	if (simState->selectedEntity == entity)
 	{
-		glm::vec3 p0 = entity->waypoints[i - 1];
-		glm::vec3 p1 = entity->waypoints[i];
+		for (int i = 1; i < entity->waypoints.size(); i++)
+		{
+			glm::vec3 p0 = entity->waypoints[i - 1];
+			glm::vec3 p1 = entity->waypoints[i];
 
-		GameRender::RenderPoint(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_GREEN, p1, 0.5);
-		GameRender::PushDashedLine(gameRenderCommands, renderGroup, gameAssets, GameRender::COLOR_GREEN, p0, p1, 0.5);
+			GameRender::RenderPoint(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_GREEN, p1, 0.5);
+			GameRender::PushDashedLine(gameRenderCommands, renderGroup, gameAssets, GameRender::COLOR_GREEN, p0, p1, 0.5);
+		}
 	}
-
 }
 
 void RenderObstacleEntity(
@@ -1501,7 +1503,7 @@ void ExecutePathingLogic(World* world, glm::vec3 start, glm::vec3 end)
 	if (world->cdTriangulationGraph->triangulated)
 	{
 		world->pathingDebug->dualGraph = new NavMesh::DualGraph(world->cdTriangulationGraph->triangles);
-		PathFinding::PathfindingResult pathingResult = PathFinding::FindPath(world->pathingDebug, world, start, end);
+		PathFinding::PathfindingResult pathingResult = PathFinding::FindPath(world->pathingDebug, 0, world, start, end);
 		world->pathingDebug->waypoints = pathingResult.waypoints;
 	}
 	else
@@ -1572,7 +1574,7 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		}
 		else if (testCase == 2)
 		{
-			LoadMap(&gameState->world, "TestData/data3.txt");
+			LoadMap(&gameState->world, "TestData/data4.txt");
 		}
 
 
@@ -1671,6 +1673,7 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		else if (editorEvent == EditorEvent::ENTER_SIM_MODE)
 		{
 			TriangulateMap(&gameState->world);
+			SetupForPathing(&gameState->world);
 
 			World* world = &gameState->world;
 			world->pathingDebug->dualGraph = new NavMesh::DualGraph(world->cdTriangulationGraph->triangles);
@@ -1898,6 +1901,9 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 			CDTriangulation::DelaunayTriangle* trig = gameState->world.cdTriangulationGraph->highlightedTriangle;
 
 			size = sprintf(ptr, "trig %d neighbors %d %d %d\n", trig->id, trig->neighbors[0], trig->neighbors[1], trig->neighbors[2]);
+			ptr += size;
+
+			size = sprintf(ptr, "  halfwidth %f %f %f\n", trig->halfWidths[0], trig->halfWidths[1], trig->halfWidths[2]);
 			ptr += size;
 		}
 	}
