@@ -32,7 +32,6 @@ namespace PathFinding
 	{
 		bool valid;
 		std::vector<glm::vec3> waypoints;
-		std::vector<NavMesh::Portal> portals;
 	};
 
 	struct AStarSearchResult
@@ -300,31 +299,19 @@ namespace PathFinding
 	struct FunnelResult
 	{
 		std::vector<glm::vec3> waypoints;
-		std::vector<NavMesh::Portal> portals;
+	//	std::vector<NavMesh::Portal> portals;
 	};
 
-	
-	// http://digestingduck.blogspot.com/2010/03/simple-stupid-funnel-algorithm.html
-	// https://gamedev.stackexchange.com/questions/68302/how-does-the-simple-stupid-funnel-algorithm-work
-	// http://ahamnett.blogspot.com/2012/10/funnel-algorithm.html
-	FunnelResult Funnel(
-		NavMesh::DualGraph* dualGraph, 
-		CDTriangulation::Graph* graph, 
-		std::vector<int> aStarNodeIds,
+
+	// portals here include start and end.
+	FunnelResult Funnel_Core(
+		std::vector<NavMesh::Portal> portals,
 		glm::vec3 start, glm::vec3 end)
 	{
 		std::vector<glm::vec3> results;
 
-		std::vector<NavMesh::Portal> portals;
-
 		NavMesh::Portal startPortal = { start, start };
-		portals.push_back(startPortal);
-		
-		dualGraph->AddToPortalList(graph, aStarNodeIds, portals);
-
 		NavMesh::Portal endPortal = { end, end };
-		portals.push_back(endPortal);
-
 
 		// we setup the first funnel
 		glm::vec3 portalApex = start;
@@ -335,45 +322,20 @@ namespace PathFinding
 
 		results.push_back(start);
 
-		// std::cout << "portalApex " << portalApex.x << " " << portalApex.y << std::endl;
-		// std::cout << "		portalRightPoint " << portalRightPoint.x << " " << portalRightPoint.y << std::endl;
-		// std::cout << "		portalLeftPoint " << portalLeftPoint.x << " " << portalLeftPoint.y << std::endl;
-
 		int apexIndex = 0, leftIndex = 0, rightIndex = 0;
 		glm::vec3 dirL, dirR;
 
 		for (int i = 1; i < portals.size(); i++)
 		{
 			// std::cout << "checking edges " << i << std::endl;
-			
+
 			// now we check edges 
 			NavMesh::Portal portal = portals[i];
-
-			/*
-			glm::vec3 vec = portalApex;
-			std::cout << "		apex is " << vec.x << " " << vec.y << " " << vec.z << std::endl << std::endl;
-
-
-			vec = portalLeftPoint;
-			std::cout << "		LeftIndex to " << leftIndex << std::endl;
-			std::cout << "		Left Point is " << vec.x << " " << vec.y << " " << vec.z << std::endl << std::endl;
-
-			vec = portalRightPoint;
-			std::cout << "		RightIndex to " << rightIndex << std::endl;
-			std::cout << "		right point is " << vec.x << " " << vec.y << " " << vec.z << std::endl << std::endl;
-
-
-			vec = portals[i].vertices[0];
-			std::cout << "		newPortalRightPoint " << vec.x << " " << vec.y << " " << vec.z << std::endl;
-
-			vec = portals[i].vertices[1];
-			std::cout << "		newPortalLeftPoint " << vec.x << " " << vec.y << " " << vec.z << std::endl << std::endl;
-			*/
 
 			// first check the right vertex
 			glm::vec3 newPortalRightPoint = portal.right;
 			glm::vec3 newPortalLeftPoint = portal.left;
-			
+
 			if (Math::Equals(newPortalRightPoint, portalRightPoint))
 			{
 				portalRightPoint = newPortalRightPoint;
@@ -385,29 +347,10 @@ namespace PathFinding
 				portalLeftPoint = newPortalLeftPoint;
 				leftIndex = i;
 			}
-			
-			/*
-			vec = portalLeftPoint;
-			std::cout << "		LeftIndex2 to " << leftIndex << std::endl;
-			std::cout << "		Left Point2 is " << vec.x << " " << vec.y << " " << vec.z << std::endl << std::endl;
 
-			vec = portalRightPoint;
-			std::cout << "		RightIndex2 to " << rightIndex << std::endl;
-			std::cout << "		right point2 is " << vec.x << " " << vec.y << " " << vec.z << std::endl << std::endl;
-
-
-			vec = newPortalLeftPoint;
-			std::cout << "		newPortalLeftPoint is " << vec.x << " " << vec.y << " " << vec.z << std::endl << std::endl;
-
-			vec = newPortalRightPoint;
-			std::cout << "		newPortalRightPoint is " << vec.x << " " << vec.y << " " << vec.z << std::endl << std::endl;
-			*/
 
 			dirL = portalLeftPoint - portalApex;
 			dirR = portalRightPoint - portalApex;
-
-			// std::cout << "		dirL " << dirL.x << " " << dirL.y << std::endl;
-			// std::cout << "		dirR " << dirR.x << " " << dirR.y << std::endl;
 
 
 			glm::vec3 dirNewR = newPortalRightPoint - portalApex;
@@ -427,9 +370,7 @@ namespace PathFinding
 					rightIndex = i;
 				}
 				else
-				{	
-				//	std::cout << "	########### right crossing over left happening " << std::endl;
-
+				{
 					// right over left, insert left to path
 					results.push_back(portalLeftPoint);
 
@@ -447,7 +388,6 @@ namespace PathFinding
 
 					// reset the index
 					i = apexIndex;
-				//	std::cout << "		resetting to " << i << std::endl;
 					continue;
 				}
 			}
@@ -467,12 +407,9 @@ namespace PathFinding
 				{
 					portalLeftPoint = newPortalLeftPoint;
 					leftIndex = i;
-				//	std::cout << "	resetting to " << i << std::endl;
 				}
 				else
 				{
-				//	std::cout << "	########### left crossing over right happening " << std::endl;
-
 					// right over left, insert left to path
 					results.push_back(portalRightPoint);
 
@@ -489,59 +426,218 @@ namespace PathFinding
 					rightIndex = apexIndex;
 
 					i = apexIndex;
-				//	std::cout << "	resetting to " << i << std::endl;
 					continue;
 				}
 			}
 		}
-/*
-		std::cout << " >>>>>> ending " << apexIndex << " " << portals.size() << std::endl;
-		std::cout << "		portalRightPoint " << portalRightPoint.x << " " << portalRightPoint.y << std::endl;
-		std::cout << "		portalLeftPoint " << portalLeftPoint.x << " " << portalLeftPoint.y << std::endl;
-*/
 
 		// for the last destination 
 		// for portalApex to end crosses the last portal, then we just draw a straight line
 		// otherwise, w need to add the last portal as another point 
 		//
-	/*
-		glm::vec2 intersectionPoint;
-		if (Collision::GetLineLineIntersectionPoint_CheckOnlyXY2D(portalApex, end, portalLeftPoint, portalRightPoint, intersectionPoint))
-		{
-			results.push_back(end);
-		}
-		else
-		{
-			dirL = portalLeftPoint - portalApex;
-			glm::vec3 leftToEnd = end - portalLeftPoint;
 
-			dirR = portalRightPoint - portalApex;
-			glm::vec3 rightToEnd = end - portalRightPoint;
-
-			float leftCost = glm::fastLength(dirL) + glm::fastLength(leftToEnd);
-			float rightCost = glm::fastLength(dirR) + glm::fastLength(rightToEnd);
-
-			if (leftCost < rightCost)
-			{
-				results.push_back(portalLeftPoint);
-			}
-			else
-			{
-				results.push_back(portalRightPoint);
-			}
-			
-			results.push_back(end);
-		}
-		*/
 		results.push_back(end);
 
 		FunnelResult funnelResult;
 		funnelResult.waypoints = results;
-		funnelResult.portals = portals;
 
 		return funnelResult;
 	}
+
+
 	
+	// http://digestingduck.blogspot.com/2010/03/simple-stupid-funnel-algorithm.html
+	// https://gamedev.stackexchange.com/questions/68302/how-does-the-simple-stupid-funnel-algorithm-work
+	// http://ahamnett.blogspot.com/2012/10/funnel-algorithm.html
+	// https://skatgame.net/mburo/ps/thesis_demyen_2006.pdf
+	FunnelResult Funnel(
+		NavMesh::DualGraph* dualGraph, 
+		CDTriangulation::Graph* graph, 
+		std::vector<int> aStarNodeIds,
+		glm::vec3 start, glm::vec3 end, 
+		PathFinding::DebugState* debugState)
+	{
+		std::vector<NavMesh::Portal> portals;
+
+		NavMesh::Portal startPortal = { start, start };
+		portals.push_back(startPortal);
+		
+		dualGraph->AddToPortalList(graph, aStarNodeIds, portals);
+
+		NavMesh::Portal endPortal = { end, end };
+		portals.push_back(endPortal);
+
+		debugState->portals = portals;
+
+		return Funnel_Core(portals, start, end);
+	}
+	
+	struct EdgeIndex
+	{
+		int leftIndex;
+		int rightIndex;
+
+		EdgeIndex()	{}
+
+		EdgeIndex(int l, int r)
+		{
+			leftIndex = l;
+			rightIndex = r;
+		}
+	};
+
+	FunnelResult ModifiedFunnel(
+		NavMesh::DualGraph* dualGraph,
+		CDTriangulation::Graph* graph,
+		std::vector<int> aStarNodeIds,
+		glm::vec3 start, glm::vec3 end, 
+		float agentRadius,
+		PathFinding::DebugState* debugState)
+	{
+		std::vector<glm::vec3> results;
+
+		std::vector<NavMesh::Portal> portals;
+		std::vector<EdgeIndex> indices;
+
+		NavMesh::Portal startPortal = { start, start };
+		portals.push_back(startPortal);
+
+		dualGraph->AddToPortalList(graph, aStarNodeIds, portals);
+
+		NavMesh::Portal endPortal = { end, end };
+		portals.push_back(endPortal);
+
+		debugState->portals = portals;
+
+
+		std::vector<glm::vec3> leftVertices;
+		std::vector<glm::vec3> rightVertices;
+
+		for (int i = 0; i < portals.size(); i++)
+		{
+			if (i == 0)
+			{
+				leftVertices.push_back(portals[i].left);
+				rightVertices.push_back(portals[i].right);
+
+				indices.push_back(EdgeIndex(i, i));
+			}
+			else
+			{
+				int index0 = leftVertices.size() - 1;
+				int index1 = rightVertices.size() - 1;
+
+				EdgeIndex edgeIndex = EdgeIndex(index0, index1);
+
+				glm::vec3 leftV = leftVertices[index0];
+				glm::vec3 rightV = rightVertices[index1];
+
+				if (!Math::Equals(leftV, portals[i].left))
+				{
+					leftVertices.push_back(portals[i].left);
+					edgeIndex.leftIndex += 1;
+				}
+
+				if (!Math::Equals(rightV, portals[i].right))
+				{
+					rightVertices.push_back(portals[i].right);
+					edgeIndex.rightIndex += 1;
+				}
+
+				indices.push_back(edgeIndex);
+			}
+		}
+
+		std::cout << "leftVertices " << leftVertices.size() << std::endl;
+		for (int i = 0; i < leftVertices.size(); i++)
+		{
+			std::cout << leftVertices[i].x << " " << leftVertices[i].y << " " << leftVertices[i].z << std::endl;
+		}
+
+		std::cout << "rightVertices " << rightVertices.size() << std::endl;
+		for (int i = 0; i < rightVertices.size(); i++)
+		{
+			std::cout << rightVertices[i].x << " " << rightVertices[i].y << " " << rightVertices[i].z << std::endl;
+		}
+
+		std::cout << "agentRadius " << agentRadius << std::endl;
+
+		// https://www.youtube.com/watch?v=rWHrTrigIYo&ab_channel=jdtec01
+		// start from 2:20
+		// the first and last point is start and end, so we dont care
+		for (int i = 1; i < leftVertices.size() - 1 ; i++)
+		{
+			// for eac vertex. gets its neighbor edges
+			glm::vec3 p0 = leftVertices[i - 1];
+			glm::vec3 p1 = leftVertices[i];
+			glm::vec3 p2 = leftVertices[i + 1];
+
+			// Get the average of neighbor edge directions
+			// I think I can just directly get the perp (instead of following the blog and getting the averageNeighborEdge first)
+			glm::vec3 dir1 = glm::normalize(p1 - p0);
+			glm::vec3 dir2 = glm::normalize(p2 - p1);
+
+			glm::vec3 averageNeighborEdge = dir1 + dir2;
+
+			glm::vec3 averageNeighborEdgePerp = glm::cross(averageNeighborEdge, glm::vec3(0, 0, 1));
+			averageNeighborEdgePerp = glm::normalize(averageNeighborEdgePerp);
+
+			glm::vec3 newVertex = leftVertices[i] + averageNeighborEdgePerp * agentRadius;
+			leftVertices[i] = newVertex;
+		}
+
+
+		for (int i = 1; i < rightVertices.size() - 1; i++)
+		{
+			// for eac vertex. gets its neighbor edges
+			glm::vec3 p0 = rightVertices[i - 1];
+			glm::vec3 p1 = rightVertices[i];
+			glm::vec3 p2 = rightVertices[i + 1];
+
+			// Get the average of neighbor edge directions
+			// I think I can just directly get the perp (instead of following the blog and getting the averageNeighborEdge first)
+			glm::vec3 dir1 = glm::normalize(p1 - p0);
+			glm::vec3 dir2 = glm::normalize(p2 - p1);
+
+			glm::vec3 averageNeighborEdge = dir1 + dir2;
+
+			glm::vec3 averageNeighborEdgePerp = glm::cross(averageNeighborEdge, glm::vec3(0, 0, -1));
+			averageNeighborEdgePerp = glm::normalize(averageNeighborEdgePerp);
+
+			glm::vec3 newVertex = rightVertices[i] + averageNeighborEdgePerp * agentRadius;
+			rightVertices[i] = newVertex;
+		}
+
+		debugState->newLeftVertices = leftVertices;
+		debugState->newRightVertices = rightVertices;
+
+
+		std::vector<NavMesh::Portal> modifiedPortals;
+		for (int i = 0; i < portals.size(); i++)
+		{
+			if (i == 0 || i == portals.size() - 1)
+			{
+				modifiedPortals.push_back(portals[i]);
+			}
+			else
+			{
+				EdgeIndex edgeIndex = indices[i];
+
+				NavMesh::Portal portal;
+				portal.left = leftVertices[edgeIndex.leftIndex];
+				portal.right = rightVertices[edgeIndex.rightIndex];
+
+				modifiedPortals.push_back(portal);
+			}
+		}
+
+		debugState->modifiedPortals = modifiedPortals;
+
+		return Funnel_Core(modifiedPortals, start, end);
+	}
+
+
+
 
 	PathfindingResult FindPath(PathFinding::DebugState* debugState, float agentDiameter, World* world, glm::vec3 start, glm::vec3 goal)
 	{
@@ -613,12 +709,23 @@ namespace PathFinding
 				finalDestination = dualGraph->GetNodeCenter(aStarResult.nodePath[index]);
 			}
 
+			float radius = agentDiameter / 2.0f;
+			FunnelResult funnelResult = ModifiedFunnel(dualGraph, world->cdTriangulationGraph, aStarResult.nodePath, start, finalDestination, radius, debugState);
+			// FunnelResult funnelResult = Funnel(dualGraph, world->cdTriangulationGraph, aStarResult.nodePath, start, finalDestination, debugState);
+
+			result.waypoints = funnelResult.waypoints;
+
+			/*
 			FunnelResult funnelResult = Funnel(dualGraph, world->cdTriangulationGraph, aStarResult.nodePath, start, finalDestination);
 			
 			result.portals = funnelResult.portals;
 			debugState->portals = result.portals;
 
+			float radius = agentDiameter / 2.0f  ;
+			ModifiedFunnel(dualGraph, world->cdTriangulationGraph, aStarResult.nodePath, start, finalDestination, radius, debugState);
+
 			result.waypoints = funnelResult.waypoints;
+			*/
 		}
 
 		return result;

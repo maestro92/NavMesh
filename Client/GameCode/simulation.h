@@ -19,11 +19,12 @@ namespace Sim
 		{
 			if (gameInputState->DidMouseRightButtonClicked())
 			{
-				entity->destination = groundIntersectionPoint;
+				entity->pathingState.destination = groundIntersectionPoint;
 
 				float diameter = entity->agentRadius * 2;
-				PathFinding::PathfindingResult pathingResult = PathFinding::FindPath(world->pathingDebug, diameter, world, entity->pos, entity->destination);
-				entity->waypoints = pathingResult.waypoints;
+				PathFinding::PathfindingResult pathingResult = PathFinding::FindPath(world->pathingDebug, diameter, world, entity->pos, entity->pathingState.destination);
+				entity->pathingState.waypoints = pathingResult.waypoints;
+				entity->pathingState.curTargetWaypointIndex = 0;
 			}
 		}
 	}
@@ -88,6 +89,37 @@ namespace Sim
 		}
 	}
 
+	void AgentPathingTick(Entity* entity)
+	{
+		/*
+		float speed = 2.0f;
+		float dt = 0.1f;
+
+		PathingState* state = &(entity->pathingState);
+
+		if (state->curTargetWaypointIndex < state->waypoints.size())
+		{
+			float distTraveledThisTick = dt * speed;
+
+			while (distTraveledThisTick > 0)
+			{
+
+
+
+			}
+
+			float distToNextWayPoint = 
+		}
+
+		if(entity->pathingState)
+
+		// FIXED_UPDATE_TIME_S;
+		entity->pos += pmove.velocity * dt;
+
+		if()
+		*/
+	}
+
 	void SimModeTick(SimulationState* simState,
 		GameInputState* gameInputState,
 		RenderSystem::GameRenderCommands* gameRenderCommands,
@@ -106,6 +138,9 @@ namespace Sim
 			{
 				case EntityFlag::AGENT:
 				{
+					AgentPathingTick(entity);
+
+
 
 
 				} break;

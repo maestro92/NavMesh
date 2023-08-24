@@ -58,6 +58,13 @@ struct CameraEntity
 	}
 };
 
+struct PathingState
+{
+	glm::vec3 destination;
+	std::vector<glm::vec3> waypoints;
+	int curWaypointIndex;
+};
+
 struct Entity
 {
 	EntityFlag flag;
@@ -70,8 +77,8 @@ struct Entity
 	glm::vec3 facingDirection;
 
 	float agentRadius;
-	glm::vec3 destination;
-	std::vector<glm::vec3> waypoints;
+
+	PathingState pathingState;
 
 	std::vector<glm::vec3> vertices;
 

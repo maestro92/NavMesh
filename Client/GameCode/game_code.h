@@ -817,7 +817,24 @@ void RenderPathingData(
 
 	}
 
+	for (int i = 0; i < debugState->modifiedPortals.size(); i++)
+	{
+		NavMesh::Portal portal = debugState->modifiedPortals[i];
 
+		GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_PINK, portal.left, portal.right, 0.5);
+
+	}
+
+
+	for (int i = 0; i < debugState->newLeftVertices.size(); i++)
+	{
+		GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_PINK, debugState->newLeftVertices[i], 0.5);
+	}
+
+	for (int i = 0; i < debugState->newRightVertices.size(); i++)
+	{
+		GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_PINK, debugState->newRightVertices[i], 0.5);
+	}
 
 
 	/*
@@ -1133,11 +1150,7 @@ void EditorInteractWithWorldEntities(GameState* gameState,
 		}
 
 	}
-
-
-
 }
-
 
 void WorldTickAndRender(GameState* gameState, TransientState* transientState, GameAssets* gameAssets,
 	GameInputState* gameInputState, RenderSystem::GameRenderCommands* gameRenderCommands, glm::ivec2 windowDimensions, DebugModeState* debugModeState)

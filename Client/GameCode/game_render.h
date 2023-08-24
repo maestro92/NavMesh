@@ -26,6 +26,9 @@ namespace GameRender
 	glm::vec4 COLOR_ORANGE = glm::vec4(1, 0.5, 1, 1);
 	glm::vec4 COLOR_BLACK = glm::vec4(0, 0, 0, 1);
 
+	glm::vec4 COLOR_PINK = glm::vec4(1, 0.75, 0.79, 1);
+
+
 	glm::vec3 DEBUG_RENDER_OFFSET = glm::vec3(0, 0.1, 0);
 
 	enum AlignmentMode

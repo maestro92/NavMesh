@@ -21,5 +21,9 @@ namespace PathFinding
 		NavMesh::DualGraph* dualGraph;
 		std::vector<glm::vec3> waypoints;
 		std::vector<NavMesh::Portal> portals;
+		std::vector<NavMesh::Portal> modifiedPortals;
+
+		std::vector<glm::vec3> newLeftVertices;
+		std::vector<glm::vec3> newRightVertices;
 	};
 }
