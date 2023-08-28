@@ -410,10 +410,10 @@ void RenderAgentEntity(
 	
 	if (simState->selectedEntity == entity)
 	{
-		for (int i = 1; i < entity->waypoints.size(); i++)
+		for (int i = 1; i < entity->pathingState.waypoints.size(); i++)
 		{
-			glm::vec3 p0 = entity->waypoints[i - 1];
-			glm::vec3 p1 = entity->waypoints[i];
+			glm::vec3 p0 = entity->pathingState.waypoints[i - 1];
+			glm::vec3 p1 = entity->pathingState.waypoints[i];
 
 			GameRender::RenderPoint(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_GREEN, p1, 0.5);
 			GameRender::PushDashedLine(gameRenderCommands, renderGroup, gameAssets, GameRender::COLOR_GREEN, p0, p1, 0.5);
@@ -461,7 +461,7 @@ void RenderObstacleEntity(
 		else
 		{
 			GameRender::RenderLine(
-				gameRenderCommands, renderGroup, gameAssets, GameRender::COLOR_RED, pos0, pos1, lineThickness);
+				gameRenderCommands, renderGroup, gameAssets, GameRender::HALF_TRANS_COLOR_RED, pos0, pos1, lineThickness);
 		}
 	}
 
@@ -478,7 +478,7 @@ void RenderObstacleEntity(
 	*/
 }
 
-
+/*
 void RenderTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderCommands,
 	RenderSystem::RenderGroup* group,
 	GameAssets* gameAssets,
@@ -512,10 +512,7 @@ void RenderTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderComman
 		GameRender::RenderCircle(
 			gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, circle->center, circle->radius, lineThickness);
 	}
-	
 }
-
-
 
 void RenderVoronoiDebug(RenderSystem::GameRenderCommands* gameRenderCommands,
 	RenderSystem::RenderGroup* group,
@@ -540,6 +537,7 @@ void RenderVoronoiDebug(RenderSystem::GameRenderCommands* gameRenderCommands,
 		}
 	}
 }
+*/
 
 void RenderGrid(EditorState* editorState, GameRender::GameRenderState* gameRenderState, World* world, glm::vec3 groundIntersectionPoint)
 {
@@ -912,7 +910,7 @@ void RenderCDTriangulationDebug(
 	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
 	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
 
-	float thickness = 0.2f;
+	float thickness = 0.1f;
 	for (int i = 0; i < triangulationDebug->rawInputVertices.size(); i++)
 	{
 		GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_GREEN, triangulationDebug->rawInputVertices[i], 1);
@@ -927,32 +925,20 @@ void RenderCDTriangulationDebug(
 		}
 	}
 
-	/*
-	std::vector<glm::vec4> colors = {
-		GameRender::COLOR_WHITE, 
-		GameRender::COLOR_YELLOW,
-		GameRender::COLOR_BLUE,
-		GameRender::COLOR_GREEN,
-		GameRender::COLOR_RED,
-		GameRender::COLOR_TEAL,
-		GameRender::COLOR_ORANGE };
-		*/
-
 	for (int i = 0; i < triangulationDebug->triangles.size(); i++)
 	{
 		CDTriangulation::DelaunayTriangle* triangle = &triangulationDebug->triangles[i];
 		glm::vec3 liftedVertex[3];
-
 
 		if (triangle->isObstacle)
 		{
 			for (int j = 0; j < CDTriangulation::NUM_TRIANGLE_VERTEX; j++)
 			{
 				// lifting it slightly higher
-				liftedVertex[j] = triangle->vertices[j].pos + GameRender::DEBUG_RENDER_OFFSET;
+				liftedVertex[j] = triangle->vertices[j].pos; // +GameRender::DEBUG_RENDER_OFFSET;
 			}
 
-			GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, liftedVertex, 2*thickness, false);
+			GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, GameRender::HALF_TRANS_COLOR_RED, liftedVertex,thickness, false);
 		}
 		else
 		{
@@ -962,11 +948,13 @@ void RenderCDTriangulationDebug(
 				liftedVertex[j] = triangle->vertices[j].pos; // +GameRender::DEBUG_RENDER_OFFSET;
 			}
 
-			GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, GameRender::COLOR_WHITE, liftedVertex, thickness, false);
+			GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, GameRender::HALF_TRANS_COLOR_WHITE, liftedVertex, thickness, false);
 		}
 
+
+		GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_PINK, triangle->GetCenter(), 1);
 		std::string s = std::to_string(triangle->id);
-		GameRender::DEBUGTextLine(s.c_str(), gameRenderState, triangle->GetCenter(), 0.5);
+		GameRender::DEBUGTextLine(s.c_str(), gameRenderState, triangle->GetCenter(), 0.2);
 
 
 		if (editorState->highlightTriangle)
@@ -1233,31 +1221,33 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 
 	EditorState* editor = &gameState->editorState;
 
+
 	for (int i = 0; i < world->numEntities; i++)
 	{
 		Entity* entity = &world->entities[i];
 		switch (entity->flag)
 		{
-			case EntityFlag::OBSTACLE:
+		case EntityFlag::OBSTACLE:
 
-				if (!editor->hideObstacles)
-				{
-					RenderObstacleEntity(gameRenderCommands, &group, gameState, gameAssets, entity);
-				}
-				break;
+			if (!editor->hideObstacles)
+			{
+				RenderObstacleEntity(gameRenderCommands, &group, gameState, gameAssets, entity);
+			}
+			break;
 
-			case EntityFlag::AGENT:
-				RenderAgentEntity(gameRenderCommands, &group, gameState, gameAssets, world, entity);
-				break;
-		}	
+		case EntityFlag::AGENT:
+			RenderAgentEntity(gameRenderCommands, &group, gameState, gameAssets, world, entity);
+			break;
+		}
 	}
 
 
 
-	RenderTriangulationDebug(gameRenderCommands, &group, gameAssets, world->triangulationDebug);
-	RenderVoronoiDebug(gameRenderCommands, &group, gameAssets, world->voronoiDebug);
+	// RenderTriangulationDebug(gameRenderCommands, &group, gameAssets, world->triangulationDebug);
+	// RenderVoronoiDebug(gameRenderCommands, &group, gameAssets, world->voronoiDebug);
 	
-	
+
+
 	glm::vec3 rayOrigin = gameState->cameraEntity.position;
 	glm::vec3 rayDir = MousePosToMousePickingRay(gameState->world.cameraSetup, gameRenderCommands, gameInputState->mousePos);
 
@@ -1299,6 +1289,7 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 
 	RenderCDTriangulationDebug(editor, &gameRenderState, world->cdTriangulationGraph);
 	RenderPathingData(editor, world, &gameRenderState, gameInputState, world->pathingDebug, groundIntersectionPoint);
+
 
 	RenderSelectedEntityOption(editor, &gameRenderState, gameInputState, gameState, groundIntersectionPoint);
 
@@ -1587,7 +1578,7 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		}
 		else if (testCase == 2)
 		{
-			LoadMap(&gameState->world, "TestData/data4.txt");
+			LoadMap(&gameState->world, "TestData/data5.txt");
 		}
 
 

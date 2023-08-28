@@ -38,6 +38,11 @@ namespace Math
 		return abs(num) < EPSILON;
 	}
 
+	bool Equals(float a, float b)
+	{
+		return IsZero(a - b);
+	}
+
 	float Cross(glm::vec2 v0, glm::vec2 v1)
 	{
 		return v0.x * v1.y - v1.x * v0.y;

@@ -8,7 +8,7 @@ namespace GameRender
 	glm::vec4 HALF_TRANS_COLOR_WHITE = glm::vec4(1, 1, 1, 0.5);
 	glm::vec4 HALF_TRANS_COLOR_RED = glm::vec4(1, 0, 0, 0.5);
 
-	glm::vec4 DRAGGED_ENTITY_COLOR = glm::vec4(1, 1, 0, 1);
+	glm::vec4 DRAGGED_ENTITY_COLOR = glm::vec4(1, 1, 0, 0.5);
 	glm::vec4 SELECTED_ENTITY_COLOR = glm::vec4(1, 0, 0, 0.25);
 	glm::vec4 POTENTIAL_PATHING_START_COLOR = glm::vec4(1, 0, 0, 0.25);
 	glm::vec4 POTENTIAL_PATHING_END_COLOR = glm::vec4(0, 1, 0, 0.25);
@@ -713,11 +713,11 @@ namespace GameRender
 		stbtt_GetFontVMetrics(&gameRenderState->debugLoadedFont->fontInfo, &ascent, &descent, &lineGap);
 		float scale = DEBUG_CHAR_BITMAP_SCALE * stbtt_ScaleForPixelHeight(&debugLoadedFont->fontInfo, FONT_SCALE);
 
-		int lineGapBetweenNextBaseline = (ascent - descent + lineGap);
-		int scaledLineGap = (int)(lineGapBetweenNextBaseline * scale);
+		float lineGapBetweenNextBaseline = (ascent - descent + lineGap);
+		float scaledLineGap = lineGapBetweenNextBaseline * scale;
 
 		float xPos = position.x;
-		int yBaselinePos = position.y;
+		float yBaselinePos = position.y;
 
 		// This is essentially following the example from stb library
 	//	for (int i = 0; i < size; i++)
@@ -742,9 +742,9 @@ namespace GameRender
 				float width = glyphBitmap->bitmap.width / (float)glyphBitmap->bitmap.height * height;
 
 				// i dont know why i only multiple scale here... but i'll investigate later
-				float x = xPos + (float)(glyphBitmap->bitmapXYOffsets.x) * scale;
-				float y = yBaselinePos - (float)(glyphBitmap->bitmapXYOffsets.y);
-
+				float x = xPos + (float)(glyphBitmap->bitmapXYOffsets.x) * DEBUG_CHAR_BITMAP_SCALE;
+				float y = yBaselinePos - (float)(glyphBitmap->bitmapXYOffsets.y) * DEBUG_CHAR_BITMAP_SCALE;
+				 
 				// 0.2 so that its slightly above the z plane
 				glm::vec3 leftTopPos = glm::vec3(x, y, 0.2);
 

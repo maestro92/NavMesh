@@ -62,7 +62,14 @@ struct PathingState
 {
 	glm::vec3 destination;
 	std::vector<glm::vec3> waypoints;
-	int curWaypointIndex;
+	int curTargetWaypointIndex;
+
+	void BeginPathingToDestination(std::vector<glm::vec3> waypointsIn)
+	{
+		curTargetWaypointIndex = 0;
+		waypoints = waypointsIn;
+		destination = waypointsIn[waypointsIn.size() - 1];
+	}
 };
 
 struct Entity

@@ -9,7 +9,7 @@ namespace Sim
 {
 
 
-	void SetDestination(SimulationState* simState,
+	void SetDestinationTick(SimulationState* simState,
 		GameInputState* gameInputState,
 		World* world,
 		glm::vec3 groundIntersectionPoint)
@@ -23,8 +23,7 @@ namespace Sim
 
 				float diameter = entity->agentRadius * 2;
 				PathFinding::PathfindingResult pathingResult = PathFinding::FindPath(world->pathingDebug, diameter, world, entity->pos, entity->pathingState.destination);
-				entity->pathingState.waypoints = pathingResult.waypoints;
-				entity->pathingState.curTargetWaypointIndex = 0;
+				entity->pathingState.BeginPathingToDestination(pathingResult.waypoints);
 			}
 		}
 	}
@@ -91,33 +90,44 @@ namespace Sim
 
 	void AgentPathingTick(Entity* entity)
 	{
-		/*
+		
 		float speed = 2.0f;
 		float dt = 0.1f;
 
 		PathingState* state = &(entity->pathingState);
 
-		if (state->curTargetWaypointIndex < state->waypoints.size())
+		if (state->curTargetWaypointIndex >= state->waypoints.size())
 		{
-			float distTraveledThisTick = dt * speed;
-
-			while (distTraveledThisTick > 0)
-			{
-
-
-
-			}
-
-			float distToNextWayPoint = 
+			return;
 		}
 
-		if(entity->pathingState)
+		float distTravelled = dt * speed;
 
-		// FIXED_UPDATE_TIME_S;
-		entity->pos += pmove.velocity * dt;
+		while (distTravelled > 0)
+		{
+			if (state->curTargetWaypointIndex >= state->waypoints.size())
+			{
+				break;
+			}
 
-		if()
-		*/
+			glm::vec3 vecToNextWaypoint = state->waypoints[state->curTargetWaypointIndex] - entity->pos;
+			float distToNextWayPoint = glm::length(vecToNextWaypoint);
+
+			// i can communte to the next waypoint
+			if (distTravelled >= distToNextWayPoint)
+			{
+				distTravelled -= distToNextWayPoint;
+				entity->pos = state->waypoints[state->curTargetWaypointIndex];
+				state->curTargetWaypointIndex++;
+			}
+			else
+			{
+				glm::vec3 dir = glm::normalize(vecToNextWaypoint);
+				entity->pos = entity->pos + dir * distTravelled;
+				entity->facingDirection = dir;
+				distTravelled = 0;
+			}
+		}
 	}
 
 	void SimModeTick(SimulationState* simState,
@@ -128,7 +138,7 @@ namespace Sim
 	{
 		InteractWorldEntities(simState, gameInputState, gameRenderCommands, world, groundIntersectionPoint);
 
-		SetDestination(simState, gameInputState, world, groundIntersectionPoint);
+		SetDestinationTick(simState, gameInputState, world, groundIntersectionPoint);
 
 
 		for (int i = 0; i < world->numEntities; i++)
@@ -138,7 +148,7 @@ namespace Sim
 			{
 				case EntityFlag::AGENT:
 				{
-					AgentPathingTick(entity);
+				//	AgentPathingTick(entity);
 
 
 
