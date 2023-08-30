@@ -12,6 +12,110 @@
 
 namespace PathFinding
 {
+
+
+	struct Funnel
+	{
+		std::vector<NavMesh::Portal> portals;
+		int apexIndex = 0;
+		glm::vec3 apex;
+
+
+		// left point and left Index dont always point to the same point
+		// when we reset portal, leftPoint/rightPoint will point to the apex
+		// and leftIndex and rightIndex will point to different indices
+		// things get fixed on the next iteration
+		glm::vec3 leftPoint;
+		glm::vec3 rightPoint;
+
+		int leftIndex = 0;
+		int rightIndex = 0;
+
+
+		Funnel(std::vector<NavMesh::Portal> portalsIn)
+		{
+			portals = portalsIn;
+
+			// assume first entry is the start;
+			apex = portalsIn[0].left;
+
+			leftPoint = apex;
+			rightPoint = apex;
+
+			apexIndex = 0;
+			leftIndex = 0;
+			rightIndex = 0;
+		}
+
+		glm::vec3 GetApex()	
+		{	
+			return apex;	
+		}
+
+		glm::vec3 GetLeftPoint()
+		{
+			return leftPoint;
+		}
+
+		glm::vec3 GetRightPoint()
+		{
+			return rightPoint;
+		}
+
+		glm::vec3 GetLeftSideDir()
+		{
+			return leftPoint - apex;
+		}
+
+		glm::vec3 GetRightSideDir()
+		{
+			return rightPoint - apex;;
+		}
+
+		void UpdateLeftSide(int index)
+		{
+			leftIndex = index;
+			leftPoint = portals[index].left;
+		}
+
+		void UpdateRightSide(int index)
+		{
+			rightIndex = index;
+			rightPoint = portals[index].right;
+		}
+
+		void ResetToLeftPoint()
+		{
+			// make the current left new apex
+			apex = GetLeftPoint();
+			apexIndex = leftIndex;
+
+			rightPoint = apex;
+			leftPoint = apex;
+
+			// reset the portal. We just reset the portal to itself
+			// we will update the left and right point in the next iteration
+			leftIndex = apexIndex;
+			rightIndex = apexIndex;
+		}
+
+		void ResetToRightPoint()
+		{
+			// make the current left new apex
+			apex = GetRightPoint();
+			apexIndex = rightIndex;
+
+			rightPoint = apex;
+			leftPoint = apex;
+
+			// reset the portal. We just reset the portal to itself
+			// we will update the left and right point in the next iteration
+			leftIndex = apexIndex;
+			rightIndex = apexIndex;
+		}
+	};
+
+
 	NavMesh::DualGraphNode* GetNodeContainingPoint(
 		NavMesh::DualGraph* pathingEnvironment,
 		World* world,
@@ -309,25 +413,11 @@ namespace PathFinding
 	{
 		std::vector<glm::vec3> results;
 
-		NavMesh::Portal startPortal = { start, start };
-		NavMesh::Portal endPortal = { end, end };
-
-		// we setup the first funnel
-		glm::vec3 portalApex = start;
-
-		// my vertices are counter clockwise
-		glm::vec3 portalRightPoint = startPortal.right;
-		glm::vec3 portalLeftPoint = startPortal.left;
-
+		Funnel funnel(portals);
 		results.push_back(start);
-
-		int apexIndex = 0, leftIndex = 0, rightIndex = 0;
-		glm::vec3 dirL, dirR;
 
 		for (int i = 1; i < portals.size(); i++)
 		{
-			// std::cout << "checking edges " << i << std::endl;
-
 			// now we check edges 
 			NavMesh::Portal portal = portals[i];
 
@@ -335,99 +425,64 @@ namespace PathFinding
 			glm::vec3 newPortalRightPoint = portal.right;
 			glm::vec3 newPortalLeftPoint = portal.left;
 
-			if (Math::Equals(newPortalRightPoint, portalRightPoint))
+			if (Math::Equals(newPortalRightPoint, funnel.GetRightPoint()))
 			{
-				portalRightPoint = newPortalRightPoint;
-				rightIndex = i;
+				funnel.UpdateRightSide(i);
 			}
 
-			if (Math::Equals(newPortalLeftPoint, portalLeftPoint))
+			if (Math::Equals(newPortalLeftPoint, funnel.GetLeftPoint()))
 			{
-				portalLeftPoint = newPortalLeftPoint;
-				leftIndex = i;
+				funnel.UpdateLeftSide(i);
 			}
 
-
-			dirL = portalLeftPoint - portalApex;
-			dirR = portalRightPoint - portalApex;
-
-
-			glm::vec3 dirNewR = newPortalRightPoint - portalApex;
+			glm::vec3 dirNewR = newPortalRightPoint - funnel.GetApex();
 			// we first check if the new newPortalRight is counter-clockwise of portalRightPoint
 			// if not, the sign of the cross product will be different, and we just ignore
-			float temp = Math::TriArea_XYPlane(dirR, dirNewR);
+			float temp = Math::TriArea_XYPlane(funnel.GetRightSideDir(), dirNewR);
 
 			// when dirNewR is counter-clockwise of dirR, that means the funnel is getting more narrow
-			if (Math::TriArea_XYPlane(dirR, dirNewR) >= 0)
+			if (Math::TriArea_XYPlane(funnel.GetRightSideDir(), dirNewR) >= 0)
 			{
 				// if portalApex and portalRightPoint, that means we just had a crossover and we just reset the portal
 				// we then want to check that it's not counter-clockwise of portalLeftPoint
 				// 
-				if (Math::Equals(portalApex, portalRightPoint) || Math::TriArea_XYPlane(dirNewR, dirL) > 0)
+				if (Math::Equals(funnel.GetApex(), funnel.GetRightPoint()) || Math::TriArea_XYPlane(dirNewR, funnel.GetLeftSideDir()) > 0)
 				{
-					portalRightPoint = newPortalRightPoint;
-					rightIndex = i;
+					funnel.UpdateRightSide(i);
 				}
 				else
 				{
 					// right over left, insert left to path
-					results.push_back(portalLeftPoint);
+					results.push_back(funnel.GetLeftPoint());
 
-					// make the current left new apex
-					portalApex = portalLeftPoint;
-					apexIndex = leftIndex;
+					funnel.ResetToLeftPoint();
 
-					// reset the portal. We just reset the portal to itself
-					// we will update the left and right point in the next iteration
-					portalRightPoint = portalApex;
-					portalLeftPoint = portalApex;
-
-					leftIndex = apexIndex;
-					rightIndex = apexIndex;
-
-					// reset the index
-					i = apexIndex;
+					i = funnel.apexIndex;
 					continue;
 				}
 			}
 
-			// we may update portalRightPoint, so we need to update the dirR
-			dirL = portalLeftPoint - portalApex;
-			dirR = portalRightPoint - portalApex;
-
 			// then check the left vertex
-
-			glm::vec3 dirNewL = newPortalLeftPoint - portalApex;
+			glm::vec3 dirNewL = newPortalLeftPoint - funnel.GetApex();
 
 			// we first check if the new newPortalLeft is clockwise of portalLeftPoint
 			// if not, the sign of the cross product will be different, and we just ignore
 			// when dirNewL is clockwise of dirL, that means the funnel is getting more narrow
-			if (Math::TriArea_XYPlane(dirNewL, dirL) >= 0)
+			if (Math::TriArea_XYPlane(dirNewL, funnel.GetLeftSideDir()) >= 0)
 			{
 				// we then want to check that it's not clockwise of portalRightPoint
-				if (Math::Equals(portalApex, portalLeftPoint) || Math::TriArea_XYPlane(dirR, dirNewL) > 0)
+				if (Math::Equals(funnel.GetApex(), funnel.GetLeftPoint()) || Math::TriArea_XYPlane(funnel.GetRightSideDir(), dirNewL) > 0)
 				{
-					portalLeftPoint = newPortalLeftPoint;
-					leftIndex = i;
+					funnel.UpdateLeftSide(i);
 				}
 				else
 				{
 					// right over left, insert left to path
-					results.push_back(portalRightPoint);
+					results.push_back(funnel.GetRightPoint());
 
-					// make the current left new apex
-					portalApex = portalRightPoint;
-					apexIndex = rightIndex;
+					funnel.ResetToRightPoint();
 
-					// reset the portal. We just reset the portal to itself
-					// we will update the left and right point in the next iteration
-					portalRightPoint = portalApex;
-					portalLeftPoint = portalApex;
-
-					leftIndex = apexIndex;
-					rightIndex = apexIndex;
-
-					i = apexIndex;
+					i = funnel.apexIndex;
 					continue;
 				}
 			}
@@ -437,7 +492,6 @@ namespace PathFinding
 		// for portalApex to end crosses the last portal, then we just draw a straight line
 		// otherwise, w need to add the last portal as another point 
 		//
-
 		results.push_back(end);
 
 		FunnelResult funnelResult;
@@ -445,153 +499,13 @@ namespace PathFinding
 
 		return funnelResult;
 	}
-
-	/*
-
-	// portals here include start and end.
-	FunnelResult Funnel_Core2(
-		std::vector<NavMesh::Portal> portals,
-		glm::vec3 start, glm::vec3 end)
-	{
-		std::vector<glm::vec3> results;
-
-		NavMesh::Portal startPortal = { start, start };
-		NavMesh::Portal endPortal = { end, end };
-
-		// we setup the first funnel
-		glm::vec3 apex = start;
-
-
-		results.push_back(start);
-
-		int apexIndex = 0, leftIndex = 1, rightIndex = 1;
-		glm::vec3 dirL, dirR;
-
-		for (int i = 1; i < portals.size(); i++)
-		{
-			// std::cout << "checking edges " << i << std::endl;
-
-			// now we check edges 
-			NavMesh::Portal portal = portals[i];
-
-			// first check the right vertex
-			glm::vec3 newPortalRightPoint = portal.right;
-			glm::vec3 newPortalLeftPoint = portal.left;
-
-		//	portalRightPoint = portals[rightIndex].right;
-			if (!Math::Equals(newPortalLeftPoint, portals[leftIndex].left) && i > leftIndex)
-			{
-				// then check the left vertex
-
-				dirL = portals[leftIndex].left - apex;
-
-				glm::vec3 dirNewL = newPortalLeftPoint - apex;
-
-				// we first check if the new newPortalLeft is clockwise of portalLeftPoint
-				// if not, the sign of the cross product will be different, and we just ignore
-				// when dirNewL is clockwise of dirL, that means the funnel is getting more narrow
-				if (Math::TriArea_XYPlane(dirNewL, dirL) >= 0)
-				{
-					// we then want to check that it's not clockwise of portalRightPoint
-					if (Math::TriArea_XYPlane(dirR, dirNewL) > 0)
-					{
-						int next = apex + 1;
-						for (int j = next; j < portals.size(); j++)
-						{
-							if (!Math::Equals(portals[j].right, newPortalRightPoint))
-							{
-								next = j;
-								break;
-							}
-						}
-
-						results.push_back(portals[rightIndex].right);
-						apex = portals[rightIndex].right;
-						rightIndex = next;
-
-					}
-					else
-					{
-						leftIndex = i;
-					}
-				}
-			}
-
-
-
-			if (!Math::Equals(newPortalRightPoint, portalRightPoint) && i > rightIndex)
-			{
-
-			}
-
-
-
-			dirR = portalRightPoint - apex;
-
-
-			glm::vec3 dirNewR = newPortalRightPoint - apex;
-			// we first check if the new newPortalRight is counter-clockwise of portalRightPoint
-			// if not, the sign of the cross product will be different, and we just ignore
-			float temp = Math::TriArea_XYPlane(dirR, dirNewR);
-
-			// when dirNewR is counter-clockwise of dirR, that means the funnel is getting more narrow
-			if (Math::TriArea_XYPlane(dirR, dirNewR) >= 0)
-			{
-				// if portalApex and portalRightPoint, that means we just had a crossover and we just reset the portal
-				// we then want to check that it's not counter-clockwise of portalLeftPoint
-				// 
-				if (Math::TriArea_XYPlane(dirNewR, dirL) > 0)
-				{
-					portalRightPoint = newPortalRightPoint;
-					rightIndex = i;
-				}
-				else
-				{
-					// right over left, insert left to path
-					results.push_back(portalLeftPoint);
-
-					// make the current left new apex
-					apex = portalLeftPoint;
-					apexIndex = leftIndex;
-
-					// reset the portal. We just reset the portal to itself
-					// we will update the left and right point in the next iteration
-					portalRightPoint = apex;
-					portalLeftPoint = apex;
-
-					leftIndex = apexIndex;
-					rightIndex = apexIndex;
-
-					// reset the index
-					i = apexIndex;
-					continue;
-				}
-			}
-
-
-
-		}
-
-		// for the last destination 
-		// for portalApex to end crosses the last portal, then we just draw a straight line
-		// otherwise, w need to add the last portal as another point 
-		//
-
-		results.push_back(end);
-
-		FunnelResult funnelResult;
-		funnelResult.waypoints = results;
-
-		return funnelResult;
-	}
-	*/
 
 	
 	// http://digestingduck.blogspot.com/2010/03/simple-stupid-funnel-algorithm.html
 	// https://gamedev.stackexchange.com/questions/68302/how-does-the-simple-stupid-funnel-algorithm-work
 	// http://ahamnett.blogspot.com/2012/10/funnel-algorithm.html
 	// https://skatgame.net/mburo/ps/thesis_demyen_2006.pdf
-	FunnelResult Funnel(
+	FunnelResult FunnelPath(
 		NavMesh::DualGraph* dualGraph, 
 		CDTriangulation::Graph* graph, 
 		std::vector<int> aStarNodeIds,
@@ -630,7 +544,7 @@ namespace PathFinding
 	// https://github.com/dotsnav/dotsnav
 	// https://www.gamedev.net/forums/topic/548610-modified-funnel-algorithm/
 	// http://ahamnett.blogspot.com/2012/10/funnel-algorithm.html
-	FunnelResult ModifiedFunnel(
+	FunnelResult ModifiedFunnelPath(
 		NavMesh::DualGraph* dualGraph,
 		CDTriangulation::Graph* graph,
 		std::vector<int> aStarNodeIds,
@@ -878,8 +792,8 @@ namespace PathFinding
 			}
 
 			float radius = agentDiameter / 2.0f;
-			FunnelResult funnelResult = ModifiedFunnel(dualGraph, world->cdTriangulationGraph, aStarResult.nodePath, start, finalDestination, radius, debugState);
-			// FunnelResult funnelResult = Funnel(dualGraph, world->cdTriangulationGraph, aStarResult.nodePath, start, finalDestination, debugState);
+			FunnelResult funnelResult = ModifiedFunnelPath(dualGraph, world->cdTriangulationGraph, aStarResult.nodePath, start, finalDestination, radius, debugState);
+			// FunnelResult funnelResult = FunnelPath(dualGraph, world->cdTriangulationGraph, aStarResult.nodePath, start, finalDestination, debugState);
 
 			result.waypoints = funnelResult.waypoints;
 
