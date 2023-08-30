@@ -67,6 +67,21 @@ namespace Editor
 		bool showCellGridCoord;
 	};
 
+	struct DebugConfig
+	{
+		bool debugCamera;
+		bool debugCursorSimPos;
+	};
+
+	struct PathingDebugConfig
+	{
+		bool showTunnel;
+		bool showPortals;
+		
+		bool showModifiedTunnel;
+		bool showModifiedPortals;
+		bool showAnePerps;
+	};
 }
 
 struct EditorState {
@@ -81,6 +96,10 @@ struct EditorState {
 	// get rid of this indirection
 	EditorStateData* coreData;
 	Editor::GridDisplayConfig gridConfig;
+
+	Editor::DebugConfig debugConfig;
+
+	Editor::PathingDebugConfig pathingDebugConfig;
 
 	bool hideObstacles;
 

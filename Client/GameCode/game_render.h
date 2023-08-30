@@ -720,8 +720,6 @@ namespace GameRender
 		float yBaselinePos = position.y;
 
 		// This is essentially following the example from stb library
-	//	for (int i = 0; i < size; i++)
-
 		int i = 0;
 		while (s[i] != '\0')
 		{

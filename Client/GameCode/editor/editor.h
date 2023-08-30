@@ -463,8 +463,6 @@ namespace Editor
 
 	}
 
-
-
 	void TickAndRenderEditorMenu(GameMemory* gameMemory,
 		GameInputState* gameInputState,
 		GameRender::GameRenderState* gameRenderSetup,
@@ -540,6 +538,81 @@ namespace Editor
 			curX, curY, btnWidth, btnHeight, "Show Grid", editor->gridConfig.showGrid))
 		{
 			editor->gridConfig.showGrid = !editor->gridConfig.showGrid;
+		}
+		gridLayoutHelper.IncrementElementCount();
+
+
+
+		gridLayoutHelper.GetElementPosition(curX, curY);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Debug Camera", editor->debugConfig.debugCamera))
+		{
+			editor->debugConfig.debugCamera = !editor->debugConfig.debugCamera;
+		}
+		gridLayoutHelper.IncrementElementCount();
+
+
+		gridLayoutHelper.GetElementPosition(curX, curY);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Debug Cursor Point", editor->debugConfig.debugCursorSimPos))
+		{
+			editor->debugConfig.debugCursorSimPos = !editor->debugConfig.debugCursorSimPos;
+		}
+		gridLayoutHelper.IncrementElementCount();
+
+
+
+
+		gridLayoutHelper.GetElementPosition(curX, curY);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Debug Cursor Point", editor->debugConfig.debugCursorSimPos))
+		{
+			editor->debugConfig.debugCursorSimPos = !editor->debugConfig.debugCursorSimPos;
+		}
+		gridLayoutHelper.IncrementElementCount();
+
+
+
+
+		gridLayoutHelper.GetElementPosition(curX, curY);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Show Tunnel", editor->pathingDebugConfig.showTunnel))
+		{
+			editor->pathingDebugConfig.showTunnel = !editor->pathingDebugConfig.showTunnel;
+		}
+		gridLayoutHelper.IncrementElementCount();
+
+
+		gridLayoutHelper.GetElementPosition(curX, curY);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Show Portals", editor->pathingDebugConfig.showPortals))
+		{
+			editor->pathingDebugConfig.showPortals = !editor->pathingDebugConfig.showPortals;
+		}
+		gridLayoutHelper.IncrementElementCount();
+
+
+		gridLayoutHelper.GetElementPosition(curX, curY);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "show Modified Tunnel", editor->pathingDebugConfig.showModifiedTunnel))
+		{
+			editor->pathingDebugConfig.showModifiedTunnel = !editor->pathingDebugConfig.showModifiedTunnel;
+		}
+		gridLayoutHelper.IncrementElementCount();
+
+		gridLayoutHelper.GetElementPosition(curX, curY);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Show Modified Portals", editor->pathingDebugConfig.showModifiedPortals))
+		{
+			editor->pathingDebugConfig.showModifiedPortals = !editor->pathingDebugConfig.showModifiedPortals;
+		}
+		gridLayoutHelper.IncrementElementCount();
+
+		gridLayoutHelper.GetElementPosition(curX, curY);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Show ANE Perps", editor->gridConfig.showGrid))
+		{
+			editor->pathingDebugConfig.showAnePerps = !editor->pathingDebugConfig.showAnePerps;
 		}
 		gridLayoutHelper.IncrementElementCount();
 

@@ -7,6 +7,12 @@
 
 namespace PathFinding
 {
+	struct Vector
+	{
+		glm::vec3 v0;
+		glm::vec3 v1;
+	};
+
 	struct DebugState
 	{
 		glm::vec3 start;
@@ -25,5 +31,9 @@ namespace PathFinding
 
 		std::vector<glm::vec3> newLeftVertices;
 		std::vector<glm::vec3> newRightVertices;
+
+		std::vector<Vector> leftAnePerp;
+		std::vector<Vector> rightAnePerp;
+
 	};
 }

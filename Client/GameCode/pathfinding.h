@@ -299,7 +299,6 @@ namespace PathFinding
 	struct FunnelResult
 	{
 		std::vector<glm::vec3> waypoints;
-	//	std::vector<NavMesh::Portal> portals;
 	};
 
 
@@ -392,6 +391,9 @@ namespace PathFinding
 				}
 			}
 
+			// we may update portalRightPoint, so we need to update the dirR
+			dirL = portalLeftPoint - portalApex;
+			dirR = portalRightPoint - portalApex;
 
 			// then check the left vertex
 
@@ -417,11 +419,11 @@ namespace PathFinding
 					portalApex = portalRightPoint;
 					apexIndex = rightIndex;
 
-
 					// reset the portal. We just reset the portal to itself
 					// we will update the left and right point in the next iteration
 					portalRightPoint = portalApex;
 					portalLeftPoint = portalApex;
+
 					leftIndex = apexIndex;
 					rightIndex = apexIndex;
 
@@ -444,6 +446,145 @@ namespace PathFinding
 		return funnelResult;
 	}
 
+	/*
+
+	// portals here include start and end.
+	FunnelResult Funnel_Core2(
+		std::vector<NavMesh::Portal> portals,
+		glm::vec3 start, glm::vec3 end)
+	{
+		std::vector<glm::vec3> results;
+
+		NavMesh::Portal startPortal = { start, start };
+		NavMesh::Portal endPortal = { end, end };
+
+		// we setup the first funnel
+		glm::vec3 apex = start;
+
+
+		results.push_back(start);
+
+		int apexIndex = 0, leftIndex = 1, rightIndex = 1;
+		glm::vec3 dirL, dirR;
+
+		for (int i = 1; i < portals.size(); i++)
+		{
+			// std::cout << "checking edges " << i << std::endl;
+
+			// now we check edges 
+			NavMesh::Portal portal = portals[i];
+
+			// first check the right vertex
+			glm::vec3 newPortalRightPoint = portal.right;
+			glm::vec3 newPortalLeftPoint = portal.left;
+
+		//	portalRightPoint = portals[rightIndex].right;
+			if (!Math::Equals(newPortalLeftPoint, portals[leftIndex].left) && i > leftIndex)
+			{
+				// then check the left vertex
+
+				dirL = portals[leftIndex].left - apex;
+
+				glm::vec3 dirNewL = newPortalLeftPoint - apex;
+
+				// we first check if the new newPortalLeft is clockwise of portalLeftPoint
+				// if not, the sign of the cross product will be different, and we just ignore
+				// when dirNewL is clockwise of dirL, that means the funnel is getting more narrow
+				if (Math::TriArea_XYPlane(dirNewL, dirL) >= 0)
+				{
+					// we then want to check that it's not clockwise of portalRightPoint
+					if (Math::TriArea_XYPlane(dirR, dirNewL) > 0)
+					{
+						int next = apex + 1;
+						for (int j = next; j < portals.size(); j++)
+						{
+							if (!Math::Equals(portals[j].right, newPortalRightPoint))
+							{
+								next = j;
+								break;
+							}
+						}
+
+						results.push_back(portals[rightIndex].right);
+						apex = portals[rightIndex].right;
+						rightIndex = next;
+
+					}
+					else
+					{
+						leftIndex = i;
+					}
+				}
+			}
+
+
+
+			if (!Math::Equals(newPortalRightPoint, portalRightPoint) && i > rightIndex)
+			{
+
+			}
+
+
+
+			dirR = portalRightPoint - apex;
+
+
+			glm::vec3 dirNewR = newPortalRightPoint - apex;
+			// we first check if the new newPortalRight is counter-clockwise of portalRightPoint
+			// if not, the sign of the cross product will be different, and we just ignore
+			float temp = Math::TriArea_XYPlane(dirR, dirNewR);
+
+			// when dirNewR is counter-clockwise of dirR, that means the funnel is getting more narrow
+			if (Math::TriArea_XYPlane(dirR, dirNewR) >= 0)
+			{
+				// if portalApex and portalRightPoint, that means we just had a crossover and we just reset the portal
+				// we then want to check that it's not counter-clockwise of portalLeftPoint
+				// 
+				if (Math::TriArea_XYPlane(dirNewR, dirL) > 0)
+				{
+					portalRightPoint = newPortalRightPoint;
+					rightIndex = i;
+				}
+				else
+				{
+					// right over left, insert left to path
+					results.push_back(portalLeftPoint);
+
+					// make the current left new apex
+					apex = portalLeftPoint;
+					apexIndex = leftIndex;
+
+					// reset the portal. We just reset the portal to itself
+					// we will update the left and right point in the next iteration
+					portalRightPoint = apex;
+					portalLeftPoint = apex;
+
+					leftIndex = apexIndex;
+					rightIndex = apexIndex;
+
+					// reset the index
+					i = apexIndex;
+					continue;
+				}
+			}
+
+
+
+		}
+
+		// for the last destination 
+		// for portalApex to end crosses the last portal, then we just draw a straight line
+		// otherwise, w need to add the last portal as another point 
+		//
+
+		results.push_back(end);
+
+		FunnelResult funnelResult;
+		funnelResult.waypoints = results;
+
+		return funnelResult;
+	}
+	*/
 
 	
 	// http://digestingduck.blogspot.com/2010/03/simple-stupid-funnel-algorithm.html
@@ -486,6 +627,9 @@ namespace PathFinding
 		}
 	};
 
+	// https://github.com/dotsnav/dotsnav
+	// https://www.gamedev.net/forums/topic/548610-modified-funnel-algorithm/
+	// http://ahamnett.blogspot.com/2012/10/funnel-algorithm.html
 	FunnelResult ModifiedFunnel(
 		NavMesh::DualGraph* dualGraph,
 		CDTriangulation::Graph* graph,
@@ -562,11 +706,16 @@ namespace PathFinding
 
 		std::cout << "agentRadius " << agentRadius << std::endl;
 
+		std::vector<PathFinding::Vector> leftPerp;
+		std::vector<PathFinding::Vector> rightPerp;
+
 		// https://www.youtube.com/watch?v=rWHrTrigIYo&ab_channel=jdtec01
 		// start from 2:20
 		// the first and last point is start and end, so we dont care
 		for (int i = 1; i < leftVertices.size() - 1 ; i++)
 		{
+			glm::vec3 oldVertex = leftVertices[i];
+
 			// for eac vertex. gets its neighbor edges
 			glm::vec3 p0 = leftVertices[i - 1];
 			glm::vec3 p1 = leftVertices[i];
@@ -584,11 +733,20 @@ namespace PathFinding
 
 			glm::vec3 newVertex = leftVertices[i] + averageNeighborEdgePerp * agentRadius;
 			leftVertices[i] = newVertex;
+
+
+			PathFinding::Vector vec;
+			vec.v0 = oldVertex;
+			vec.v1 = newVertex;
+
+			leftPerp.push_back(vec);
 		}
 
 
 		for (int i = 1; i < rightVertices.size() - 1; i++)
 		{
+			glm::vec3 oldVertex = rightVertices[i];
+
 			// for eac vertex. gets its neighbor edges
 			glm::vec3 p0 = rightVertices[i - 1];
 			glm::vec3 p1 = rightVertices[i];
@@ -606,10 +764,20 @@ namespace PathFinding
 
 			glm::vec3 newVertex = rightVertices[i] + averageNeighborEdgePerp * agentRadius;
 			rightVertices[i] = newVertex;
+
+			PathFinding::Vector vec;
+			vec.v0 = oldVertex;
+			vec.v1 = newVertex;
+
+			rightPerp.push_back(vec);
 		}
 
 		debugState->newLeftVertices = leftVertices;
 		debugState->newRightVertices = rightVertices;
+
+		debugState->leftAnePerp = leftPerp;
+		debugState->rightAnePerp = rightPerp;
+
 
 
 		std::vector<NavMesh::Portal> modifiedPortals;

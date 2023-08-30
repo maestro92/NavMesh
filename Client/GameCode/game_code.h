@@ -415,8 +415,8 @@ void RenderAgentEntity(
 			glm::vec3 p0 = entity->pathingState.waypoints[i - 1];
 			glm::vec3 p1 = entity->pathingState.waypoints[i];
 
-			GameRender::RenderPoint(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_GREEN, p1, 0.5);
-			GameRender::PushDashedLine(gameRenderCommands, renderGroup, gameAssets, GameRender::COLOR_GREEN, p0, p1, 0.5);
+			GameRender::RenderPoint(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_GREEN, p1, 0.3);
+			GameRender::PushDashedLine(gameRenderCommands, renderGroup, gameAssets, GameRender::COLOR_GREEN, p0, p1, 0.3);
 		}
 	}
 }
@@ -434,7 +434,7 @@ void RenderObstacleEntity(
 	EditorState* editor = &gameState->editorState;
 	bool isDragged = editor->draggedEntity == entity;
 
-	float lineThickness = 0.5;
+	float lineThickness = 0.3;
 	glm::vec3 translate = entity->pos;
 	for (int i = 0; i < entity->vertices.size(); i++)
 	{
@@ -807,22 +807,75 @@ void RenderPathingData(
 	}
 	
 
-	for (int i = 0; i < debugState->portals.size(); i++)
+	if (editor->pathingDebugConfig.showTunnel)
 	{
-		NavMesh::Portal portal = debugState->portals[i];
+		for (int i = 1; i < debugState->portals.size(); i++)
+		{
+			NavMesh::Portal portal0 = debugState->portals[i-1];
+			NavMesh::Portal portal1 = debugState->portals[i];
 
-		GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_TEAL, portal.left, portal.right, 0.5);
+			portal0.left.z = 0.2;
+			portal1.left.z = 0.2;
 
+			portal0.right.z = 0.2;
+			portal1.right.z = 0.2;
+
+			GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_TEAL, portal0.left, portal1.left, 0.2);
+			GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_ORANGE, portal0.right, portal1.right, 0.2);
+		}
 	}
 
-	for (int i = 0; i < debugState->modifiedPortals.size(); i++)
+	if (editor->pathingDebugConfig.showModifiedTunnel)
 	{
-		NavMesh::Portal portal = debugState->modifiedPortals[i];
+		for (int i = 1; i < debugState->modifiedPortals.size(); i++)
+		{
+			NavMesh::Portal portal0 = debugState->modifiedPortals[i - 1];
+			NavMesh::Portal portal1 = debugState->modifiedPortals[i];
 
-		GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_PINK, portal.left, portal.right, 0.5);
+			portal0.left.z = 0.2;
+			portal1.left.z = 0.2;
 
+			portal0.right.z = 0.2;
+			portal1.right.z = 0.2;
+
+			GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_TEAL, portal0.left, portal1.left, 0.2);
+			GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_ORANGE, portal0.right, portal1.right, 0.2);
+		}
 	}
 
+
+	if (editor->pathingDebugConfig.showPortals)
+	{
+		for (int i = 0; i < debugState->portals.size(); i++)
+		{
+			NavMesh::Portal portal = debugState->portals[i];
+			GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_TEAL, portal.left, portal.right, 0.2);
+		}
+	}
+
+	if (editor->pathingDebugConfig.showModifiedPortals)
+	{
+		for (int i = 0; i < debugState->modifiedPortals.size(); i++)
+		{
+			NavMesh::Portal portal = debugState->modifiedPortals[i];
+			GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_PINK, portal.left, portal.right, 0.2);
+		}
+	}
+
+	if (editor->pathingDebugConfig.showAnePerps)
+	{
+		for (int i = 0; i < debugState->leftAnePerp.size(); i++)
+		{
+			PathFinding::Vector vec = debugState->leftAnePerp[i];
+			GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_BLUE, vec.v0, vec.v1, 0.2);
+		}
+
+		for (int i = 0; i < debugState->rightAnePerp.size(); i++)
+		{
+			PathFinding::Vector vec = debugState->rightAnePerp[i];
+			GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_BLUE, vec.v0, vec.v1, 0.2);
+		}
+	}
 
 	for (int i = 0; i < debugState->newLeftVertices.size(); i++)
 	{
@@ -952,7 +1005,6 @@ void RenderCDTriangulationDebug(
 		}
 
 
-		GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_PINK, triangle->GetCenter(), 1);
 		std::string s = std::to_string(triangle->id);
 		GameRender::DEBUGTextLine(s.c_str(), gameRenderState, triangle->GetCenter(), 0.2);
 
@@ -1873,30 +1925,53 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 	size = sprintf(ptr, "\n");
 	ptr += size;
 
-	size = sprintf(ptr, "CameraPos is %f %f %f\n", gameState->cameraEntity.position.x, gameState->cameraEntity.position.y, gameState->cameraEntity.position.z);
-	ptr += size;
-
-	size = sprintf(ptr, "xDir is %f %f %f\n", gameState->cameraEntity.xAxis.x, gameState->cameraEntity.xAxis.y, gameState->cameraEntity.xAxis.z);
-	ptr += size;
-
-	size = sprintf(ptr, "yDir is %f %f %f\n", gameState->cameraEntity.yAxis.x, gameState->cameraEntity.yAxis.y, gameState->cameraEntity.yAxis.z);
-	ptr += size;
-
-	size = sprintf(ptr, "zDir is %f %f %f\n", gameState->cameraEntity.zAxis.x, gameState->cameraEntity.zAxis.y, gameState->cameraEntity.zAxis.z);
-	ptr += size;
-
-	size = sprintf(ptr, "viewDir is %f %f %f\n", gameState->cameraEntity.GetViewDirection().x,
-		gameState->cameraEntity.GetViewDirection().y,
-		gameState->cameraEntity.GetViewDirection().z);
-	ptr += size;
-
-
-
-	glm::vec3 rayDir = MousePosToMousePickingRay(gameState->world.cameraSetup, gameRenderCommands, glm::ivec2(halfWidth, halfHeight));
-	size = sprintf(ptr, "rayDir %f %f %f\n", rayDir.x, rayDir.y, rayDir.z);
-	ptr += size;
 
 	EditorState* editorState = &gameState->editorState;
+
+	if (editorState->debugConfig.debugCamera)
+	{
+		size = sprintf(ptr, "CameraPos is %f %f %f\n", gameState->cameraEntity.position.x, gameState->cameraEntity.position.y, gameState->cameraEntity.position.z);
+		ptr += size;
+
+		size = sprintf(ptr, "xDir is %f %f %f\n", gameState->cameraEntity.xAxis.x, gameState->cameraEntity.xAxis.y, gameState->cameraEntity.xAxis.z);
+		ptr += size;
+
+		size = sprintf(ptr, "yDir is %f %f %f\n", gameState->cameraEntity.yAxis.x, gameState->cameraEntity.yAxis.y, gameState->cameraEntity.yAxis.z);
+		ptr += size;
+
+		size = sprintf(ptr, "zDir is %f %f %f\n", gameState->cameraEntity.zAxis.x, gameState->cameraEntity.zAxis.y, gameState->cameraEntity.zAxis.z);
+		ptr += size;
+
+		size = sprintf(ptr, "viewDir is %f %f %f\n", gameState->cameraEntity.GetViewDirection().x,
+			gameState->cameraEntity.GetViewDirection().y,
+			gameState->cameraEntity.GetViewDirection().z);
+		ptr += size;
+	}
+
+	{
+		glm::vec3 rayDir = MousePosToMousePickingRay(gameState->world.cameraSetup, gameRenderCommands, glm::ivec2(halfWidth, halfHeight));
+		size = sprintf(ptr, "rayDir %f %f %f\n", rayDir.x, rayDir.y, rayDir.z);
+		ptr += size;
+	}
+
+	if (editorState->debugConfig.debugCursorSimPos)
+	{
+		glm::vec3 rayOrigin = gameState->cameraEntity.position;
+		glm::vec3 rayDir = MousePosToMousePickingRay(gameState->world.cameraSetup, gameRenderCommands, gameInputState->mousePos);
+
+		glm::vec3 groundIntersectionPoint;
+
+		Collision::Plane plane = { gameState->world.zAxis, 0 };
+		Collision::Ray ray = { rayOrigin, rayDir };
+		bool intersects = Collision::RayPlaneIntersection3D(plane, ray, groundIntersectionPoint);
+
+		if (intersects)
+		{
+			size = sprintf(ptr, "Ground Point %f %f %f\n", groundIntersectionPoint.x, groundIntersectionPoint.y, groundIntersectionPoint.z);
+			ptr += size;
+		}
+	}
+
 
 	if (editorState->highlightTriangle)
 	{
