@@ -14,7 +14,7 @@ typedef int TriangleId;
 
 
 // constrained delaunay triangulation
-namespace CDTriangulation
+namespace CDT
 {
 	const int NUM_TRIANGLE_VERTEX = 3;
 	const int NUM_TRIANGLE_EDGES = 3;
@@ -327,7 +327,7 @@ namespace CDTriangulation
 	{
 		std::vector<glm::vec3> rawInputVertices;
 		
-		std::vector<GeoCore::Polygon> holes;
+		std::vector<gmt::Polygon> holes;
 		std::vector<std::vector<Vertex>> intersectingEdges;
 	//	std::vector<DebugConstrainedEdgePolygon> debugConstrainedEdgePolygons;
 
@@ -629,7 +629,7 @@ namespace CDTriangulation
 
 	// assume all points are between [0, 256]
 	void CreateAndAddVerticesForHole(
-		GeoCore::Polygon& hole, std::vector<Vertex>& masterVertexArray, int& idCounter, 
+		gmt::Polygon& hole, std::vector<Vertex>& masterVertexArray, int& idCounter, 
 		std::vector<int>& holeVertices,
 		std::vector<int>& newlyAddedVertices)
 	{
@@ -1408,11 +1408,11 @@ namespace CDTriangulation
 		}
 	}
 
-	void MarkObstacles(Graph* debugState, std::vector<GeoCore::Polygon> holes)
+	void MarkObstacles(Graph* debugState, std::vector<gmt::Polygon> holes)
 	{
 		for (int i = 0; i < debugState->triangles.size(); i++)
 		{
-			CDTriangulation::DelaunayTriangle* triangle = &debugState->triangles[i];
+			CDT::DelaunayTriangle* triangle = &debugState->triangles[i];
 			glm::vec3 center = triangle->GetCenter();
 
 			std::cout << center.x << " " << center.y << " " << std::endl;
@@ -1496,7 +1496,7 @@ namespace CDTriangulation
 	// assume all points are in [0, 256] range
 	void ConstrainedDelaunayTriangulation(
 		std::vector<glm::vec3> points,
-		std::vector<GeoCore::Polygon> holes,
+		std::vector<gmt::Polygon> holes,
 		glm::ivec2 mapSize,
 		Graph* debugState)
 	{

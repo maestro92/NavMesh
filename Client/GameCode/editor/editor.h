@@ -193,7 +193,7 @@ namespace Editor
 				isPressed = true;
 			}
 
-			if (gameInputState->DidMouseLeftButtonClicked())
+			if (gameInputState->DidMouseLeftButtonClickedUp())
 			{
 				trigger = true;
 			}			
@@ -254,7 +254,7 @@ namespace Editor
 				isPressed = true;
 			}
 
-			if (gameInputState->DidMouseLeftButtonClicked())
+			if (gameInputState->DidMouseLeftButtonClickedUp())
 			{
 				trigger = true;
 			}
@@ -305,7 +305,7 @@ namespace Editor
 		if (Collision::IsPointInsideRect({ profileRectMin, profileRectMax }, screenMousePos))
 		{
 			editorState->consumingMouse = true;
-			if (gameInputState->DidMouseLeftButtonClicked())
+			if (gameInputState->DidMouseLeftButtonClickedUp())
 			{
 				if (editorState->selectedOption != NULL && entityOption == editorState->selectedOption)
 				{

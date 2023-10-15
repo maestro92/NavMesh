@@ -14,11 +14,12 @@ namespace Sim
 		World* world,
 		glm::vec3 groundIntersectionPoint)
 	{
-		Entity* entity = simState->selectedEntity;
-		if (entity != NULL)
+		
+		if (gameInputState->DidMouseRightButtonClickedDown())
 		{
-			if (gameInputState->DidMouseRightButtonClicked())
+			for(int i=0; i<simState->data->selectedEntities.size(); i++)
 			{
+				Entity* entity = simState->data->selectedEntities[i];
 				entity->pathingState.destination = groundIntersectionPoint;
 
 				float diameter = entity->agentRadius * 2;
@@ -26,67 +27,9 @@ namespace Sim
 				entity->pathingState.BeginPathingToDestination(pathingResult.waypoints);
 			}
 		}
+		
 	}
 
-
-	void InteractWorldEntities(SimulationState* simState,
-		GameInputState* gameInputState,
-		RenderSystem::GameRenderCommands* gameRenderCommands,
-		World* world,
-		glm::vec3 groundIntersectionPoint)
-	{
-
-		bool done = false;
-		Entity* candidate = NULL;
-		for (int i = 0; i < world->numEntities; i++)
-		{
-			Entity* entity = &world->entities[i];
-
-			if (done)
-			{
-				break;
-			}
-
-			switch (entity->flag)
-			{
-				case EntityFlag::OBSTACLE:
-				{
-					std::vector<glm::vec3> absolutePos;
-
-					for (int j = 0; j < entity->vertices.size(); j++)
-					{
-						absolutePos.push_back(entity->pos + entity->vertices[j]);
-					}
-
-					if (Collision::IsPointInsidePolygon2D(groundIntersectionPoint, absolutePos))
-					{
-						candidate = entity;
-						done = true;
-
-					}
-				} break;
-
-				case EntityFlag::AGENT:
-				{
-					if (Collision::IsPointInsideCircle(glm::vec2(groundIntersectionPoint), entity->agentRadius, glm::vec2(entity->pos)))
-					{
-						candidate = entity;
-						done = true;
-					}
-				} break;
-
-			}
-		}
-
-
-		if (candidate != NULL)
-		{
-			if (gameInputState->DidMouseLeftButtonClicked())
-			{
-				simState->selectedEntity = candidate;
-			}
-		}
-	}
 
 	void AgentPathingTick(Entity* entity)
 	{
@@ -136,10 +79,9 @@ namespace Sim
 		World* world,
 		glm::vec3 groundIntersectionPoint)
 	{
-		InteractWorldEntities(simState, gameInputState, gameRenderCommands, world, groundIntersectionPoint);
+		// InteractWorldEntities(simState, gameInputState, gameRenderCommands, world, groundIntersectionPoint);
 
 		SetDestinationTick(simState, gameInputState, world, groundIntersectionPoint);
-
 
 		for (int i = 0; i < world->numEntities; i++)
 		{
@@ -148,7 +90,7 @@ namespace Sim
 			{
 				case EntityFlag::AGENT:
 				{
-				//	AgentPathingTick(entity);
+					AgentPathingTick(entity);
 
 
 

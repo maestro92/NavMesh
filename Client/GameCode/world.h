@@ -76,6 +76,8 @@ struct Entity
 {
 	EntityFlag flag;
 
+	bool isSelected;
+
 	int id;
 	glm::vec3 pos;
 	glm::vec3 dim;
@@ -180,7 +182,7 @@ struct World
 	Triangulation::DebugState* triangulationDebug;
 	Voronoi::DebugState* voronoiDebug;
 
-	CDTriangulation::Graph* cdTriangulationGraph;
+	CDT::Graph* cdTriangulationGraph;
 	PathFinding::DebugState* pathingDebug;
 
 	MapGrid mapGrid;
@@ -195,7 +197,7 @@ struct World
 		maxEntityCount = 1024;
 		triangulationDebug = new Triangulation::DebugState();
 		voronoiDebug = new Voronoi::DebugState();
-		cdTriangulationGraph = new CDTriangulation::Graph();
+		cdTriangulationGraph = new CDT::Graph();
 		pathingDebug = new PathFinding::DebugState();
 
 		xAxis = glm::vec3(1.0, 0.0, 0.0);
@@ -221,7 +223,7 @@ struct World
 
 
 	
-	CDTriangulation::DelaunayTriangle* FindTriangleBySimPos(glm::vec3 pos)
+	CDT::DelaunayTriangle* FindTriangleBySimPos(glm::vec3 pos)
 	{
 		int cx, cy = 0;
 		SimPos2GridCoord(pos, cx, cy);
@@ -230,7 +232,7 @@ struct World
 		for (int i = 0; i < mapCell->triangles.size(); i++)
 		{
 			int trigId = mapCell->triangles[i];
-			CDTriangulation::DelaunayTriangle* triangle = cdTriangulationGraph->trianglesById[trigId];
+			CDT::DelaunayTriangle* triangle = cdTriangulationGraph->trianglesById[trigId];
 
 			if (triangle->isObstacle)
 			{
@@ -249,9 +251,9 @@ struct World
 		return NULL;
 	}
 	
-	void AddWorldBoundsAsHoles(std::vector<GeoCore::Polygon>& holes)
+	void AddWorldBoundsAsHoles(std::vector<gmt::Polygon>& holes)
 	{
-		GeoCore::Polygon hole;
+		gmt::Polygon hole;
 
 		// a hole with 2 vertices is just a constrained edge
 		// putting the world borders as hard constraints
@@ -282,7 +284,7 @@ struct World
 //
 		for (int i = 0; i < cdTriangulationGraph->triangles.size(); i++)
 		{
-			CDTriangulation::DelaunayTriangle& triangle = cdTriangulationGraph->triangles[i];
+			CDT::DelaunayTriangle& triangle = cdTriangulationGraph->triangles[i];
 
 			for (int y = 0, yi = 0; yi < maxSimPos.y; y++, yi += mapGrid.cellSize)
 			{
@@ -292,7 +294,7 @@ struct World
 					glm::vec3 min = glm::vec3(xi, yi, 0);
 					glm::vec3 max = min + glm::vec3(mapGrid.cellSize, mapGrid.cellSize, 0);
 
-					GeoCore::AABB aabb = { min, max };
+					gmt::AABB aabb = { min, max };
 
 					if (Collision::TestTriangleAABB2D(triangle.vertices[0].pos, triangle.vertices[1].pos, triangle.vertices[2].pos, aabb))
 					{
@@ -326,7 +328,7 @@ struct World
 		std::vector<glm::vec3> vertices;
 
 		// clockwise
-		std::vector<GeoCore::Polygon> holes;
+		std::vector<gmt::Polygon> holes;
 
 		int testPathingCase = 0;
 		if (testPathingCase == 1)
@@ -349,7 +351,7 @@ struct World
 			vertices.push_back(glm::vec3(min.x, max.y, 0));
 
 
-			GeoCore::Polygon hole;
+			gmt::Polygon hole;
 			
 			hole.vertices.clear();
 			hole.vertices.push_back(glm::vec3(144, 176, 0));
@@ -386,7 +388,7 @@ struct World
 			vertices.push_back(glm::vec3(min.x, max.y, 0));
 
 
-			GeoCore::Polygon hole;
+			gmt::Polygon hole;
 
 			hole.vertices.clear();
 			hole.vertices.push_back(glm::vec3(-5, 50, 0));
@@ -415,8 +417,8 @@ struct World
 		}
 
 
-		CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, maxSimPos, cdTriangulationGraph);
-		CDTriangulation::MarkObstacles(cdTriangulationGraph, holes);
+		CDT::ConstrainedDelaunayTriangulation(vertices, holes, maxSimPos, cdTriangulationGraph);
+		CDT::MarkObstacles(cdTriangulationGraph, holes);
 
 		if (testPathingCase == 1)
 		{
@@ -670,7 +672,7 @@ std::vector<Face> CreateCubeFaceCentered(glm::vec3 pos, glm::vec3 dim)
 	return CreateCubeFaceMinMax(min, max);
 }
 
-void ScalingTheHole(GeoCore::Polygon& hole, float scale, glm::vec3 min)
+void ScalingTheHole(gmt::Polygon& hole, float scale, glm::vec3 min)
 {
 	for (int i = 0; i < hole.vertices.size(); i++)
 	{

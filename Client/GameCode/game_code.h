@@ -379,7 +379,8 @@ void RenderAgentEntity(
 	SimulationState* simState = &gameState->simState;
 
 	glm::vec4 color;
-	if (editor->draggedEntity == entity || simState->selectedEntity == entity)
+	
+	if (editor->draggedEntity == entity || entity->isSelected)
 	{
 		color = GameRender::DRAGGED_ENTITY_COLOR;
 	}
@@ -387,7 +388,7 @@ void RenderAgentEntity(
 	{
 		color = GameRender::COLOR_RED;
 	}
-
+	
 	float thickness = 0.5;
 
 	GameRender::RenderCircle(
@@ -408,7 +409,7 @@ void RenderAgentEntity(
 		gameRenderCommands, renderGroup, gameAssets, color, entity->pos, arrowApex, arrowThickness);
 
 	
-	if (simState->selectedEntity == entity)
+	if (entity!= NULL && entity->isSelected)
 	{
 		for (int i = 1; i < entity->pathingState.waypoints.size(); i++)
 		{
@@ -419,6 +420,7 @@ void RenderAgentEntity(
 			GameRender::PushDashedLine(gameRenderCommands, renderGroup, gameAssets, GameRender::COLOR_GREEN, p0, p1, 0.3);
 		}
 	}
+	
 }
 
 void RenderObstacleEntity(
@@ -538,6 +540,26 @@ void RenderVoronoiDebug(RenderSystem::GameRenderCommands* gameRenderCommands,
 	}
 }
 */
+
+
+
+
+void RenderSelectionBox(SimulationState* simState, GameRender::GameRenderState* gameRenderState)
+{
+	SelectionBox selectionBox = simState->selectionBox;
+	if (!simState->selectionBox.active) {
+		return;
+	}
+
+	RenderSystem::GameRenderCommands* gameRenderCommands = gameRenderState->gameRenderCommands;
+	GameAssets* gameAssets = gameRenderState->gameAssets;
+	RenderSystem::RenderGroup* group = gameRenderState->renderGroup;
+	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
+	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
+
+
+	GameRender::PushCube(gameRenderCommands, group, bitmap, GameRender::SELECTION_BOX, selectionBox.box.min, selectionBox.box.max, false);
+}
 
 void RenderGrid(EditorState* editorState, GameRender::GameRenderState* gameRenderState, World* world, glm::vec3 groundIntersectionPoint)
 {
@@ -695,7 +717,7 @@ void RenderSelectedEntityOption(
 			GameRender::RenderCircle(
 				gameRenderCommands, group, gameAssets, GameRender::SELECTED_ENTITY_COLOR, groundIntersectionPoint, option->agentRadius, 0.5);
 		
-			if (gameInputState->DidMouseLeftButtonClicked())
+			if (gameInputState->DidMouseLeftButtonClickedUp())
 			{
 				gameState->world.AddAgent(groundIntersectionPoint, option->agentRadius);
 			}		
@@ -722,7 +744,7 @@ void RenderSelectedEntityOption(
 					gameRenderCommands, group, gameAssets, GameRender::SELECTED_ENTITY_COLOR, pos0, pos1, lineThickness);
 			}
 
-			if (gameInputState->DidMouseLeftButtonClicked())
+			if (gameInputState->DidMouseLeftButtonClickedUp())
 			{
 				gameState->world.AddObstacle(groundIntersectionPoint, option->vertices);
 			}
@@ -758,7 +780,7 @@ void RenderPathingData(
 
 			GameRender::PushCube(gameRenderCommands, group, bitmap, GameRender::POTENTIAL_PATHING_START_COLOR, min, max, false);
 
-			if (gameInputState->DidMouseLeftButtonClicked())
+			if (gameInputState->DidMouseLeftButtonClickedUp())
 			{
 				debugState->hasSetStartPos = true;
 				debugState->start = groundIntersectionPoint;
@@ -772,7 +794,7 @@ void RenderPathingData(
 
 			GameRender::PushCube(gameRenderCommands, group, bitmap, GameRender::POTENTIAL_PATHING_END_COLOR, min, max, false);
 
-			if (gameInputState->DidMouseLeftButtonClicked())
+			if (gameInputState->DidMouseLeftButtonClickedUp())
 			{
 				debugState->hasSetEndPos = true;
 				debugState->end = groundIntersectionPoint;
@@ -952,7 +974,7 @@ void RenderPathingData(
 void RenderCDTriangulationDebug(
 	EditorState* editorState,
 	GameRender::GameRenderState* gameRenderState,
-	CDTriangulation::Graph* triangulationDebug)
+	CDT::Graph* triangulationDebug)
 {
 	RenderSystem::GameRenderCommands* gameRenderCommands = gameRenderState->gameRenderCommands;
 	GameAssets* gameAssets = gameRenderState->gameAssets;
@@ -971,7 +993,7 @@ void RenderCDTriangulationDebug(
 
 	for (int j = 0; j < triangulationDebug->holes.size(); j++)
 	{
-		GeoCore::Polygon polygon = triangulationDebug->holes[j];
+		gmt::Polygon polygon = triangulationDebug->holes[j];
 		for (int i = 0; i < polygon.vertices.size(); i++)
 		{
 			GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_RED, polygon.vertices[i], 1);
@@ -980,12 +1002,12 @@ void RenderCDTriangulationDebug(
 
 	for (int i = 0; i < triangulationDebug->triangles.size(); i++)
 	{
-		CDTriangulation::DelaunayTriangle* triangle = &triangulationDebug->triangles[i];
+		CDT::DelaunayTriangle* triangle = &triangulationDebug->triangles[i];
 		glm::vec3 liftedVertex[3];
 
 		if (triangle->isObstacle)
 		{
-			for (int j = 0; j < CDTriangulation::NUM_TRIANGLE_VERTEX; j++)
+			for (int j = 0; j < CDT::NUM_TRIANGLE_VERTEX; j++)
 			{
 				// lifting it slightly higher
 				liftedVertex[j] = triangle->vertices[j].pos; // +GameRender::DEBUG_RENDER_OFFSET;
@@ -995,7 +1017,7 @@ void RenderCDTriangulationDebug(
 		}
 		else
 		{
-			for (int j = 0; j < CDTriangulation::NUM_TRIANGLE_VERTEX; j++)
+			for (int j = 0; j < CDT::NUM_TRIANGLE_VERTEX; j++)
 			{
 				// lifting it slightly higher
 				liftedVertex[j] = triangle->vertices[j].pos; // +GameRender::DEBUG_RENDER_OFFSET;
@@ -1015,7 +1037,7 @@ void RenderCDTriangulationDebug(
 			{
 				GameRender::PushTriangle(gameRenderCommands, group, bitmap, GameRender::COLOR_YELLOW, liftedVertex, false);
 
-				Triangulation::Circle circle = CDTriangulation::FindCircumCircle(*triangle);
+				Triangulation::Circle circle = CDT::FindCircumCircle(*triangle);
 				GameRender::RenderCircle(
 					gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, circle.center, circle.radius, lineThickness);
 
@@ -1165,7 +1187,7 @@ void EditorInteractWithWorldEntities(GameState* gameState,
 
 	if (candidate != NULL)
 	{
-		if (gameInputState->DidMouseLeftButtonClicked())
+		if (gameInputState->DidMouseLeftButtonClickedUp())
 		{
 			if (editorState->draggedEntity == candidate)
 			{
@@ -1191,6 +1213,148 @@ void EditorInteractWithWorldEntities(GameState* gameState,
 
 	}
 }
+
+void ClearSelection(SimulationState* simState)
+{
+	for (int i = 0; i < simState->data->selectedEntities.size(); i++)
+	{
+		Entity* entity = simState->data->selectedEntities[i];
+		entity->isSelected = false;
+	}
+
+	simState->data->selectedEntities.clear();
+}
+
+
+void RunClickOnEntityLogic(SimulationState* simState, GameInputState* gameInputState, World* world, glm::vec3 groundIntersectionPoint)
+{
+	bool done = false;
+
+	// Optimize this shieet
+	Entity* candidate = NULL;
+	for (int i = 0; i < world->numEntities; i++)
+	{
+		Entity* entity = &world->entities[i];
+
+		if (done)
+		{
+			break;
+		}
+
+		switch (entity->flag)
+		{
+		case EntityFlag::OBSTACLE:
+		{
+			std::vector<glm::vec3> absolutePos;
+
+			for (int j = 0; j < entity->vertices.size(); j++)
+			{
+				absolutePos.push_back(entity->pos + entity->vertices[j]);
+			}
+
+			if (Collision::IsPointInsidePolygon2D(groundIntersectionPoint, absolutePos))
+			{
+				candidate = entity;
+				done = true;
+
+			}
+		} break;
+
+		case EntityFlag::AGENT:
+		{
+			if (Collision::IsPointInsideCircle(glm::vec2(groundIntersectionPoint), entity->agentRadius, glm::vec2(entity->pos)))
+			{
+				candidate = entity;
+				done = true;
+			}
+		} break;
+
+		}
+	}
+
+
+	if (candidate != NULL)
+	{
+		if (gameInputState->DidMouseLeftButtonClickedUp())
+		{
+			ClearSelection(simState);
+			candidate->isSelected = true;
+			simState->data->selectedEntities.push_back(candidate);
+		}
+	}
+}
+
+
+
+void RunSelectionBoxLogic(SimulationState* simState, GameInputState* gameInputState, World* world, glm::vec3 groundIntersectionPoint)
+{
+	SelectionBox* selectionBox = &(simState->selectionBox);
+
+	if (gameInputState->DidMouseLeftButtonClickedDown())
+	{
+		selectionBox->active = true;
+		selectionBox->SetP0(groundIntersectionPoint);
+		selectionBox->SetP1(groundIntersectionPoint);
+		selectionBox->UpdateAABB();
+	}
+	else if (gameInputState->IsMouseLeftButtonDown())
+	{
+		selectionBox->active = true;
+		selectionBox->SetP1(groundIntersectionPoint);
+		selectionBox->UpdateAABB();
+	}
+	else
+	{
+		if (selectionBox->active)
+		{
+			if (gameInputState->DidMouseLeftButtonClickedUp())
+			{
+				ClearSelection(simState);
+
+				// Optimize this shieet
+				for (int i = 0; i < world->numEntities; i++)
+				{
+					Entity* entity = &world->entities[i];
+
+					switch (entity->flag)
+					{
+						case EntityFlag::AGENT:
+						{
+							gmt::Sphere s;
+							s.center = entity->pos;
+							s.radius = entity->agentRadius;
+
+							if (Collision::SphereAABBIntersection(s, selectionBox->box))
+							{
+								entity->isSelected = true;
+								simState->data->selectedEntities.push_back(entity);
+							}
+						}
+					}
+				}
+			}
+		}
+		selectionBox->active = false;
+	}
+
+}
+
+
+
+void InteractWorldEntities(SimulationState* simState,
+	GameInputState* gameInputState,
+	RenderSystem::GameRenderCommands* gameRenderCommands,
+	World* world,
+	glm::vec3 groundIntersectionPoint)
+{
+	RunClickOnEntityLogic(simState, gameInputState, world, groundIntersectionPoint);
+	RunSelectionBoxLogic(simState, gameInputState, world, groundIntersectionPoint);
+}
+
+
+
+
+
 
 void WorldTickAndRender(GameState* gameState, TransientState* transientState, GameAssets* gameAssets,
 	GameInputState* gameInputState, RenderSystem::GameRenderCommands* gameRenderCommands, glm::ivec2 windowDimensions, DebugModeState* debugModeState)
@@ -1305,8 +1469,8 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 
 	glm::vec3 groundIntersectionPoint;
 	
-	Collision::Plane plane = { world->zAxis, 0 };
-	Collision::Ray ray = { rayOrigin, rayDir };
+	gmt::Plane plane = { world->zAxis, 0 };
+	gmt::Ray ray = { rayOrigin, rayDir };
 	bool intersects = Collision::RayPlaneIntersection3D(plane, ray, groundIntersectionPoint);
 
 	world->cdTriangulationGraph->highlightedTriangle = NULL;
@@ -1315,7 +1479,7 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 		glm::vec3 triangleInterspectionPoint;
 		for (int i = 0; i < world->cdTriangulationGraph->triangles.size(); i++)
 		{
-			CDTriangulation::DelaunayTriangle triangle = world->cdTriangulationGraph->triangles[i];
+			CDT::DelaunayTriangle triangle = world->cdTriangulationGraph->triangles[i];
 
 			if (Collision::IsPointInsideTriangle_Barycentric(
 				groundIntersectionPoint,
@@ -1352,8 +1516,12 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 
 	if (editor->isInSimMode)
 	{
+		InteractWorldEntities(&gameState->simState, gameInputState, gameRenderCommands, world, groundIntersectionPoint);
+		RenderSelectionBox(&gameState->simState, &gameRenderState);
 		Sim::SimModeTick(&gameState->simState, gameInputState, gameRenderCommands, world, groundIntersectionPoint);
+
 	}
+
 
 	RenderGrid(editor, &gameRenderState, world, groundIntersectionPoint);
 	RenderWorldBorders(&gameRenderState, world);
@@ -1531,14 +1699,14 @@ void TriangulateMap(World* world)
 	vertices.push_back(glm::vec3(world->minSimPos.x, world->maxSimPos.y, 0));
 
 	// clockwise
-	std::vector<GeoCore::Polygon> holes;
+	std::vector<gmt::Polygon> holes;
 
 	for (int i = 0; i < world->numEntities; i++)
 	{
 		Entity* entity = &world->entities[i];
 		if (entity->flag == OBSTACLE)
 		{
-			GeoCore::Polygon hole;
+			gmt::Polygon hole;
 			for (int j = 0; j < entity->vertices.size(); j++)
 			{
 				hole.vertices.push_back(entity->vertices[j] + entity->pos);
@@ -1549,8 +1717,8 @@ void TriangulateMap(World* world)
 	
 	world->AddWorldBoundsAsHoles(holes);
 
-	CDTriangulation::ConstrainedDelaunayTriangulation(vertices, holes, world->maxSimPos, world->cdTriangulationGraph);
-	CDTriangulation::MarkObstacles(world->cdTriangulationGraph, holes);
+	CDT::ConstrainedDelaunayTriangulation(vertices, holes, world->maxSimPos, world->cdTriangulationGraph);
+	CDT::MarkObstacles(world->cdTriangulationGraph, holes);
 	world->SpatialPartitionTriangles();
 }
 
@@ -1648,6 +1816,8 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		MemoryIndex size = gameMemory->permenentStorageSize - sizeof(GameState);
 		gameState->memoryArena.Init(base, size);
 
+
+		gameState->simState.data = new SimulationStateData();
 
 		Editor::InitEditorData(&gameState->editorState);
 
@@ -1961,8 +2131,8 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 
 		glm::vec3 groundIntersectionPoint;
 
-		Collision::Plane plane = { gameState->world.zAxis, 0 };
-		Collision::Ray ray = { rayOrigin, rayDir };
+		gmt::Plane plane = { gameState->world.zAxis, 0 };
+		gmt::Ray ray = { rayOrigin, rayDir };
 		bool intersects = Collision::RayPlaneIntersection3D(plane, ray, groundIntersectionPoint);
 
 		if (intersects)
@@ -1977,7 +2147,7 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 	{
 		if (gameState->world.cdTriangulationGraph->highlightedTriangle != NULL)
 		{
-			CDTriangulation::DelaunayTriangle* trig = gameState->world.cdTriangulationGraph->highlightedTriangle;
+			CDT::DelaunayTriangle* trig = gameState->world.cdTriangulationGraph->highlightedTriangle;
 
 			size = sprintf(ptr, "trig %d neighbors %d %d %d\n", trig->id, trig->neighbors[0], trig->neighbors[1], trig->neighbors[2]);
 			ptr += size;

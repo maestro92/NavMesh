@@ -132,14 +132,34 @@ struct GameInputState
 		return mouseButtons[GameInputMouseButton::PlatformMouseButton_Left].endedDown;
 	}
 
-	bool DidMouseLeftButtonClicked() {
-		return !mouseButtons[GameInputMouseButton::PlatformMouseButton_Left].endedDown && 
-			mouseButtons[GameInputMouseButton::PlatformMouseButton_Left].changed;
+	bool DidMouseLeftButtonClickedDown()
+	{
+		return DidMouseButtonClickedDown(GameInputMouseButton::PlatformMouseButton_Left);
 	}
 
-	bool DidMouseRightButtonClicked() {
-		return !mouseButtons[GameInputMouseButton::PlatformMouseButton_Right].endedDown &&
-			mouseButtons[GameInputMouseButton::PlatformMouseButton_Right].changed;
+	bool DidMouseRightButtonClickedDown()
+	{
+		return DidMouseButtonClickedDown(GameInputMouseButton::PlatformMouseButton_Right);
+	}
+
+	bool DidMouseLeftButtonClickedUp() 
+	{
+		return DidMouseButtonClickedUp(GameInputMouseButton::PlatformMouseButton_Left);
+	}
+
+	bool DidMouseRightButtonClickedUp() 
+	{
+		return DidMouseButtonClickedUp(GameInputMouseButton::PlatformMouseButton_Right);
+	}
+
+	bool DidMouseButtonClickedDown(GameInputMouseButton buttonId)
+	{
+		return mouseButtons[buttonId].endedDown && mouseButtons[buttonId].changed;
+	}
+
+	bool DidMouseButtonClickedUp(GameInputMouseButton buttonId)
+	{
+		return !mouseButtons[buttonId].endedDown && mouseButtons[buttonId].changed;
 	}
 };
 

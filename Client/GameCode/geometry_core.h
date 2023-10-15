@@ -3,7 +3,8 @@
 #include "../PlatformShared/platform_shared.h"
 #include <vector>
 
-namespace GeoCore {
+// stands for geometry
+namespace gmt {
 
 	struct Polygon
 	{
@@ -14,6 +15,24 @@ namespace GeoCore {
 	{
 		glm::vec3 min;
 		glm::vec3 max;
+	};
+
+	struct Sphere
+	{
+		glm::vec3 center;
+		float radius;
+	};
+
+	struct Plane
+	{
+		glm::vec3 normal;
+		float dist;
+	};
+
+	struct Ray
+	{
+		glm::vec3 p;
+		glm::vec3 dir;
 	};
 
 }

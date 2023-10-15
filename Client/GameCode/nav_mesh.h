@@ -15,7 +15,7 @@ namespace NavMesh
 	// https://liu.diva-portal.org/smash/get/diva2:1560399/FULLTEXT01.pdf
 	struct DualGraphNode {
 		
-		CDTriangulation::DelaunayTriangle* triangle;
+		CDT::DelaunayTriangle* triangle;
 
 		glm::vec3 center;
 		std::vector<int> neighbors;
@@ -40,7 +40,7 @@ namespace NavMesh
 		std::vector<DualGraphNode> nodes;
 		std::vector<DualGraphNode*> nodesById;
 
-		DualGraph(std::vector<CDTriangulation::DelaunayTriangle>& triangles)
+		DualGraph(std::vector<CDT::DelaunayTriangle>& triangles)
 		{
 			int maxId;
 			for (int i = 0; i < triangles.size(); i++)
@@ -69,8 +69,8 @@ namespace NavMesh
 		}
 
 		void GetEdgeVertices(
-			CDTriangulation::DelaunayTriangleEdge edge,
-			CDTriangulation::Graph* graph,
+			CDT::DelaunayTriangleEdge edge,
+			CDT::Graph* graph,
 			Portal& portal)
 		{
 			int id0 = edge.vertices[0];
@@ -80,7 +80,7 @@ namespace NavMesh
 			portal.left = graph->GetVertexById(id1).pos;
 		}
 
-		void AddToPortalList(CDTriangulation::Graph* graph, std::vector<int> nodeIds, std::vector<Portal>& portals)
+		void AddToPortalList(CDT::Graph* graph, std::vector<int> nodeIds, std::vector<Portal>& portals)
 		{
 			for (int i = 1; i < nodeIds.size(); i++)
 			{
@@ -89,7 +89,7 @@ namespace NavMesh
 
 				DualGraphNode* node0 = GetNode(nodeId0);
 
-				CDTriangulation::DelaunayTriangle* triangle = node0->triangle;
+				CDT::DelaunayTriangle* triangle = node0->triangle;
 				for (int ni = 0; ni < ArrayCount(triangle->neighbors); ni++)
 				{
 					if (triangle->neighbors[ni] == nodeId1)

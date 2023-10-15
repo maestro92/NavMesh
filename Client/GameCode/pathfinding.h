@@ -115,13 +115,24 @@ namespace PathFinding
 		}
 	};
 
+	void JumpAndWalk()
+	{
+		// sample size   m = O(n ^ 1/4)
+
+		// distance of the triangle to the query point q is calculated as the min distance of its three vertices to q
+		// the triangle which scores the shortest distance is selected. 
+		
+	}
+
+
+
 
 	NavMesh::DualGraphNode* GetNodeContainingPoint(
 		NavMesh::DualGraph* pathingEnvironment,
 		World* world,
 		glm::vec3 point)
 	{
-		CDTriangulation::DelaunayTriangle* triangle = world->FindTriangleBySimPos(point);
+		CDT::DelaunayTriangle* triangle = world->FindTriangleBySimPos(point);
 		if (triangle == NULL)
 		{
 			return NULL;
@@ -153,11 +164,11 @@ namespace PathFinding
 		int fromPolygonNodeId;
 		int cost;		// g(n) + f(n)
 		int costFromStartNode; // this is g(n)
-		CDTriangulation::DelaunayTriangleEdge sourceEdge;
+		CDT::DelaunayTriangleEdge sourceEdge;
 
 		AStarSearchNode() {}
 
-		AStarSearchNode(int polygonNodeIdIn, int fromPolygonNodeIdIn, int costIn, int costFromStartNodeIn, CDTriangulation::DelaunayTriangleEdge sourceEdgeIn)
+		AStarSearchNode(int polygonNodeIdIn, int fromPolygonNodeIdIn, int costIn, int costFromStartNodeIn, CDT::DelaunayTriangleEdge sourceEdgeIn)
 		{
 			polygonNodeId = polygonNodeIdIn;
 			fromPolygonNodeId = fromPolygonNodeIdIn;
@@ -188,35 +199,35 @@ namespace PathFinding
 		return glm::fastLength(len);
 	}
 
-	bool CheckTunnelWidth(CDTriangulation::DelaunayTriangle* curTriangle, 
-		CDTriangulation::DelaunayTriangleEdge sourceEdge,
-		CDTriangulation::DelaunayTriangle* neighbor, 
-		CDTriangulation::DelaunayTriangleEdge dstEdge,
+	bool CheckTunnelWidth(CDT::DelaunayTriangle* curTriangle, 
+		CDT::DelaunayTriangleEdge sourceEdge,
+		CDT::DelaunayTriangle* neighbor, 
+		CDT::DelaunayTriangleEdge dstEdge,
 		float agentDiameter)
 	{
 	
 		std::cout << ">>>> curTriangle " << curTriangle->id << ", neighbor is " << neighbor->id << std::endl;
-		for (int i = 0; i < CDTriangulation::NUM_TRIANGLE_VERTEX; i++)
+		for (int i = 0; i < CDT::NUM_TRIANGLE_VERTEX; i++)
 		{
 			std::cout << "	curTriangle " << curTriangle->halfWidths[i] << std::endl;
 		}
 
-		if (!CDTriangulation::DelaunayTriangleEdge::IsValidEdge(sourceEdge))
+		if (!CDT::DelaunayTriangleEdge::IsValidEdge(sourceEdge))
 		{
 			return true;
 		}
 
 		int edgeIndex0 = curTriangle->GetEdgeIndex(sourceEdge);
 
-		int edgeIndex1 = (edgeIndex0 - 1 + 3) % CDTriangulation::NUM_TRIANGLE_EDGES;
-		CDTriangulation::DelaunayTriangleEdge edge1 = curTriangle->edges[edgeIndex1];
+		int edgeIndex1 = (edgeIndex0 - 1 + 3) % CDT::NUM_TRIANGLE_EDGES;
+		CDT::DelaunayTriangleEdge edge1 = curTriangle->edges[edgeIndex1];
 		if (dstEdge == edge1)
 		{
 			float halfWidth = curTriangle->halfWidths[edgeIndex0];
 			return agentDiameter <= halfWidth;
 		}
 
-		edgeIndex1 = (edgeIndex0 + 1) % CDTriangulation::NUM_TRIANGLE_EDGES;
+		edgeIndex1 = (edgeIndex0 + 1) % CDT::NUM_TRIANGLE_EDGES;
 		edge1 = curTriangle->edges[edgeIndex1];
 		if (dstEdge == edge1)
 		{
@@ -245,7 +256,7 @@ namespace PathFinding
 
 		std::unordered_map<int, AStarSearchNode> visited;
 
-		CDTriangulation::DelaunayTriangleEdge edge = CDTriangulation::DelaunayTriangleEdge::GetInvalidEdge();
+		CDT::DelaunayTriangleEdge edge = CDT::DelaunayTriangleEdge::GetInvalidEdge();
 		AStarSearchNode node = AStarSearchNode(startNode->GetId(), -1, 0, 0, edge);
 		q.push(node);
 	
@@ -291,13 +302,13 @@ namespace PathFinding
 
 			// go through neighbors
 
-			CDTriangulation::DelaunayTriangle* triangle = curGraphNode->triangle;
+			CDT::DelaunayTriangle* triangle = curGraphNode->triangle;
 			for (int i = 0; i < ArrayCount(triangle->neighbors); i++)
 			{
 				int neighborId = triangle->neighbors[i];
 				std::cout << "		neighborId " << neighborId << std::endl;
 
-				if (neighborId == CDTriangulation::INVALID_NEIGHBOR)
+				if (neighborId == CDT::INVALID_NEIGHBOR)
 				{
 					continue;
 				}
@@ -314,7 +325,7 @@ namespace PathFinding
 					continue;
 				}
 
-				CDTriangulation::DelaunayTriangleEdge edge = triangle->edges[i];
+				CDT::DelaunayTriangleEdge edge = triangle->edges[i];
 
 				if (!CheckTunnelWidth(triangle, curAStarNode.sourceEdge, neighbor->triangle, edge, agentDiameter))
 				{
@@ -507,7 +518,7 @@ namespace PathFinding
 	// https://skatgame.net/mburo/ps/thesis_demyen_2006.pdf
 	FunnelResult FunnelPath(
 		NavMesh::DualGraph* dualGraph, 
-		CDTriangulation::Graph* graph, 
+		CDT::Graph* graph, 
 		std::vector<int> aStarNodeIds,
 		glm::vec3 start, glm::vec3 end, 
 		PathFinding::DebugState* debugState)
@@ -546,7 +557,7 @@ namespace PathFinding
 	// http://ahamnett.blogspot.com/2012/10/funnel-algorithm.html
 	FunnelResult ModifiedFunnelPath(
 		NavMesh::DualGraph* dualGraph,
-		CDTriangulation::Graph* graph,
+		CDT::Graph* graph,
 		std::vector<int> aStarNodeIds,
 		glm::vec3 start, glm::vec3 end, 
 		float agentRadius,

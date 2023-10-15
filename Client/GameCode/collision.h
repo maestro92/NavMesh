@@ -10,7 +10,7 @@ namespace Collision
 {
 	float EPSILON = 1e-5;
 
-	bool IsPointInsideRect(GeoCore::AABB rect, glm::vec3 point)
+	bool IsPointInsideRect(gmt::AABB rect, glm::vec3 point)
 	{
 		return rect.min.x <= point.x && point.x < rect.max.x&& rect.min.y <= point.y && point.y < rect.max.y;
 	}
@@ -137,7 +137,7 @@ namespace Collision
 	}
 
 
-	bool DoesAABBAABBIntersect2D(GeoCore::AABB a, GeoCore::AABB b)
+	bool DoesAABBAABBIntersect2D(gmt::AABB a, gmt::AABB b)
 	{
 		if (a.max.x < b.min.x || a.min.x > b.max.x)
 		{
@@ -244,19 +244,8 @@ namespace Collision
 	}
 
 
-	struct Plane
-	{
-		glm::vec3 normal;
-		float dist;
-	};
 
-	struct Ray
-	{
-		glm::vec3 p;
-		glm::vec3 dir;
-	};
-
-	Plane GetPlane(glm::vec3 a, glm::vec3 b, glm::vec3 c)
+	gmt::Plane GetPlane(glm::vec3 a, glm::vec3 b, glm::vec3 c)
 	{
 		glm::vec3 ab = b - a;
 		glm::vec3 ac = c - a;
@@ -265,7 +254,33 @@ namespace Collision
 		return { normal, dist };
 	}
 
-	bool RayPlaneIntersection3D(Plane plane, Ray ray, glm::vec3& intersectionPoint)
+	float SqDistPointAABB(glm::vec3 p, gmt::AABB aabb)
+	{
+		float sqDist = 0.0f;
+		for (int i = 0; i < 3; i++)
+		{
+			float v = p[i];
+			if (v < aabb.min[i])
+			{
+				sqDist += (aabb.min[i] - v) * (aabb.min[i] - v);
+			}
+
+			if (v > aabb.max[i])
+			{
+				sqDist += (v - aabb.max[i]) * (v - aabb.max[i]);
+			}
+		}
+		return sqDist;
+	}
+
+	bool SphereAABBIntersection(gmt::Sphere s, gmt::AABB aabb)
+	{
+		float sqDist = SqDistPointAABB(s.center, aabb);
+
+		return sqDist <= s.radius * s.radius;
+	}
+
+	bool RayPlaneIntersection3D(gmt::Plane plane, gmt::Ray ray, glm::vec3& intersectionPoint)
 	{
 		// check if p is above the plane, and approaching the plane
 		// or if p is below the plane, and approaching the plane.
@@ -302,8 +317,8 @@ namespace Collision
 
 	bool RayTriangleIntersection3D(glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 rayOrigin, glm::vec3 rayDir, glm::vec3& intersectionPoint)
 	{
-		Plane plane = GetPlane(a, b, c);
-		Ray ray = { rayOrigin, rayDir };
+		gmt::Plane plane = GetPlane(a, b, c);
+		gmt::Ray ray = { rayOrigin, rayDir };
 
 		// first check if ray plane intersection happens
 		if (!RayPlaneIntersection3D(plane, ray, intersectionPoint))
@@ -342,7 +357,7 @@ namespace Collision
 
 	// https://www.jkh.me/files/tutorials/Separating%20Axis%20Theorem%20for%20Oriented%20Bounding%20Boxes.pdf
 	// separating axis theorem
-	bool TestTriangleAABB2D(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, GeoCore::AABB b)
+	bool TestTriangleAABB2D(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, gmt::AABB b)
 	{
 		// p0, p1, p2, is projecting the triangle points onto an axis
 		float p0, p1, p2, r;
