@@ -8,6 +8,7 @@
 #include "nav_mesh.h"
 #include "cd_triangulation.h"
 #include "pathfinding_common.h"
+#include "collision.h"
 #include "voronoi.h"
 
 #define	DIST_EPSILON	(0.03125)
@@ -72,6 +73,7 @@ struct PathingState
 	}
 };
 
+
 struct Entity
 {
 	EntityFlag flag;
@@ -80,16 +82,23 @@ struct Entity
 
 	int id;
 	glm::vec3 pos;
-	glm::vec3 dim;
 	glm::vec3 velocity;
+	glm::vec3 dim;
+
+
+	// Boid boid;
 
 	glm::vec3 facingDirection;
 
+	// if agent use agent radius
 	float agentRadius;
+	// if obstacle use vertices
+	// std::vector<glm::vec3> vertices;
+	Collision::PhysBody physBody;
 
 	PathingState pathingState;
 
-	std::vector<glm::vec3> vertices;
+
 
 	// For AABB physics, in object space
 	glm::vec3 min;
@@ -435,6 +444,8 @@ struct World
 		Entity* entity = &entities[id];
 		entity->id = id;
 		entity->pos = pos;
+		entity->velocity = glm::vec3(0, 0, 0);
+
 		entity->agentRadius = radius;
 		entity->flag = EntityFlag::AGENT;
 		entity->facingDirection = glm::vec3(1, 0, 0);
@@ -446,7 +457,9 @@ struct World
 		Entity* entity = &entities[id];
 		entity->id = id;
 		entity->pos = pos;
-		entity->vertices = vertices;
+		entity->velocity = glm::vec3(0, 0, 0);
+
+		entity->physBody.SetData(vertices);
 		entity->flag = EntityFlag::OBSTACLE;
 		entity->facingDirection = glm::vec3(1, 0, 0);
 	}

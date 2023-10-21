@@ -35,4 +35,9 @@ namespace gmt {
 		glm::vec3 dir;
 	};
 
+	struct Line
+	{
+		glm::vec3 p0;
+		glm::vec3 p1;
+	};
 }

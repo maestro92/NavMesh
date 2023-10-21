@@ -610,7 +610,7 @@ namespace Editor
 
 		gridLayoutHelper.GetElementPosition(curX, curY);
 		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
-			curX, curY, btnWidth, btnHeight, "Show ANE Perps", editor->gridConfig.showGrid))
+			curX, curY, btnWidth, btnHeight, "Show ANE Perps", editor->pathingDebugConfig.showAnePerps))
 		{
 			editor->pathingDebugConfig.showAnePerps = !editor->pathingDebugConfig.showAnePerps;
 		}

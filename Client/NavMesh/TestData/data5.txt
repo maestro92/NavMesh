@@ -347,19 +347,85 @@
         },
         {
             "Id" : 13,
+            "Flag" : 2,
+            "x" : 79.418930053710938,
+            "y" : 97.763992309570313
+        },
+        {
+            "Id" : 14,
+            "Flag" : 2,
+            "x" : 222.74052429199219,
+            "y" : 226.74406433105469
+        },
+        {
+            "Id" : 15,
             "Flag" : 0,
-            "x" : 43.175296783447266,
-            "y" : 122.23397827148438,
-            "agentRadius" : 5,
+            "x" : 18.354606628417969,
+            "y" : 34.550743103027344,
+            "agentRadius" : 2,
             "facingDirectionX" : 1,
             "facingDirectionY" : 0
         },
         {
-            "Id" : 14,
+            "Id" : 16,
             "Flag" : 0,
-            "x" : 216.36532592773438,
-            "y" : 231.77238464355469,
-            "agentRadius" : 10,
+            "x" : 13.329229354858398,
+            "y" : 29.622121810913086,
+            "agentRadius" : 2,
+            "facingDirectionX" : 1,
+            "facingDirectionY" : 0
+        },
+        {
+            "Id" : 17,
+            "Flag" : 0,
+            "x" : 18.488765716552734,
+            "y" : 30.266302108764648,
+            "agentRadius" : 2,
+            "facingDirectionX" : 1,
+            "facingDirectionY" : 0
+        },
+        {
+            "Id" : 18,
+            "Flag" : 0,
+            "x" : 15.757810592651367,
+            "y" : 31.89851188659668,
+            "agentRadius" : 2,
+            "facingDirectionX" : 1,
+            "facingDirectionY" : 0
+        },
+        {
+            "Id" : 19,
+            "Flag" : 0,
+            "x" : 13.801388740539551,
+            "y" : 25.968950271606445,
+            "agentRadius" : 2,
+            "facingDirectionX" : 1,
+            "facingDirectionY" : 0
+        },
+        {
+            "Id" : 20,
+            "Flag" : 0,
+            "x" : 18.929170608520508,
+            "y" : 25.570131301879883,
+            "agentRadius" : 2,
+            "facingDirectionX" : 1,
+            "facingDirectionY" : 0
+        },
+        {
+            "Id" : 21,
+            "Flag" : 0,
+            "x" : 16.493255615234375,
+            "y" : 27.571126937866211,
+            "agentRadius" : 2,
+            "facingDirectionX" : 1,
+            "facingDirectionY" : 0
+        },
+        {
+            "Id" : 22,
+            "Flag" : 0,
+            "x" : 15.981472969055176,
+            "y" : 23.718069076538086,
+            "agentRadius" : 2,
             "facingDirectionX" : 1,
             "facingDirectionY" : 0
         }

@@ -10,6 +10,54 @@ namespace Collision
 {
 	float EPSILON = 1e-5;
 
+	struct ContactData
+	{
+		glm::vec3 point;
+
+		// in the direction where a separates from b
+		glm::vec3 normal;
+		float penetrationDepth;
+	};
+
+
+	struct PhysBody
+	{
+		// local position
+		std::vector<glm::vec3> vertices;
+		std::vector<glm::vec3> normals;
+
+		void SetData(std::vector<glm::vec3> verticesIn)
+		{
+			vertices = verticesIn;
+			UpdateNormal();
+		}
+
+		void UpdateNormal()
+		{
+			normals.clear();
+
+			for (int i = 0; i < vertices.size(); i++)
+			{
+				glm::vec3 a = vertices[i];
+				glm::vec3 b;
+				if (i == vertices.size() - 1)
+				{
+					b = vertices[0];
+				}
+				else
+				{
+					b = vertices[i + 1];
+				}
+
+				glm::vec3 dir = b - a;
+				glm::vec3 normal = glm::normalize(glm::cross(dir, glm::vec3(0, 0, -1)));
+
+				normals.push_back(normal);
+			}
+		}
+	};
+
+
 	bool IsPointInsideRect(gmt::AABB rect, glm::vec3 point)
 	{
 		return rect.min.x <= point.x && point.x < rect.max.x&& rect.min.y <= point.y && point.y < rect.max.y;
@@ -280,6 +328,29 @@ namespace Collision
 		return sqDist <= s.radius * s.radius;
 	}
 
+	bool SphereSphereIntersection(gmt::Sphere a, gmt::Sphere b, ContactData& contact)
+	{
+		glm::vec3 d = a.center - b.center;
+		float distSquared = glm::dot(d, d);
+		
+		float radiusSum = a.radius + b.radius;
+		float radiusSumSquared = radiusSum * radiusSum;
+
+		if (distSquared > radiusSumSquared)
+		{
+			return false;
+		}
+
+		contact.point = b.center + d * 0.5f;
+		contact.normal = d;
+		contact.normal = glm::normalize(contact.normal);
+		contact.penetrationDepth = radiusSum - sqrt(distSquared);
+
+		return true;
+	}
+
+
+
 	bool RayPlaneIntersection3D(gmt::Plane plane, gmt::Ray ray, glm::vec3& intersectionPoint)
 	{
 		// check if p is above the plane, and approaching the plane
@@ -463,6 +534,156 @@ namespace Collision
 
 
 		return windingNumber;
+	}
+
+
+
+
+
+	bool CircleLineIntersection(gmt::Sphere s, gmt::Line line, glm::vec3 normal, ContactData& contact)
+	{
+		float lineDistToOrigin = glm::dot(line.p0, normal);
+
+		// first check if the circle is in the right collision side
+
+		glm::vec3 centerToPoint = line.p0 - s.center;
+		if (glm::dot(centerToPoint, normal) > 0)
+		{
+			return false;
+		}
+
+		float centerDistToLine = glm::dot(s.center, normal) - std::abs(lineDistToOrigin);
+		centerDistToLine = std::abs(centerDistToLine);
+
+		float diff = centerDistToLine - s.radius;
+
+		if (diff >= 0)
+		{
+			return false;
+		}
+		/*
+		glm::vec3 ab = line.p1 - line.p0;
+		float t = glm::dot(s.center - line.p0, ab) / glm::dot(ab, ab);
+
+		if (t < 0.0f) {
+			t = 0.0f;
+		}
+
+		if (t > 1.0f) {
+			t = 1.0f;
+		}
+
+		glm::vec3 closestPoint = line.p0 + t * ab;
+
+		centerDistToLine = glm::length(closestPoint - s.center);
+		diff = centerDistToLine - s.radius;
+
+		if (diff >= 0)
+		{
+			return false;
+		}
+		*/
+		diff = -diff;
+		contact.penetrationDepth = diff;
+		contact.point = s.center - normal * (centerDistToLine + diff * 0.5f);
+		contact.normal = normal;
+		return true;
+	}
+
+
+
+	bool PolygonCircleCollision(gmt::Sphere s, PhysBody& body, glm::vec3 bodyPos, ContactData& contact)
+	{
+		// TODO: calculate the circle position in the frame of the polygon
+		float separationFromLine = -FLT_MAX;
+		int normalIndex = 0;
+
+		for (int i = 0; i < body.vertices.size(); i++)
+		{
+			glm::vec3 normal = body.normals[i];
+
+			glm::vec3 vertPos = body.vertices[i] + bodyPos;
+
+
+			float separation2 = glm::dot(normal, s.center - vertPos);
+
+			/*
+			if (Early Out if possible)
+			{
+				return;
+			}
+			*/
+
+			// find the side that has the shortest separation from the circle
+			if (separation2 > separationFromLine)
+			{
+				separationFromLine = separation2;
+				normalIndex = i;
+			}
+
+		}
+
+		int vertIndex1 = normalIndex;
+		int vertIndex2 = (vertIndex1 + 1 < body.vertices.size()) ? vertIndex1 + 1 : 0;
+
+		glm::vec3 v1 = body.vertices[vertIndex1] + bodyPos;
+		glm::vec3 v2 = body.vertices[vertIndex2] + bodyPos;
+
+		// separationFromLine is negative means the center is insde the polygon
+		if (separationFromLine < EPSILON)
+		{
+			contact.penetrationDepth = s.radius - separationFromLine;
+			contact.normal = body.normals[normalIndex];
+			contact.point = 0.5f * (v1 + v2);
+			return true;
+		}
+
+		// compute barycentric coordinates
+		// we want to know if the circle is between the line
+		// so we express, s.center - v1, in terms of v2-v1, to know if s.center
+		// lies outside of v1 or v2
+		float u1 = glm::dot(s.center - v1, v2 - v1);
+		float u2 = glm::dot(s.center - v2, v1 - v2);
+
+		if (u1 <= 0.0f)
+		{
+			if (glm::distance2(s.center, v1) > s.radius * s.radius)
+			{
+				return false;
+			}
+
+			contact.penetrationDepth = s.radius - glm::length(s.center - v1);
+			contact.normal = s.center - v1;
+			contact.normal = glm::normalize(contact.normal);
+			contact.point = v1;
+		}
+		else if (u2 <= 0.0f)
+		{
+			if (glm::distance2(s.center, v2) > s.radius * s.radius)
+			{
+				return false;
+			}
+
+			contact.penetrationDepth = s.radius - glm::length(s.center - v2);
+			contact.normal = s.center - v2;
+			contact.normal = glm::normalize(contact.normal);
+			contact.point = v2;
+		}
+		else
+		{
+			glm::vec3 faceCenter = 0.5f * (v1 + v2);
+			float sep = glm::dot(s.center - faceCenter, body.normals[normalIndex]);
+
+			if (sep > s.radius)
+			{
+				return false;
+			}
+
+			contact.penetrationDepth = s.radius - sep;
+			contact.normal = body.normals[normalIndex];
+			contact.point = faceCenter;
+			return true;
+		}
 	}
 
 }

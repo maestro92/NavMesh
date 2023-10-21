@@ -438,17 +438,17 @@ void RenderObstacleEntity(
 
 	float lineThickness = 0.3;
 	glm::vec3 translate = entity->pos;
-	for (int i = 0; i < entity->vertices.size(); i++)
+	for (int i = 0; i < entity->physBody.vertices.size(); i++)
 	{
-		glm::vec3 pos0 = entity->vertices[i];
+		glm::vec3 pos0 = entity->physBody.vertices[i];
 		glm::vec3 pos1;
-		if (i == entity->vertices.size() - 1)
+		if (i == entity->physBody.vertices.size() - 1)
 		{
-			pos1 = entity->vertices[0];
+			pos1 = entity->physBody.vertices[0];
 		}
 		else
 		{
-			pos1 = entity->vertices[i + 1];
+			pos1 = entity->physBody.vertices[i + 1];
 		}
 
 		pos0 += translate;
@@ -465,6 +465,15 @@ void RenderObstacleEntity(
 			GameRender::RenderLine(
 				gameRenderCommands, renderGroup, gameAssets, GameRender::HALF_TRANS_COLOR_RED, pos0, pos1, lineThickness);
 		}
+
+
+		// render normal
+		glm::vec3 normal = entity->physBody.normals[i];
+		glm::vec3 midPoint = (pos1 + pos0) / 2.0f;
+		glm::vec3 point2 = midPoint + normal * 5.0f;
+		GameRender::RenderLine(
+			gameRenderCommands, renderGroup, gameAssets, GameRender::DRAGGED_ENTITY_COLOR, midPoint, point2, lineThickness);
+
 	}
 
 
@@ -641,6 +650,10 @@ void RenderGrid(EditorState* editorState, GameRender::GameRenderState* gameRende
 
 			GameRender::PushCube(gameRenderCommands, group, bitmap, EditorMain::COLOR_HIGHLIGHT_GRID, min, max, false);
 		}
+	}
+	else
+	{
+		editorState->hightlightMapCell.Reset();
 	}
 }
 
@@ -1161,9 +1174,9 @@ void EditorInteractWithWorldEntities(GameState* gameState,
 			{
 				std::vector<glm::vec3> absolutePos;
 
-				for (int j = 0; j < entity->vertices.size(); j++)
+				for (int j = 0; j < entity->physBody.vertices.size(); j++)
 				{
-					absolutePos.push_back(entity->pos + entity->vertices[j]);
+					absolutePos.push_back(entity->pos + entity->physBody.vertices[j]);
 				}
 
 				if (Collision::IsPointInsidePolygon2D(groundIntersectionPoint, absolutePos))
@@ -1247,9 +1260,9 @@ void RunClickOnEntityLogic(SimulationState* simState, GameInputState* gameInputS
 		{
 			std::vector<glm::vec3> absolutePos;
 
-			for (int j = 0; j < entity->vertices.size(); j++)
+			for (int j = 0; j < entity->physBody.vertices.size(); j++)
 			{
-				absolutePos.push_back(entity->pos + entity->vertices[j]);
+				absolutePos.push_back(entity->pos + entity->physBody.vertices[j]);
 			}
 
 			if (Collision::IsPointInsidePolygon2D(groundIntersectionPoint, absolutePos))
@@ -1512,14 +1525,16 @@ void WorldTickAndRender(GameState* gameState, TransientState* transientState, Ga
 	// render world borders
 
 
-	EditorInteractWithWorldEntities(gameState, gameInputState, gameRenderCommands, world, groundIntersectionPoint);
 
 	if (editor->isInSimMode)
 	{
 		InteractWorldEntities(&gameState->simState, gameInputState, gameRenderCommands, world, groundIntersectionPoint);
 		RenderSelectionBox(&gameState->simState, &gameRenderState);
-		Sim::SimModeTick(&gameState->simState, gameInputState, gameRenderCommands, world, groundIntersectionPoint);
-
+		sim::SimModeTick(&gameState->simState, gameInputState, gameRenderCommands, world, groundIntersectionPoint);
+	}
+	else
+	{
+		EditorInteractWithWorldEntities(gameState, gameInputState, gameRenderCommands, world, groundIntersectionPoint);
 	}
 
 
@@ -1541,9 +1556,9 @@ Object SerializeEntity(Entity* entity)
 	if (entity->flag == EntityFlag::OBSTACLE)
 	{
 		Array verticesArray;
-		for (int i = 0; i < entity->vertices.size(); i++)
+		for (int i = 0; i < entity->physBody.vertices.size(); i++)
 		{
-			glm::vec3 pos = entity->vertices[i];
+			glm::vec3 pos = entity->physBody.vertices[i];
 			Object pointObj;
 
 			pointObj.push_back(Pair("x", pos.x));
@@ -1583,6 +1598,7 @@ void DeserializeEntity(Entity* entity, const mObject& obj)
 	{
 		const mArray& vertices = GameIO::FindValue(obj, "vertices").get_array();
 
+		std::vector<glm::vec3> rawVertices;
 		for (int i = 0; i < vertices.size(); i++)
 		{
 			const mObject pointObj = vertices[i].get_obj();
@@ -1592,9 +1608,9 @@ void DeserializeEntity(Entity* entity, const mObject& obj)
 			float z = GameIO::FindValue(pointObj, "z").get_real();
 
 			glm::vec3 pos = glm::vec3(x, y, z);
-
-			entity->vertices.push_back(pos);
+			rawVertices.push_back(pos);
 		}
+		entity->physBody.SetData(rawVertices);
 	}
 	else if (entityFlag == EntityFlag::AGENT)
 	{
@@ -1707,9 +1723,9 @@ void TriangulateMap(World* world)
 		if (entity->flag == OBSTACLE)
 		{
 			gmt::Polygon hole;
-			for (int j = 0; j < entity->vertices.size(); j++)
+			for (int j = 0; j < entity->physBody.vertices.size(); j++)
 			{
-				hole.vertices.push_back(entity->vertices[j] + entity->pos);
+				hole.vertices.push_back(entity->physBody.vertices[j] + entity->pos);
 			}
 			holes.push_back(hole);
 		}
@@ -1798,7 +1814,8 @@ extern "C" __declspec(dllexport) void GameUpdateAndRender(GameMemory * gameMemor
 		}
 		else if (testCase == 2)
 		{
-			LoadMap(&gameState->world, "TestData/data5.txt");
+//			LoadMap(&gameState->world, "TestData/data5.txt");
+			LoadMap(&gameState->world, "TestData/data4.txt");
 		}
 
 
@@ -2189,13 +2206,28 @@ extern "C" __declspec(dllexport) void DebugSystemUpdateAndRender(GameMemory * ga
 
 	if (editorState->draggedEntity != NULL)
 	{
-		size = sprintf(ptr, "dragging entity %d\n", gameState->editorState.draggedEntity->id);
+		size = sprintf(ptr, "dragging entity %d\n", editorState->draggedEntity->id);
+		ptr += size;
+
+		size = sprintf(ptr, "entity Point %f %f %f\n", editorState->draggedEntity->pos.x, editorState->draggedEntity->pos.y, editorState->draggedEntity->pos.z);
+		ptr += size;
+
+		if (editorState->draggedEntity->flag == OBSTACLE)
+		{
+			for (int j = 0; j < editorState->draggedEntity->physBody.vertices.size(); j++)
+			{
+				glm::vec3 v = editorState->draggedEntity->physBody.vertices[j];
+				size = sprintf(ptr, "   vertex %f %f %f\n", v.x, v.y, v.z);
+				ptr += size;
+			}
+		}
+
 	}
 	else
 	{
 		size = sprintf(ptr, "Not dragging entity\n");
+		ptr += size;
 	}
-	ptr += size;
 
 
 	if (gameState->world.pathingDebug->hasSetStartPos)
