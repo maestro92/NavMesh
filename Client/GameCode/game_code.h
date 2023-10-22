@@ -876,6 +876,16 @@ void RenderPathingData(
 			GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_TEAL, portal0.left, portal1.left, 0.2);
 			GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_ORANGE, portal0.right, portal1.right, 0.2);
 		}
+
+		for (int i = 0; i < debugState->newLeftVertices.size(); i++)
+		{
+			GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_PINK, debugState->newLeftVertices[i], 0.5);
+		}
+
+		for (int i = 0; i < debugState->newRightVertices.size(); i++)
+		{
+			GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_PINK, debugState->newRightVertices[i], 0.5);
+		}
 	}
 
 
@@ -912,15 +922,6 @@ void RenderPathingData(
 		}
 	}
 
-	for (int i = 0; i < debugState->newLeftVertices.size(); i++)
-	{
-		GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_PINK, debugState->newLeftVertices[i], 0.5);
-	}
-
-	for (int i = 0; i < debugState->newRightVertices.size(); i++)
-	{
-		GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_PINK, debugState->newRightVertices[i], 0.5);
-	}
 
 
 	/*

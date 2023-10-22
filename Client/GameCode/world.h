@@ -61,6 +61,9 @@ struct CameraEntity
 
 struct PathingState
 {
+
+	bool isNearTargetWaypoint;
+
 	glm::vec3 destination;
 	std::vector<glm::vec3> waypoints;
 	int curTargetWaypointIndex;
@@ -89,6 +92,7 @@ struct Entity
 	// Boid boid;
 
 	glm::vec3 facingDirection;
+	glm::vec3 targetFacingDirection;
 
 	// if agent use agent radius
 	float agentRadius;
@@ -96,6 +100,7 @@ struct Entity
 	// std::vector<glm::vec3> vertices;
 	Collision::PhysBody physBody;
 
+	bool isPushed;
 	PathingState pathingState;
 
 
@@ -449,6 +454,7 @@ struct World
 		entity->agentRadius = radius;
 		entity->flag = EntityFlag::AGENT;
 		entity->facingDirection = glm::vec3(1, 0, 0);
+		entity->targetFacingDirection = glm::vec3(1, 0, 0);
 	}
 
 	void AddObstacle(glm::vec3 pos, std::vector<glm::vec3> vertices)
@@ -462,6 +468,7 @@ struct World
 		entity->physBody.SetData(vertices);
 		entity->flag = EntityFlag::OBSTACLE;
 		entity->facingDirection = glm::vec3(1, 0, 0);
+		entity->targetFacingDirection = glm::vec3(1, 0, 0);
 	}
 
 	void RemoveEntity(Entity* entity)

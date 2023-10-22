@@ -503,7 +503,13 @@ namespace PathFinding
 		// for portalApex to end crosses the last portal, then we just draw a straight line
 		// otherwise, w need to add the last portal as another point 
 		//
-		results.push_back(end);
+		if (results.size() > 1)
+		{
+			if (!Math::Equals(results[results.size() - 1], end))
+			{
+				results.push_back(end);
+			}
+		}
 
 		FunnelResult funnelResult;
 		funnelResult.waypoints = results;
@@ -563,8 +569,6 @@ namespace PathFinding
 		float agentRadius,
 		PathFinding::DebugState* debugState)
 	{
-		std::vector<glm::vec3> results;
-
 		std::vector<NavMesh::Portal> portals;
 		std::vector<EdgeIndex> indices;
 
@@ -805,6 +809,18 @@ namespace PathFinding
 			float radius = agentDiameter / 2.0f;
 			FunnelResult funnelResult = ModifiedFunnelPath(dualGraph, world->cdTriangulationGraph, aStarResult.nodePath, start, finalDestination, radius, debugState);
 			// FunnelResult funnelResult = FunnelPath(dualGraph, world->cdTriangulationGraph, aStarResult.nodePath, start, finalDestination, debugState);
+
+			/*
+			if (funnelResult.waypoints.size() == 3)
+			{
+				for (int i = 0; i < funnelResult.waypoints.size(); i++)
+				{
+					std::cout << "waypoints " << funnelResult.waypoints[i].x << " " << funnelResult.waypoints[i].y << std::endl;
+				}
+				
+				funnelResult = ModifiedFunnelPath(dualGraph, world->cdTriangulationGraph, aStarResult.nodePath, start, finalDestination, radius, debugState);
+			}
+			*/
 
 			result.waypoints = funnelResult.waypoints;
 

@@ -647,7 +647,7 @@ namespace Collision
 
 		if (u1 <= 0.0f)
 		{
-			if (glm::distance2(s.center, v1) > s.radius * s.radius)
+			if ( (glm::distance2(s.center, v1) - s.radius * s.radius) > EPSILON)
 			{
 				return false;
 			}
@@ -659,7 +659,8 @@ namespace Collision
 		}
 		else if (u2 <= 0.0f)
 		{
-			if (glm::distance2(s.center, v2) > s.radius * s.radius)
+
+			if ( (glm::distance2(s.center, v2) - s.radius * s.radius) > EPSILON)
 			{
 				return false;
 			}
@@ -674,7 +675,7 @@ namespace Collision
 			glm::vec3 faceCenter = 0.5f * (v1 + v2);
 			float sep = glm::dot(s.center - faceCenter, body.normals[normalIndex]);
 
-			if (sep > s.radius)
+			if (sep - s.radius > EPSILON)
 			{
 				return false;
 			}

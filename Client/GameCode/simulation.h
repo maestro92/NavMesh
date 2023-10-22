@@ -8,6 +8,8 @@
 namespace sim
 {
 	float c_dt = 1;
+	const float c_nearWaypointRange = 0;
+	const float c_maxAngleChangePerTick = 10;
 
 	void SetDestinationTick(SimulationState* simState,
 		GameInputState* gameInputState,
@@ -33,11 +35,10 @@ namespace sim
 
 	void PathingTick(Entity* entity)
 	{
-		
+
 		float speed = 0.2f;
 
 		PathingState* state = &(entity->pathingState);
-
 		if (state->curTargetWaypointIndex >= state->waypoints.size())
 		{
 			return;
@@ -47,6 +48,7 @@ namespace sim
 
 		while (maxDistTravelled > 0)
 		{
+			state->isNearTargetWaypoint = false;
 			if (state->curTargetWaypointIndex >= state->waypoints.size())
 			{
 				break;
@@ -55,6 +57,23 @@ namespace sim
 			glm::vec3 vecToNextWaypoint = state->waypoints[state->curTargetWaypointIndex] - entity->pos;
 			float distToNextWayPoint = glm::length(vecToNextWaypoint);
 			glm::vec3 dir = glm::normalize(vecToNextWaypoint);
+
+			
+			if (distToNextWayPoint < c_nearWaypointRange)
+			{
+				state->isNearTargetWaypoint = true;
+
+				if (entity->isPushed)
+				{
+					maxDistTravelled -= distToNextWayPoint;
+
+					entity->velocity = vecToNextWaypoint;
+					state->curTargetWaypointIndex++;
+					continue;
+				}
+			}
+			
+
 		//	entity->facingDirection = dir;
 
 			// i can communte to the next waypoint
@@ -63,19 +82,20 @@ namespace sim
 				maxDistTravelled -= distToNextWayPoint;
 
 				entity->velocity = vecToNextWaypoint;
-
-//				entity->pos = state->waypoints[state->curTargetWaypointIndex];
 				state->curTargetWaypointIndex++;
 			}
 			else
 			{
 				entity->velocity = dir * speed;
-
-//				entity->pos = entity->pos + dir * maxDistTravelled;
-
 				maxDistTravelled = 0;
 			}
-			entity->facingDirection = dir;
+			entity->targetFacingDirection = dir;
+
+			if (entity->id == 36)
+			{
+				std::cout << entity->id << " " << dir.x << " " << dir.y << " " << std::endl;
+			}
+
 		}
 
 		std::cout << entity->id << " " << entity->velocity.x << " " << entity->velocity.y << " " << std::endl;
@@ -173,10 +193,15 @@ namespace sim
 		{
 			entity->velocity += contactData.normal * contactData.penetrationDepth / 2.0f;
 			entity2->velocity -= contactData.normal * contactData.penetrationDepth / 2.0f;
+
+			entity->isPushed = true;
+			entity2->isPushed = true;
 		}
 		else if (entity->flag == AGENT && entity2->flag == OBSTACLE)
 		{
 			entity->velocity += contactData.normal * contactData.penetrationDepth;
+
+			entity->isPushed = true;
 		}
 
 	}
@@ -201,6 +226,7 @@ namespace sim
 
 	void PhysicsTick(Entity* entity, World* world)
 	{
+		entity->isPushed = false;
 
 		for (int i = 0; i < world->numEntities; i++)
 		{
@@ -251,6 +277,46 @@ namespace sim
 		}
 	}
 
+	void InterpolateFacingDirection(Entity* entity)
+	{
+		// TODO: try interpolate with quat
+		float angle0 = Math::VectorToAngle(entity->facingDirection);
+		float angle1 = Math::VectorToAngle(entity->targetFacingDirection);
+
+
+		if (angle0 == angle1)
+		{
+			return;
+		}
+
+		angle0 = Math::ConvertAngleTo0To360(angle0);
+		angle1 = Math::ConvertAngleTo0To360(angle1);
+
+		float det = entity->facingDirection.x * entity->targetFacingDirection.y - 
+			entity->targetFacingDirection.x * entity->facingDirection.y;
+
+		float angle = 0;
+		if (det >= 0)
+		{
+			if (angle1 < angle0)
+			{
+				angle1 += 360;
+			}
+			angle = std::min(angle0 + c_maxAngleChangePerTick, angle1);
+		}
+		else
+		{
+			if (angle1 > angle0)
+			{
+				angle0 += 360;
+			}
+			angle = std::max(angle0 - c_maxAngleChangePerTick, angle1);
+		}
+
+		entity->facingDirection = Math::AngleToVector(angle);
+		angle0 = Math::VectorToAngle(entity->facingDirection);
+	}
+
 
 	void TransformTick(Entity* entity)
 	{
@@ -265,9 +331,18 @@ namespace sim
 			entity->velocity = dir * c_maxSpeed;
 		}
 
-
 		entity->pos = entity->pos + entity->velocity;
+
+		InterpolateFacingDirection(entity);
+
+		if (entity->id == 36)
+		{
+			std::cout << entity->id << " " << entity->velocity.x << " " << entity->velocity.y << " " << std::endl;
+		}
+
 	}
+
+
 
 	void EntityTick(Entity* entity,
 		SimulationState* simState,
@@ -276,18 +351,28 @@ namespace sim
 		World* world)
 	{
 
-		std::cout << ">>>> entity Tick " << entity->id << " " << entity->pos.x << " " << entity->pos.y << " " << std::endl;
+
 
 
 		entity->velocity = glm::vec3(0);
+
+		if (entity->id == 36)
+		{
+			std::cout << entity->id << " " << entity->velocity.x << " " << entity->velocity.y << " " << std::endl;
+		}
+
 
 		PathingTick(entity);
 	//	BoidsTick(entity, world);
 		PhysicsTick(entity, world);
 		TransformTick(entity);
 
-		std::cout << "				" << entity->id << " " << entity->pos.x << " " << entity->pos.y << " " << std::endl;
-		
+		if (entity->id == 36)
+		{
+			std::cout << entity->id << " " << entity->velocity.x << " " << entity->velocity.y << " " << std::endl;
+		}
+
+
 
 	}
 

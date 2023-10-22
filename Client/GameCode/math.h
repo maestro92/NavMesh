@@ -110,6 +110,17 @@ namespace Math
 		return diff;
 	}
 
+	glm::vec3 AngleToVector(float angle)
+	{
+		// -pi ~ pi
+		return glm::vec3(cos(angle * PI / 180.0f), sin(angle * PI / 180.0f), 0);
+	}
+
+	float VectorToAngle(glm::vec3 vector)
+	{
+		return atan2(vector.y, vector.x) * 180 / PI;
+	}
+
 
 	float CalculateInteriorAngle(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2)
 	{
