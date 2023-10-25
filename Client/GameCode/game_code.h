@@ -610,7 +610,7 @@ void RenderGrid(EditorState* editorState, GameRender::GameRenderState* gameRende
 					std::string s = std::to_string(x) + " " + std::to_string(y);
 
 					int xTextPos = xi;
-					int yTextPos = yi - world->mapGrid.cellSize / 2;
+					int yTextPos = yi + world->mapGrid.cellSize / 10;
 					GameRender::DEBUGTextLine(s.c_str(), gameRenderState, glm::vec3(xTextPos, yTextPos, 0), 0.2);
 				}
 			}
@@ -624,7 +624,7 @@ void RenderGrid(EditorState* editorState, GameRender::GameRenderState* gameRende
 					std::string s = std::to_string(xi) + " " + std::to_string(yi);
 
 					int xTextPos = xi;
-					int yTextPos = yi - world->mapGrid.cellSize / 2;
+					int yTextPos = yi + world->mapGrid.cellSize / 10;
 					GameRender::DEBUGTextLine(s.c_str(), gameRenderState, glm::vec3(xTextPos, yTextPos, 0), 0.2);
 				}
 			}
@@ -888,6 +888,15 @@ void RenderPathingData(
 		}
 	}
 
+	
+	if (editor->pathingDebugConfig.showAStarWaypoints)
+	{
+		for (int i = 0; i < debugState->aStarWaypoints.size(); i++)
+		{
+			GameRender::RenderPoint(gameRenderCommands, group, bitmap, GameRender::COLOR_TEAL, debugState->aStarWaypoints[i], 0.5);
+		}
+	}
+	
 
 	if (editor->pathingDebugConfig.showPortals)
 	{

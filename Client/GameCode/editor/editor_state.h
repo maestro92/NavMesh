@@ -75,6 +75,7 @@ namespace Editor
 
 	struct PathingDebugConfig
 	{
+		bool showAStarWaypoints;
 		bool showTunnel;
 		bool showPortals;
 		

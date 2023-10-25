@@ -178,12 +178,15 @@ namespace Collision
 		return distSq < EPSILON;
 	}
 
-
 	float Signed2DTrigArea(glm::vec2 a, glm::vec2 b, glm::vec2 c)
 	{
 		return (a.x - c.x) * (b.y - c.y) - (a.y - c.y) * (b.x - c.x);
 	}
 
+	float Signed2DTrigArea(glm::vec3 a, glm::vec3 b, glm::vec3 c)
+	{
+		return (a.x - c.x) * (b.y - c.y) - (a.y - c.y) * (b.x - c.x);
+	}
 
 	bool DoesAABBAABBIntersect2D(gmt::AABB a, gmt::AABB b)
 	{
@@ -590,7 +593,145 @@ namespace Collision
 		return true;
 	}
 
+	// Clamp n to lie within the range [min, max]
+	float Clamp(float n, float min, float max) 
+	{
+		if (n < min) return min;
+		if (n > max) return max;
+		return n;
+	}
 
+	/*
+	float ClosestPtLineSegmentLineSegment(glm::vec3 p1, glm::vec3 q1, glm::vec3 p2, glm::vec3 q2, glm::vec3& c1, glm::vec3& c2)
+	{
+		float s, t;
+
+		glm::vec3 d1 = q1 - p1;
+		glm::vec3 d2 = q2 - p2;
+		glm::vec3 r = p1 - p2;
+
+		float a = glm::dot(d1, d1); // Squared length of segment S1, always nonnegative
+		float e = glm::dot(d2, d2); // Squared length of segment S2, always nonnegative
+		float f = glm::dot(d2, r);
+		// Check if either or both segments degenerate into points
+		if (a <= EPSILON && e <= EPSILON) {
+			// Both segments degenerate into points
+			s = t = 0.0f;
+			c1 = p1;
+			c2 = p2;
+			return glm::dot(c1 - c2, c1 - c2);
+		}
+		if (a <= EPSILON) {
+			// First segment degenerates into a point
+			s = 0.0f;
+			t = f / e; // s = 0 => t = (b*s + f) / e = f / e
+			t = Clamp(t, 0.0f, 1.0f);
+		}
+		else {
+			float c = glm::dot(d1, r);
+			if (e <= EPSILON) {
+				// Second segment degenerates into a point
+				t = 0.0f;
+				s = Clamp(-c / a, 0.0f, 1.0f); // t = 0 => s = (b*t - c) / a = -c / a
+			}
+			else {
+				// The general nondegenerate case starts here
+				float b = glm::dot(d1, d2);
+				float denom = a * e - b * b; // Always nonnegative
+				// If segments not parallel, compute closest point on L1 to L2 and
+				// clamp to segment S1. Else pick arbitrary s (here 0)
+				if (denom != 0.0f) {
+					s = Clamp((b * f - c * e) / denom, 0.0f, 1.0f);
+				}
+				else s = 0.0f;
+				// Compute point on L2 closest to S1(s) using
+				// t = Dot((P1 + D1*s) - P2,D2) / Dot(D2,D2) = (b*s + f) / e
+				t = (b * s + f) / e;
+				// If t in [0,1] done. Else clamp t, recompute s for the new value
+				// of t using s = Dot((P2 + D2*t) - P1,D1) / Dot(D1,D1)= (t*b - c) / a
+				// and clamp s to [0, 1]
+				if (t < 0.0f) {
+					t = 0.0f;
+					s = Clamp(-c / a, 0.0f, 1.0f);
+				}
+				else if (t > 1.0f) {
+					t = 1.0f;
+					s = Clamp((b - c) / a, 0.0f, 1.0f);
+				}
+			}
+		}
+		c1 = p1 + d1 * s;
+		c2 = p2 + d2 * t;
+		return glm::dot(c1 - c2, c1 - c2);
+	}
+	*/
+
+
+	float ClosestDistanceLineSegmentLineSegment(glm::vec3 a1, glm::vec3 a2, glm::vec3 b1, glm::vec3 b2)
+	{
+		glm::vec3 v1 = a2 - a1;
+		glm::vec3 v2 = b2 - b1;
+		glm::vec3 w = a1 - b1;
+
+		float a = glm::dot(v1, v1);
+		float b = glm::dot(v1, v2);
+		float c = glm::dot(v2, v2);
+		float d = glm::dot(v1, w);
+		float e = glm::dot(v2, w);
+	
+		float det = a * c - b * b;
+
+		// Parallel
+		if ( abs(det) < EPSILON)
+		{
+			// get distance between two parallel lines, which is the just distance between two points
+			return glm::length(a1 - b1);
+		}
+
+		float t1 = (b * e - c * d) / det;
+		float t2 = (a * e - b * d) / det;
+
+		if (t1 < 0) t1 = 0;
+		if (t1 > 1) t1 = 1;
+		if (t2 < 0) t2 = 0;
+		if (t2 > 1) t2 = 1;
+
+		return glm::length(w + t1 * v1 - t2 * v2);
+	}
+
+	// realtime collision detection
+	// ab forms the line, 
+	glm::vec3 ClosestPointOnLine(glm::vec3 a, glm::vec3 b, glm::vec3 p)
+	{	
+		glm::vec3 ab = b - a;
+	
+		float lengthSquared = glm::dot(ab, ab);
+		if (lengthSquared == 0)
+		{
+			return a;
+		}
+
+		float t = glm::dot(p - a, ab) / lengthSquared;
+		if (t < 0)
+		{
+			return a;
+		}
+
+		if (t > 1.0f)
+		{
+			return b;
+		}
+
+		return a + t * ab;
+	}
+
+	bool MovingCircleWithEdgesCollision(gmt::Sphere s, glm::vec3 sphereEnd, gmt::Line line, glm::vec3 normal)
+	{
+		glm::vec3 c1, c2;
+		float dist = ClosestDistanceLineSegmentLineSegment(s.center, sphereEnd, line.p0, line.p1);
+
+		return dist < s.radius;
+	}
 
 	bool PolygonCircleCollision(gmt::Sphere s, PhysBody& body, glm::vec3 bodyPos, ContactData& contact)
 	{

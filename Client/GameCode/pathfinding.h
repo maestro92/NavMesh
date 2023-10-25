@@ -155,6 +155,13 @@ namespace PathFinding
 		std::vector<int> nodePath;
 	};
 
+	/*
+	struct VisitEdgeEntry
+	{
+		bool isValid;
+		CDT::DelaunayTriangleEdge edge;
+	};
+	*/
 
 	struct AStarSearchNode
 	{
@@ -162,19 +169,24 @@ namespace PathFinding
 
 		// this is to remeber the path
 		int fromPolygonNodeId;
-		int cost;		// g(n) + f(n)
-		int costFromStartNode; // this is g(n)
+		int costFromStartNode; // g(n)
+		int cost;		// f(n) = g(n) + h(n)
+		glm::vec3 pos;
+
 		CDT::DelaunayTriangleEdge sourceEdge;
+
+	//	VisitEdgeEntry visitedEdges[3];
 
 		AStarSearchNode() {}
 
-		AStarSearchNode(int polygonNodeIdIn, int fromPolygonNodeIdIn, int costIn, int costFromStartNodeIn, CDT::DelaunayTriangleEdge sourceEdgeIn)
+		AStarSearchNode(int polygonNodeIdIn, int fromPolygonNodeIdIn, int gCostIn, int fCostIn, glm::vec3 posIn, CDT::DelaunayTriangleEdge sourceEdgeIn)
 		{
 			polygonNodeId = polygonNodeIdIn;
 			fromPolygonNodeId = fromPolygonNodeIdIn;
-			cost = costIn;
-			costFromStartNode = costFromStartNodeIn;
+			costFromStartNode = gCostIn;
+			cost = fCostIn;
 			sourceEdge = sourceEdgeIn;
+			pos = posIn;
 		}
 	};
 
@@ -238,26 +250,76 @@ namespace PathFinding
 		return true;
 	}
 
+	/*
+	bool HasVisitedNodeFromThisEdge(
+		std::unordered_map<TriangleId, AStarSearchNode>& visited, 
+		TriangleId triangleId,
+		CDT::DelaunayTriangleEdge edge)
+	{
+		if (visited.find(triangleId) == visited.end())
+		{
+			return false;
+		}
+		
+		AStarSearchNode node = visited[triangleId];
+		for (int i = 0; i < ArrayCount(node.visitedEdges); i++) 
+		{
+			if (node.visitedEdges[i].isValid && node.visitedEdges[i].edge == edge)
+			{
+				return true;
+			}
+		}		
+
+		return false;
+	}
+	*/
+
+
+	// to better estimate where the agent where travel on this edge, we shrink the edge
+	// by agent radius
+	void ShrinkEdgeByRadius(glm::vec3& v0, glm::vec3& v1, float agentDiameterSqured, float agentRadius)
+	{
+		// we dont do an accurate shrinking. We just do a rough shrinking
+
+		// TODO: make this fast
+		glm::vec3 v0v1 = v1 - v0;
+		
+		float lengthSquared = glm::dot(v0v1, v0v1);
+
+		if (lengthSquared > agentDiameterSqured)
+		{
+			v0v1 = glm::normalize(v0v1);
+			v0 = v0 + v0v1 * agentRadius;
+			v1 = v1 - v0v1 * agentRadius;
+		}
+	}
+
 
 	AStarSearchResult AStarSearch(NavMesh::DualGraph* dualGraph,
 		float agentDiameter, 
 		NavMesh::DualGraphNode* startNode, glm::vec3 start, 
-		NavMesh::DualGraphNode* destNode, glm::vec3 end)
+		NavMesh::DualGraphNode* destNode, glm::vec3 end,
+		PathFinding::DebugState* debugState)
 	{
 		std::cout << "start" << startNode->GetId() << std::endl;
 		std::cout << "end" << destNode->GetId() << std::endl;
 
+		debugState->aStarWaypoints.clear();
 
+		float agentDiameterSquared = agentDiameter * agentDiameter;
+		float agentRadius = agentDiameter / 2.0f;
 		AStarSearchResult result;
 		result.reachedOriginalGoal = false;
 
 		// from triangle 0, do a bfs with a distance heuristic until u reach triangle 1
 		std::priority_queue<AStarSearchNode, std::vector<AStarSearchNode>, AStarSearchNodeComparison> q;
 
-		std::unordered_map<int, AStarSearchNode> visited;
+		std::unordered_map<TriangleId, AStarSearchNode> visited;
 
 		CDT::DelaunayTriangleEdge edge = CDT::DelaunayTriangleEdge::GetInvalidEdge();
-		AStarSearchNode node = AStarSearchNode(startNode->GetId(), -1, 0, 0, edge);
+
+		float cost = HeuristicCost(start, end);
+		AStarSearchNode node = AStarSearchNode(startNode->GetId(), -1, 0, cost, start, edge);
 		q.push(node);
 	
 
@@ -283,17 +345,7 @@ namespace PathFinding
 
 			std::cout << ">>>>> visiting " << curPolygonId << std::endl;
 
-			glm::vec3 fromPos;
-			if (curAStarNode.polygonNodeId == startNode->GetId())
-			{
-				fromPos = start;
-			}
-			else
-			{
-				fromPos = curGraphNode->center;
-			}
-
-			float distToDest = HeuristicCost(fromPos, end);
+			float distToDest = HeuristicCost(curAStarNode.pos, end);
 			if (distToDest < curClosestDist)
 			{
 				curClosestDist = distToDest;
@@ -327,35 +379,60 @@ namespace PathFinding
 
 				CDT::DelaunayTriangleEdge edge = triangle->edges[i];
 
+
 				if (!CheckTunnelWidth(triangle, curAStarNode.sourceEdge, neighbor->triangle, edge, agentDiameter))
 				{
 					continue;
 				}
 
-				float cost1 = HeuristicCost(fromPos, neighbor->center);
-				float cost2 = HeuristicCost(neighbor->center, end);
 
-				int costFromStartNode = curAStarNode.costFromStartNode + HeuristicCost(fromPos, neighbor->center);
-				int totalCost = costFromStartNode + HeuristicCost(neighbor->center, end);
+				CDT::Vertex v0 = triangle->GetVertexById(edge.vertices[0]);
+				CDT::Vertex v1 = triangle->GetVertexById(edge.vertices[1]);
 
-				std::cout << "			costFromStartNode " << costFromStartNode << std::endl;
-				std::cout << "			cost1 " << cost1 << std::endl;
-				std::cout << "			cost2 " << cost2 << std::endl;
+				glm::vec3 pos0 = v0.pos;
+				glm::vec3 pos1 = v1.pos;
+				ShrinkEdgeByRadius(pos0, pos1, agentDiameterSquared, agentRadius);
 
-				std::cout << "			totalCost " << totalCost << std::endl;
+				glm::vec3 newPos = Collision::ClosestPointOnLine(pos0, pos1, curAStarNode.pos);
 
-				q.push(AStarSearchNode(neighborId, curPolygonId, totalCost, costFromStartNode, edge));
+
+
+				float gCost = curAStarNode.costFromStartNode + HeuristicCost(curAStarNode.pos, newPos);
+				float hCost = HeuristicCost(newPos, end);
+
+				float fCost = gCost + hCost;	// total cost
+
+				
+				std::cout << "			costFromStartNode " << curAStarNode.costFromStartNode << std::endl;
+				std::cout << "			gCost " << gCost << std::endl;
+				std::cout << "			hCost " << hCost << std::endl;
+
+				std::cout << "			fCost " << fCost << std::endl;
+				
+
+				// AStarSearchNode(int polygonNodeIdIn, int fromPolygonNodeIdIn, int costIn, int costFromStartNodeIn, glm::vec3 posIn, CDT::DelaunayTriangleEdge sourceEdgeIn)
+
+				q.push(AStarSearchNode(
+					neighborId, 
+					curPolygonId, 
+					gCost, 
+					fCost, newPos, edge));
 			}
 		}
 		
 		std::vector<int> polygonNodesPath;
-		int curId = destinationNode.polygonNodeId;
-		while (curId != -1)
 		{
-			polygonNodesPath.push_back(curId);
+			AStarSearchNode node2 = destinationNode;
+			int curId = node2.polygonNodeId;
+			while (curId != -1)
+			{
+				polygonNodesPath.push_back(curId);
 
-			AStarSearchNode node = visited[curId];
-			curId = node.fromPolygonNodeId;
+				debugState->aStarWaypoints.push_back(node2.pos);
+
+				node2 = visited[curId];
+				curId = node2.fromPolygonNodeId;
+			}
 		}
 
 		// reverse it
@@ -366,6 +443,12 @@ namespace PathFinding
 			int temp = polygonNodesPath[i0];
 			polygonNodesPath[i0] = polygonNodesPath[i1];
 			polygonNodesPath[i1] = temp;
+
+			
+			glm::vec3 tempPos = debugState->aStarWaypoints[i0];
+			debugState->aStarWaypoints[i0] = debugState->aStarWaypoints[i1];
+			debugState->aStarWaypoints[i1] = tempPos;
+			
 
 			i0++;
 			i1--;
@@ -733,8 +816,12 @@ namespace PathFinding
 		return Funnel_Core(modifiedPortals, start, end);
 	}
 
+	/*
+	std::vector<gmt::Line> GetHardEdgesTouchingNode(NavMesh::DualGraphNode* node)
+	{
 
-
+	}
+	*/
 
 	PathfindingResult FindPath(PathFinding::DebugState* debugState, float agentDiameter, World* world, glm::vec3 start, glm::vec3 goal)
 	{
@@ -758,6 +845,23 @@ namespace PathFinding
 		result.valid = true;
 		if (node0 == node1)
 		{
+			// we do a collision test to see if I can actually traverse there.
+			// if not I have to do an Astar to see if I can go through another way
+			
+			/*
+			we get all the hard constraints that this triangle is touching, and do a dynamic test
+			
+			*/
+			
+			/*
+			std::vector<gmt::Line> edges = GetHardEdgesTouchingNode(node0);
+
+			if (Collision::MovingCircleWithEdgesCollision())
+			{
+
+			}
+			*/
+
 			// return a straight line between them
 			result.waypoints.push_back(start);
 			result.waypoints.push_back(goal);
@@ -776,7 +880,9 @@ namespace PathFinding
 			result.waypoints.push_back(goal);
 			*/
 
-			AStarSearchResult aStarResult = AStarSearch(dualGraph, agentDiameter, node0, start, node1, goal);
+			AStarSearchResult aStarResult = AStarSearch(dualGraph, agentDiameter, node0, start, node1, goal, debugState);
+
+
 
 				/*
 				for (int i = 0; i < aStarNodeIds.size(); i++)

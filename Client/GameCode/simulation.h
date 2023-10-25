@@ -91,14 +91,16 @@ namespace sim
 			}
 			entity->targetFacingDirection = dir;
 
+			/*
 			if (entity->id == 36)
 			{
 				std::cout << entity->id << " " << dir.x << " " << dir.y << " " << std::endl;
 			}
+			*/
 
 		}
 
-		std::cout << entity->id << " " << entity->velocity.x << " " << entity->velocity.y << " " << std::endl;
+	//	std::cout << entity->id << " " << entity->velocity.x << " " << entity->velocity.y << " " << std::endl;
 	}
 
 	// https://www.youtube.com/watch?v=nvx-13zWTPI&t=1156s&ab_channel=AndrewSmith
@@ -356,22 +358,24 @@ namespace sim
 
 		entity->velocity = glm::vec3(0);
 
+		/*
 		if (entity->id == 36)
 		{
 			std::cout << entity->id << " " << entity->velocity.x << " " << entity->velocity.y << " " << std::endl;
 		}
-
+		*/
 
 		PathingTick(entity);
 	//	BoidsTick(entity, world);
 		PhysicsTick(entity, world);
 		TransformTick(entity);
 
+		/*
 		if (entity->id == 36)
 		{
 			std::cout << entity->id << " " << entity->velocity.x << " " << entity->velocity.y << " " << std::endl;
 		}
-
+		*/
 
 
 	}
@@ -383,7 +387,7 @@ namespace sim
 		World* world,
 		glm::vec3 groundIntersectionPoint)
 	{
-		std::cout << ">>>> SimModeTick " << std::endl;
+	//	std::cout << ">>>> SimModeTick " << std::endl;
 
 		// InteractWorldEntities(simState, gameInputState, gameRenderCommands, world, groundIntersectionPoint);
 

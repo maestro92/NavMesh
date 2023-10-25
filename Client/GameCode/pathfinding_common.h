@@ -25,6 +25,8 @@ namespace PathFinding
 		int endNodeId;
 
 		NavMesh::DualGraph* dualGraph;
+
+		std::vector<glm::vec3> aStarWaypoints;
 		std::vector<glm::vec3> waypoints;
 		std::vector<NavMesh::Portal> portals;
 		std::vector<NavMesh::Portal> modifiedPortals;

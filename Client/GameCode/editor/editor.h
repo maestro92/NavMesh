@@ -533,15 +533,6 @@ namespace Editor
 		gridLayoutHelper.IncrementElementCount();
 
 
-		gridLayoutHelper.GetElementPosition(curX, curY);
-		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
-			curX, curY, btnWidth, btnHeight, "Show Grid", editor->gridConfig.showGrid))
-		{
-			editor->gridConfig.showGrid = !editor->gridConfig.showGrid;
-		}
-		gridLayoutHelper.IncrementElementCount();
-
-
 
 		gridLayoutHelper.GetElementPosition(curX, curY);
 		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
@@ -572,6 +563,13 @@ namespace Editor
 		gridLayoutHelper.IncrementElementCount();
 
 
+		gridLayoutHelper.GetElementPosition(curX, curY);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Show AStar Waypoints", editor->pathingDebugConfig.showAStarWaypoints))
+		{
+			editor->pathingDebugConfig.showAStarWaypoints = !editor->pathingDebugConfig.showAStarWaypoints;
+		}
+		gridLayoutHelper.IncrementElementCount();
 
 
 		gridLayoutHelper.GetElementPosition(curX, curY);
@@ -616,7 +614,13 @@ namespace Editor
 		}
 		gridLayoutHelper.IncrementElementCount();
 
-
+		gridLayoutHelper.GetElementPosition(curX, curY);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Show Grid", editor->gridConfig.showGrid))
+		{
+			editor->gridConfig.showGrid = !editor->gridConfig.showGrid;
+		}
+		gridLayoutHelper.IncrementElementCount();
 
 		if (editor->gridConfig.showGrid)
 		{
