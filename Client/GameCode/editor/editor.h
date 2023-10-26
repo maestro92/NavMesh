@@ -533,6 +533,15 @@ namespace Editor
 		gridLayoutHelper.IncrementElementCount();
 
 
+		gridLayoutHelper.GetElementPosition(curX, curY);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Show Half Width Lines", editor->triangulationDebugConfig.showHalfWidthLines))
+		{
+			editor->triangulationDebugConfig.showHalfWidthLines = !editor->triangulationDebugConfig.showHalfWidthLines;
+		}
+		gridLayoutHelper.IncrementElementCount();
+
+
 
 		gridLayoutHelper.GetElementPosition(curX, curY);
 		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,

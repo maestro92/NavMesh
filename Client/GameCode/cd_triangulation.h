@@ -65,6 +65,13 @@ namespace CDT
 		}
 	};
 
+	struct HalfWidthLine
+	{
+		glm::vec3 p0;
+		glm::vec3 p1;
+		bool isInside;	// if its inside the triangle
+	};
+
 	struct DebugConstrainedEdge
 	{
 		std::vector<Vertex> vertices;
@@ -83,6 +90,7 @@ namespace CDT
 
 		DelaunayTriangleEdge edges[NUM_TRIANGLE_EDGES];
 		float halfWidths[NUM_TRIANGLE_VERTEX];
+		HalfWidthLine halfWidthLines[NUM_TRIANGLE_EDGES];
 
 		DelaunayTriangle()
 		{
@@ -337,8 +345,7 @@ namespace CDT
 		std::vector<DelaunayTriangle> triangles;
 		std::vector<DelaunayTriangle*> trianglesById;
 		std::vector<Vertex> masterVertexList;
-
-
+		std::vector<bool> vertexConstrainedList;
 
 		bool triangulated;
 
@@ -399,9 +406,13 @@ namespace CDT
 				DelaunayTriangleEdge ec;
 				triangle->TryGetOppositeEdge(vc, ec);
 
+				HalfWidthLine halfWidthLine;
+				halfWidthLine.p0 = vc.pos;
+				halfWidthLine.isInside = false;
 
-				float halfWidth = CalculateWidthForVertex(triangle, ea, eb, ec, va, vb, vc);
+				float halfWidth = CalculateWidthForVertex(triangle, ea, eb, ec, va, vb, vc, halfWidthLine);
 				triangle->halfWidths[i] = halfWidth;
+				triangle->halfWidthLines[i] = halfWidthLine;
 
 				std::cout << "			halfWidth " << halfWidth << std::endl;
 			}
@@ -417,7 +428,7 @@ namespace CDT
 		// same with vc and ec
 		float CalculateWidthForVertex(DelaunayTriangle* triangle, 
 			DelaunayTriangleEdge ea, DelaunayTriangleEdge eb, DelaunayTriangleEdge ec,
-			Vertex va, Vertex vb, Vertex vc)
+			Vertex va, Vertex vb, Vertex vc, HalfWidthLine& halfWidthLine)
 		{
 			assert(ea.vertices[1] == eb.vertices[0]);
 			assert(ea.vertices[1] == vc.id);
@@ -439,12 +450,16 @@ namespace CDT
 			{
 				std::cout << "   DistanceBetweenEdgeAndVertex " << std::endl;
 				// if ec is a constrained edge in DelaunayTriangle
-				return DistanceBetweenEdgeAndVertex(ec, vc);
+				glm::vec3 closestPoint;
+				float dist = DistanceBetweenEdgeAndVertex(ec, vc, closestPoint);
+				halfWidthLine.p1 = closestPoint;
+				halfWidthLine.isInside = true;
+				return dist;
 			}
 			else
 			{
 				std::cout << "   SearchWidth " << std::endl;
-				return SearchWidth(triangle, vc, ec, curLargestWidth);
+				return SearchWidth(triangle, vc, ec, curLargestWidth, halfWidthLine);
 			}
 		}
 
@@ -457,13 +472,12 @@ namespace CDT
 			return glm::length(len);
 		}
 
-		float DistanceBetweenEdgeAndVertex(DelaunayTriangleEdge edge, Vertex v)
+		float DistanceBetweenEdgeAndVertex(DelaunayTriangleEdge edge, Vertex v, glm::vec3& closestPoint)
 		{
 			Vertex va = GetVertexById(edge.vertices[0]);
 			Vertex vb = GetVertexById(edge.vertices[1]);
 
 			float t;
-			glm::vec3 closestPoint;
 			Math::ClosestPointBetweenPointSegment(v.pos, va.pos, vb.pos, t, closestPoint);
 
 			glm::vec3 len = v.pos - closestPoint;
@@ -471,7 +485,7 @@ namespace CDT
 		}
 
 		// we are searching the closest point on edge to vertex v
-		float SearchWidth(DelaunayTriangle* triangle, Vertex v, DelaunayTriangleEdge edge, float curLargestWidth)
+		float SearchWidth(DelaunayTriangle* triangle, Vertex v, DelaunayTriangleEdge edge, float curLargestWidth, HalfWidthLine& halfWidthLine)
 		{
 			Vertex v0 = GetVertexById(edge.vertices[0]);
 			Vertex v1 = GetVertexById(edge.vertices[1]);
@@ -481,13 +495,16 @@ namespace CDT
 				return curLargestWidth;
 			}
 
-			float distance2 = DistanceBetweenEdgeAndVertex(edge, v);
+			glm::vec3 closestPoint;
+			float distance2 = DistanceBetweenEdgeAndVertex(edge, v, closestPoint);
 			if (distance2 > curLargestWidth)
 			{
 				return curLargestWidth;	// Essentially case 1
 			}
 			else if (edge.isConstrained)
 			{
+				halfWidthLine.p1 = closestPoint;
+				halfWidthLine.isInside = true;
 				return distance2; // Essentially case 2
 			}
 			else
@@ -498,9 +515,9 @@ namespace CDT
 					DelaunayTriangle* oppositeTriangle = GetTriangleById(triangleId);
 
 					std::vector<DelaunayTriangleEdge> otherEdges = oppositeTriangle->GetOtherEdges(edge);
-					curLargestWidth = SearchWidth(oppositeTriangle, v, otherEdges[0], curLargestWidth);
+					curLargestWidth = SearchWidth(oppositeTriangle, v, otherEdges[0], curLargestWidth, halfWidthLine);
 
-					return SearchWidth(oppositeTriangle, v, otherEdges[1], curLargestWidth);
+					return SearchWidth(oppositeTriangle, v, otherEdges[1], curLargestWidth, halfWidthLine);
 				}
 				else
 				{
@@ -1482,12 +1499,16 @@ namespace CDT
 	void MarkHoleOverlappingEdgesConstrained(
 		std::vector<Vertex>& masterVertexArray,
 		std::vector<DelaunayTriangle>& triangles,
-		std::vector<DelaunayTriangleEdge>& allConstrainedEdges)
+		std::vector<DelaunayTriangleEdge>& allConstrainedEdges, 
+		std::vector<bool>& vertexContrainedArray)
 	{
 		for (int i = 0; i < allConstrainedEdges.size(); i++)
 		{
 			DelaunayTriangleEdge constrainedEdge = allConstrainedEdges[i];
 			FindAndMarkConstrainedEdges(constrainedEdge, triangles);
+
+			vertexContrainedArray[constrainedEdge.vertices[0]] = true;
+			vertexContrainedArray[constrainedEdge.vertices[1]] = true;
 		}
 	}
 
@@ -1508,6 +1529,8 @@ namespace CDT
 		// not doing the normalization yet. do it later
 
 		std::vector<Vertex> masterVertexArray;
+		std::vector<bool> vertexConstrainedArray;
+
 		int idCounter = 0;
 		CreateAndAddVertices(points, masterVertexArray, idCounter);
 
@@ -1531,6 +1554,8 @@ namespace CDT
 			superTriangle.vertices[i].id = idCounter++;
 			masterVertexArray.push_back(superTriangle.vertices[i]);
 		}
+
+	
 
 		// regenerate edges after assigning proper edges
 		superTriangle.GenerateEdges();
@@ -1702,12 +1727,10 @@ namespace CDT
 
 		}
 #endif	
-
-
-		MarkHoleOverlappingEdgesConstrained(masterVertexArray, triangles, debugState->debugAllConstrainedEdges);
-
+		vertexConstrainedArray.resize(masterVertexArray.size());
 
 		// 5.4 identify all the triangles in the constraint
+		MarkHoleOverlappingEdgesConstrained(masterVertexArray, triangles, debugState->debugAllConstrainedEdges, vertexConstrainedArray);
 
 
 		
@@ -1757,6 +1780,7 @@ namespace CDT
 		}
 
 		debugState->masterVertexList = masterVertexArray;
+		debugState->vertexConstrainedList = vertexConstrainedArray;
 
 		debugState->triangulated = true;
 

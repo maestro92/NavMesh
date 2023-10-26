@@ -467,13 +467,14 @@ void RenderObstacleEntity(
 		}
 
 
+		/*
 		// render normal
 		glm::vec3 normal = entity->physBody.normals[i];
 		glm::vec3 midPoint = (pos1 + pos0) / 2.0f;
 		glm::vec3 point2 = midPoint + normal * 5.0f;
 		GameRender::RenderLine(
 			gameRenderCommands, renderGroup, gameAssets, GameRender::DRAGGED_ENTITY_COLOR, midPoint, point2, lineThickness);
-
+		*/
 	}
 
 
@@ -1049,9 +1050,24 @@ void RenderCDTriangulationDebug(
 			GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, GameRender::HALF_TRANS_COLOR_WHITE, liftedVertex, thickness, false);
 		}
 
-
 		std::string s = std::to_string(triangle->id);
 		GameRender::DEBUGTextLine(s.c_str(), gameRenderState, triangle->GetCenter(), 0.2);
+
+
+		if (editorState->triangulationDebugConfig.showHalfWidthLines)
+		{
+			for (int j = 0; j < CDT::NUM_TRIANGLE_VERTEX; j++)
+			{
+				float thickness = 0.2;
+				if (triangle->halfWidthLines[j].isInside)
+				{
+					glm::vec3 p0 = triangle->halfWidthLines[j].p0;
+					glm::vec3 p1 = triangle->halfWidthLines[j].p1;
+					GameRender::RenderLine(
+						gameRenderCommands, group, gameAssets, GameRender::COLOR_YELLOW, p0, p1, thickness);
+				}
+			}
+		}
 
 
 		if (editorState->highlightTriangle)

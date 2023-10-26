@@ -73,6 +73,11 @@ namespace Editor
 		bool debugCursorSimPos;
 	};
 
+	struct TriangulationDebugConfig
+	{
+		bool showHalfWidthLines;
+	};
+
 	struct PathingDebugConfig
 	{
 		bool showAStarWaypoints;
@@ -100,6 +105,7 @@ struct EditorState {
 
 	Editor::DebugConfig debugConfig;
 
+	Editor::TriangulationDebugConfig triangulationDebugConfig;
 	Editor::PathingDebugConfig pathingDebugConfig;
 
 	bool hideObstacles;

@@ -184,7 +184,7 @@ namespace sim
 			entity->velocity.y += (avgNeighborPos.y - entity->pos.y) * c_centeringFactor;
 		}
 
-		std::cout << entity->id << " " << entity->velocity.x << " " << entity->velocity.y << " " << std::endl;
+	//	std::cout << entity->id << " " << entity->velocity.x << " " << entity->velocity.y << " " << std::endl;
 	}
 
 	void ResolveCollision(Entity* entity, Entity* entity2, Collision::ContactData contactData)
@@ -339,7 +339,7 @@ namespace sim
 
 		if (entity->id == 36)
 		{
-			std::cout << entity->id << " " << entity->velocity.x << " " << entity->velocity.y << " " << std::endl;
+		//	std::cout << entity->id << " " << entity->velocity.x << " " << entity->velocity.y << " " << std::endl;
 		}
 
 	}

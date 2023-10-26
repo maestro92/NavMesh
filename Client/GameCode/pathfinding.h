@@ -218,12 +218,13 @@ namespace PathFinding
 		float agentDiameter)
 	{
 	
+		/*
 		std::cout << ">>>> curTriangle " << curTriangle->id << ", neighbor is " << neighbor->id << std::endl;
 		for (int i = 0; i < CDT::NUM_TRIANGLE_VERTEX; i++)
 		{
 			std::cout << "	curTriangle " << curTriangle->halfWidths[i] << std::endl;
 		}
-
+		*/
 		if (!CDT::DelaunayTriangleEdge::IsValidEdge(sourceEdge))
 		{
 			return true;
@@ -294,6 +295,36 @@ namespace PathFinding
 		}
 	}
 
+	bool CanReachEndInFinalNode(AStarSearchNode curAStarNode, CDT::DelaunayTriangle* triangle, glm::vec3 end, float aagentDiameter)
+	{
+		// get my final trajectory
+		glm::vec3 trajectoryPoint0 = curAStarNode.pos;
+		glm::vec3 trajectoryPoint1 = end;
+
+		for (int i = 0; i < ArrayCount(triangle->halfWidthLines); i++)
+		{
+			CDT::HalfWidthLine halfWidthLine = triangle->halfWidthLines[i];
+			if (halfWidthLine.isInside)
+			{
+				glm::vec2 intersectionPoint;
+				if (Collision::GetLineLineIntersectionPoint_CheckOnlyXY2D(
+					halfWidthLine.p0, 
+					halfWidthLine.p1, 
+					trajectoryPoint0, 
+					trajectoryPoint1, 
+					intersectionPoint))
+				{
+					if (triangle->halfWidths[i] < aagentDiameter)
+					{
+						return false;
+					}
+				}
+			}
+		}
+
+		return true;
+	}
+
 
 	AStarSearchResult AStarSearch(NavMesh::DualGraph* dualGraph,
 		float agentDiameter, 
@@ -330,20 +361,18 @@ namespace PathFinding
 			AStarSearchNode curAStarNode = q.top();
 			q.pop();
 
-			visited[curAStarNode.polygonNodeId] = curAStarNode;
 
-
-			if (curAStarNode.polygonNodeId == destNode->GetId())
-			{
-				destinationNode = curAStarNode;
-				result.reachedOriginalGoal = true;
-				break;
-			}
 
 			int curPolygonId = curAStarNode.polygonNodeId;
 			NavMesh::DualGraphNode* curGraphNode = dualGraph->GetNode(curPolygonId);
 
-			std::cout << ">>>>> visiting " << curPolygonId << std::endl;
+
+
+			if (curPolygonId == 97)
+			{
+				std::cout << ">>>>> visiting " << curPolygonId << std::endl;
+				std::cout << "			" << curAStarNode.pos.x << " " << curAStarNode.pos.y << std::endl;
+			}
 
 			float distToDest = HeuristicCost(curAStarNode.pos, end);
 			if (distToDest < curClosestDist)
@@ -355,10 +384,32 @@ namespace PathFinding
 			// go through neighbors
 
 			CDT::DelaunayTriangle* triangle = curGraphNode->triangle;
+			if (curAStarNode.polygonNodeId == destNode->GetId())
+			{
+				destinationNode = curAStarNode;
+
+				if (CanReachEndInFinalNode(curAStarNode, triangle, end, agentDiameter))
+				{
+					result.reachedOriginalGoal = true;
+					visited[curAStarNode.polygonNodeId] = curAStarNode;
+					break;
+				}
+				else
+				{
+					continue;
+				}
+			}
+			else
+			{
+				// the final node can be visited multiple times
+				visited[curAStarNode.polygonNodeId] = curAStarNode;
+			}
+
+
 			for (int i = 0; i < ArrayCount(triangle->neighbors); i++)
 			{
 				int neighborId = triangle->neighbors[i];
-				std::cout << "		neighborId " << neighborId << std::endl;
+			//	std::cout << "		neighborId " << neighborId << std::endl;
 
 				if (neighborId == CDT::INVALID_NEIGHBOR)
 				{
@@ -402,13 +453,13 @@ namespace PathFinding
 
 				float fCost = gCost + hCost;	// total cost
 
-				
+				/*
 				std::cout << "			costFromStartNode " << curAStarNode.costFromStartNode << std::endl;
 				std::cout << "			gCost " << gCost << std::endl;
 				std::cout << "			hCost " << hCost << std::endl;
 
 				std::cout << "			fCost " << fCost << std::endl;
-				
+				*/
 
 				// AStarSearchNode(int polygonNodeIdIn, int fromPolygonNodeIdIn, int costIn, int costFromStartNodeIn, glm::vec3 posIn, CDT::DelaunayTriangleEdge sourceEdgeIn)
 
