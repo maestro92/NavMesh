@@ -582,12 +582,11 @@ namespace PathFinding
 		bool isLeft,
 		float agentRadius)
 	{
-		
-		glm::vec3 vertex = isLeft ? funnel.GetLeftPoint() : funnel.GetRightPoint();
 		int vertexIndex = isLeft ? funnel.leftIndex : funnel.rightIndex;
 
 		if (vertexIndex == 0 || vertexIndex == portals.size() - 1)
 		{
+			glm::vec3 vertex = isLeft ? funnel.GetLeftPoint() : funnel.GetRightPoint();
 			results.push_back(vertex);
 		}
 		else
@@ -613,7 +612,8 @@ namespace PathFinding
 			glm::vec3 averageNeighborEdgePerp = glm::cross(averageNeighborEdge, supportingVector);
 			averageNeighborEdgePerp = glm::normalize(averageNeighborEdgePerp);
 
-
+			// we want to create a smooth path around the original portal point
+			glm::vec3 vertex = isLeft ? portals[vertexIndex].left : portals[vertexIndex].right;
 			glm::vec3 newVertex = vertex + averageNeighborEdgePerp * agentRadius;
 
 			results.push_back(newVertex);
@@ -623,8 +623,10 @@ namespace PathFinding
 	
 	
 	// portals here include start and end.
-	FunnelResult Funnel_Core(
+	// we want to do the smoothed paths on the original Portals
+	FunnelResult Funnel_withSmoothPaths(
 		std::vector<NavMesh::Portal> portals,
+		std::vector<NavMesh::Portal> originalPortals,
 		glm::vec3 start, glm::vec3 end,
 		std::vector<glm::vec3> leftVertices,
 		std::vector<glm::vec3> rightVertices,
@@ -678,7 +680,7 @@ namespace PathFinding
 					AddSmoothedPoints(
 						results,
 						funnel,
-						portals,
+						originalPortals,
 						leftVertices,
 						indices,
 						true,
@@ -713,7 +715,7 @@ namespace PathFinding
 					AddSmoothedPoints(
 						results,
 						funnel,
-						portals,
+						originalPortals,
 						rightVertices,
 						indices,
 						false,
@@ -1121,7 +1123,34 @@ namespace PathFinding
 		debugState->newRightVertices = rightVertices;
 
 
-		return Funnel_Core(portals, start, end, leftVertices, rightVertices, indices, agentRadius);
+
+		std::vector<NavMesh::Portal> modifiedPortals;
+		for (int i = 0; i < portals.size(); i++)
+		{
+			if (i == 0 || i == portals.size() - 1)
+			{
+				modifiedPortals.push_back(portals[i]);
+			}
+			else
+			{
+				EdgeIndex edgeIndex = indices[i];
+
+				NavMesh::Portal portal;
+
+				portal = portals[i];
+
+				glm::vec3 dir = glm::normalize(portal.right - portal.left);
+				
+				portal.left += dir * agentRadius;
+				portal.right -= dir * agentRadius;
+
+				modifiedPortals.push_back(portal);
+			}
+		}
+
+		debugState->modifiedPortals = modifiedPortals;
+
+		return Funnel_withSmoothPaths(modifiedPortals, portals, start, end, leftVertices, rightVertices, indices, agentRadius);
 	}
 
 
