@@ -91,6 +91,8 @@ namespace CDT
 		DelaunayTriangleEdge edges[NUM_TRIANGLE_EDGES];
 		float halfWidths[NUM_TRIANGLE_VERTEX];
 		HalfWidthLine halfWidthLines[NUM_TRIANGLE_EDGES];
+		
+
 
 		DelaunayTriangle()
 		{

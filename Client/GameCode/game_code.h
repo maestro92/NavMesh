@@ -857,7 +857,7 @@ void RenderPathingData(
 			portal1.right.z = 0.2;
 
 			GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_TEAL, portal0.left, portal1.left, 0.2);
-			GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_ORANGE, portal0.right, portal1.right, 0.2);
+			GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_PINK, portal0.right, portal1.right, 0.2);
 		}
 	}
 
@@ -904,7 +904,7 @@ void RenderPathingData(
 		for (int i = 0; i < debugState->portals.size(); i++)
 		{
 			NavMesh::Portal portal = debugState->portals[i];
-			GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_TEAL, portal.left, portal.right, 0.2);
+			GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_BLUE, portal.left, portal.right, 0.2);
 		}
 	}
 

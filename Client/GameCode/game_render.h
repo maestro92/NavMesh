@@ -24,7 +24,7 @@ namespace GameRender
 	glm::vec4 COLOR_BLUE = glm::vec4(0, 0, 1, 1);
 	glm::vec4 COLOR_YELLOW = glm::vec4(1, 1, 0, 1);
 	glm::vec4 COLOR_TEAL = glm::vec4(0, 1, 1, 1);
-	glm::vec4 COLOR_ORANGE = glm::vec4(1, 0.5, 1, 1);
+	glm::vec4 COLOR_ORANGE = glm::vec4(1, 0.65, 1, 1);
 	glm::vec4 COLOR_BLACK = glm::vec4(0, 0, 0, 1);
 
 	glm::vec4 COLOR_PINK = glm::vec4(1, 0.75, 0.79, 1);
