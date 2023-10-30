@@ -121,6 +121,14 @@ namespace Math
 		return atan2(vector.y, vector.x) * 180 / PI;
 	}
 
+	glm::vec3 RotateVector(glm::vec3 vector, float rotationAngle, float& newAngle)
+	{
+		// optimize this 
+		float angle = VectorToAngle(vector);
+		newAngle = angle + rotationAngle;
+		glm::vec3 newVector = AngleToVector(newAngle);
+		return newVector;
+	}
 
 	float CalculateInteriorAngle(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2)
 	{

@@ -76,6 +76,7 @@ namespace Editor
 	struct TriangulationDebugConfig
 	{
 		bool showHalfWidthLines;
+		bool showTriangles;
 	};
 
 	struct PathingDebugConfig

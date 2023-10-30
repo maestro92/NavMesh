@@ -46,6 +46,15 @@ namespace PathFinding
 		int rightIndex = 0;
 
 
+		int lastAddedUniqueIndex;
+		bool lastAddedIsLeft;
+
+		/*
+		bool lastAddedIsSmoothed;
+		int lastAddedMinAngle;
+		int lastAddedMaxAngle;
+		*/
+
 		Funnel(std::vector<NavMesh::Portal> portalsIn)
 		{
 			portals = portalsIn;
@@ -127,6 +136,37 @@ namespace PathFinding
 			leftIndex = apexIndex;
 			rightIndex = apexIndex;
 		}
+
+		void RecordLastAddedVertex(bool isLeft, int uniqueIndex)
+		{
+			lastAddedUniqueIndex = uniqueIndex;
+			lastAddedIsLeft = isLeft;
+		}
+
+		bool CanAddThisIndex(bool isLeft, int uniqueIndex)
+		{
+			return lastAddedIsLeft != isLeft || lastAddedUniqueIndex != uniqueIndex;
+		}
+
+		/*
+		void RecordLastAddedVertex(bool isLeft, int index, float minAngle, float maxAngle)
+		{
+			lastAddedIndex = index;
+			lastAddedIsLeft = isLeft;
+			lastAddedIsSmoothed = false;
+			lastAddedMinAngle = minAngle;
+			lastAddedMaxAngle = maxAngle;
+		}
+
+		bool OverlapsWithLastVertex(bool isLeft, bool newPointAngle, int newPointIndex)
+		{
+			if (lastAddedIsSmoothed && lastAddedIndex == newPointIndex && isLeft == lastAddedIsLeft)
+			{
+				return lastAddedMinAngle <= newPointAngle && newPointAngle <= lastAddedMaxAngle;
+			}
+			return false;
+		}
+		*/
 	};
 
 	void JumpAndWalk()
@@ -227,7 +267,39 @@ namespace PathFinding
 		return glm::fastLength(len);
 	}
 
-	bool CheckTunnelWidth(CDT::DelaunayTriangle* curTriangle, 
+	bool CanGoThroughTriangle(glm::vec3 start, glm::vec3 end, CDT::DelaunayTriangle* triangle, float aagentDiameter)
+	{
+		// get my final trajectory
+		glm::vec3 trajectoryPoint0 = start;
+		glm::vec3 trajectoryPoint1 = end;
+
+		for (int i = 0; i < ArrayCount(triangle->halfWidthLines); i++)
+		{
+			CDT::HalfWidthLine halfWidthLine = triangle->halfWidthLines[i];
+			if (halfWidthLine.isInside)
+			{
+				glm::vec2 intersectionPoint;
+				if (Collision::GetLineLineIntersectionPoint_CheckOnlyXY2D(
+					halfWidthLine.p0,
+					halfWidthLine.p1,
+					trajectoryPoint0,
+					trajectoryPoint1,
+					intersectionPoint))
+				{
+					if (triangle->halfWidths[i] < aagentDiameter)
+					{
+						return false;
+					}
+				}
+			}
+		}
+
+		return true;
+	}
+
+
+	bool CheckTunnelWidth(AStarSearchNode curAStarNode,
+		CDT::DelaunayTriangle* curTriangle,
 		CDT::DelaunayTriangleEdge sourceEdge,
 		CDT::DelaunayTriangle* neighbor, 
 		CDT::DelaunayTriangleEdge dstEdge,
@@ -243,7 +315,21 @@ namespace PathFinding
 		*/
 		if (!CDT::DelaunayTriangleEdge::IsValidEdge(sourceEdge))
 		{
-			return true;
+			CDT::Vertex v0 = curTriangle->GetVertexById(dstEdge.vertices[0]);
+			CDT::Vertex v1 = curTriangle->GetVertexById(dstEdge.vertices[1]);
+
+			glm::vec3 pos0 = v0.pos;
+			glm::vec3 pos1 = v1.pos;
+
+
+			glm::vec3 edgeMidPoint = (pos0 + pos1) / 2.0f;
+
+			if (CanGoThroughTriangle(curAStarNode.pos, edgeMidPoint, curTriangle, agentDiameter))
+			{
+				return true;
+			}
+
+			return false;
 		}
 
 		int edgeIndex0 = curTriangle->GetEdgeIndex(sourceEdge);
@@ -266,30 +352,6 @@ namespace PathFinding
 
 		return true;
 	}
-
-	/*
-	bool HasVisitedNodeFromThisEdge(
-		std::unordered_map<TriangleId, AStarSearchNode>& visited, 
-		TriangleId triangleId,
-		CDT::DelaunayTriangleEdge edge)
-	{
-		if (visited.find(triangleId) == visited.end())
-		{
-			return false;
-		}
-		
-		AStarSearchNode node = visited[triangleId];
-		for (int i = 0; i < ArrayCount(node.visitedEdges); i++) 
-		{
-			if (node.visitedEdges[i].isValid && node.visitedEdges[i].edge == edge)
-			{
-				return true;
-			}
-		}		
-
-		return false;
-	}
-	*/
 
 
 	// we shrink the edge to better estimate where the agent will enter in this edge 
@@ -323,36 +385,6 @@ namespace PathFinding
 		
 		*/
 
-	}
-
-	bool CanReachEndInFinalNode(AStarSearchNode curAStarNode, CDT::DelaunayTriangle* triangle, glm::vec3 end, float aagentDiameter)
-	{
-		// get my final trajectory
-		glm::vec3 trajectoryPoint0 = curAStarNode.pos;
-		glm::vec3 trajectoryPoint1 = end;
-
-		for (int i = 0; i < ArrayCount(triangle->halfWidthLines); i++)
-		{
-			CDT::HalfWidthLine halfWidthLine = triangle->halfWidthLines[i];
-			if (halfWidthLine.isInside)
-			{
-				glm::vec2 intersectionPoint;
-				if (Collision::GetLineLineIntersectionPoint_CheckOnlyXY2D(
-					halfWidthLine.p0, 
-					halfWidthLine.p1, 
-					trajectoryPoint0, 
-					trajectoryPoint1, 
-					intersectionPoint))
-				{
-					if (triangle->halfWidths[i] < aagentDiameter)
-					{
-						return false;
-					}
-				}
-			}
-		}
-
-		return true;
 	}
 
 
@@ -423,7 +455,7 @@ namespace PathFinding
 			CDT::DelaunayTriangle* triangle = curGraphNode->triangle;
 			if (curAStarNode.polygonNodeId == destNode->GetId())
 			{
-				if (CanReachEndInFinalNode(curAStarNode, triangle, end, agentDiameter))
+				if (CanGoThroughTriangle(curAStarNode.pos, end, triangle, agentDiameter))
 				{
 					destinationNode = curAStarNode;
 					result.finalEnd = end;
@@ -469,12 +501,10 @@ namespace PathFinding
 
 				CDT::DelaunayTriangleEdge edge = triangle->edges[i];
 
-
-				if (!CheckTunnelWidth(triangle, curAStarNode.sourceEdge, neighbor->triangle, edge, agentDiameter))
+				if (!CheckTunnelWidth(curAStarNode, triangle, curAStarNode.sourceEdge, neighbor->triangle, edge, agentDiameter))
 				{
 					continue;
 				}
-
 
 				CDT::Vertex v0 = triangle->GetVertexById(edge.vertices[0]);
 				CDT::Vertex v1 = triangle->GetVertexById(edge.vertices[1]);
@@ -592,13 +622,21 @@ namespace PathFinding
 		else
 		{
 			EdgeIndex edgeIndex = indices[vertexIndex];
+			int uniqueIndex = isLeft ? edgeIndex.leftIndex : edgeIndex.rightIndex;
 
-			int i = isLeft ? edgeIndex.leftIndex : edgeIndex.rightIndex;
+			if (!funnel.CanAddThisIndex(isLeft, uniqueIndex))
+			{
+				return;
+			}
+
+
+			std::cout << "			adding uniqueIndex" << uniqueIndex << std::endl;
+
 
 			// for each vertex. gets its neighbor edges
-			glm::vec3 p0 = vertices[i - 1];
-			glm::vec3 p1 = vertices[i];
-			glm::vec3 p2 = vertices[i + 1];
+			glm::vec3 p0 = vertices[uniqueIndex - 1];
+			glm::vec3 p1 = vertices[uniqueIndex];
+			glm::vec3 p2 = vertices[uniqueIndex + 1];
 
 			// Get the average of neighbor edge directions
 			// I think I can just directly get the perp (instead of following the blog and getting the averageNeighborEdge first)
@@ -614,9 +652,74 @@ namespace PathFinding
 
 			// we want to create a smooth path around the original portal point
 			glm::vec3 vertex = isLeft ? portals[vertexIndex].left : portals[vertexIndex].right;
-			glm::vec3 newVertex = vertex + averageNeighborEdgePerp * agentRadius;
+			glm::vec3 newVertex;
 
+
+			float angle = Math::ComputeRotationAngle_XYPlane(-dir1, dir2);
+			if (!isLeft)
+			{
+				angle = 360 - angle;
+			}
+
+			if (angle > 180)
+			{
+				float angleDiff = angle - 180;
+				float allowedRotation = angleDiff / 2.0f;
+
+
+				float normalVectorAngle = Math::VectorToAngle(averageNeighborEdgePerp);
+
+				int sign = isLeft ? -1 : 1;
+
+				float minAngle = normalVectorAngle + sign * allowedRotation;
+				glm::vec3 minVector = Math::AngleToVector(minAngle);
+
+				/*
+				float maxAngle = normalVectorAngle - sign * allowedRotation;
+				glm::vec3 maxVector = Math::AngleToVector(maxAngle);
+				*/
+
+
+
+
+				glm::vec3 minVertex = vertex + minVector * agentRadius;
+				glm::vec3 midVertex = vertex + averageNeighborEdgePerp * agentRadius;
+
+				// if curPos is behind MinVertex, then we add MinVertex, otherwise we go straight to midVertex
+				//
+				glm::vec3 curPos = funnel.GetApex();
+				glm::vec3 vecToMin = minVertex - curPos;
+				glm::vec3 minToMid = midVertex - minVertex;
+
+				if (glm::dot(vecToMin, minToMid) > 0)
+				{
+					results.push_back(minVertex);
+				}
+				results.push_back(midVertex);
+
+
+				/*
+				newVertex = vertex + maxVector * agentRadius;
+				results.push_back(newVertex);
+				*/
+
+				funnel.RecordLastAddedVertex(isLeft, uniqueIndex);
+
+				/*
+				newVector = Math::RotateVector(averageNeighborEdgePerp, allowedRotation);
+				newVertex = vertex + newVector * agentRadius;
+				results.push_back(newVertex);
+				*/
+
+				return;
+			}
+
+			
+			newVertex = vertex + averageNeighborEdgePerp * agentRadius;
 			results.push_back(newVertex);
+
+
+			funnel.RecordLastAddedVertex(isLeft, uniqueIndex);
 		}
 		
 	}
@@ -640,6 +743,10 @@ namespace PathFinding
 
 		for (int i = 1; i < portals.size(); i++)
 		{
+
+			std::cout << ">>>>>>>>>>> Checking portal " << i << std::endl;
+
+
 			// now we check edges 
 			NavMesh::Portal portal = portals[i];
 
@@ -674,7 +781,9 @@ namespace PathFinding
 				}
 				else
 				{
-					
+					std::cout << "			adding left point i " << funnel.leftIndex << std::endl;
+
+
 					// right over left, insert left to path
 					// try smooth the path around the corner
 					AddSmoothedPoints(
@@ -710,6 +819,8 @@ namespace PathFinding
 				else
 				{
 					
+					std::cout << "			adding right point i " << funnel.rightIndex << std::endl;
+
 					// right over left, insert left to path
 					// try smooth the path around the corner
 					AddSmoothedPoints(

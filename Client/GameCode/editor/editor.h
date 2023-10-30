@@ -542,6 +542,15 @@ namespace Editor
 		gridLayoutHelper.IncrementElementCount();
 
 
+		gridLayoutHelper.GetElementPosition(curX, curY);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Show Triangles", editor->triangulationDebugConfig.showTriangles))
+		{
+			editor->triangulationDebugConfig.showTriangles = !editor->triangulationDebugConfig.showTriangles;
+		}
+		gridLayoutHelper.IncrementElementCount();
+
+		
 
 		gridLayoutHelper.GetElementPosition(curX, curY);
 		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,

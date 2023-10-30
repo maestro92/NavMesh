@@ -465,93 +465,8 @@ void RenderObstacleEntity(
 			GameRender::RenderLine(
 				gameRenderCommands, renderGroup, gameAssets, GameRender::HALF_TRANS_COLOR_RED, pos0, pos1, lineThickness);
 		}
-
-
-		/*
-		// render normal
-		glm::vec3 normal = entity->physBody.normals[i];
-		glm::vec3 midPoint = (pos1 + pos0) / 2.0f;
-		glm::vec3 point2 = midPoint + normal * 5.0f;
-		GameRender::RenderLine(
-			gameRenderCommands, renderGroup, gameAssets, GameRender::DRAGGED_ENTITY_COLOR, midPoint, point2, lineThickness);
-		*/
-	}
-
-
-	/*
-	for (int i = 0; i < entity->model.size(); i++)
-	{
-		GameRender::PushQuad(gameRenderCommands, renderGroup, bitmap,
-			entity->model[i].vertices[0],
-			entity->model[i].vertices[1],
-			entity->model[i].vertices[2],
-			entity->model[i].vertices[3], GameRender::COLOR_WHITE);
-	}
-	*/
-}
-
-/*
-void RenderTriangulationDebug(RenderSystem::GameRenderCommands* gameRenderCommands,
-	RenderSystem::RenderGroup* group,
-	GameAssets* gameAssets,
-	Triangulation::DebugState* triangulationDebug)
-{
-	float lineThickness = 0.5;
-
-	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
-	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
-
-	float thickness = 0.2f;
-	for (int i = 0; i < triangulationDebug->triangles.size(); i++)
-	{
-		Triangulation::Triangle* triangle = &triangulationDebug->triangles[i];
-		glm::vec3 liftedVertex[3];
-
-		for (int j = 0; j < Triangulation::NUM_TRIANGLE_VERTEX; j++)
-		{
-			// lifting it slightly higher
-			liftedVertex[j] = triangle->vertices[j] + GameRender::DEBUG_RENDER_OFFSET;
-		}
-
-		GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, GameRender::COLOR_WHITE, liftedVertex, thickness, false);
-	}
-
-	
-	for (int i = 0; i < triangulationDebug->circles.size(); i++)
-	{
-		Triangulation::Circle* circle = &triangulationDebug->circles[i];
-
-		GameRender::RenderCircle(
-			gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, circle->center, circle->radius, lineThickness);
 	}
 }
-
-void RenderVoronoiDebug(RenderSystem::GameRenderCommands* gameRenderCommands,
-	RenderSystem::RenderGroup* group,
-	GameAssets* gameAssets,
-	Voronoi::DebugState* voronoiDebug)
-{
-	BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
-	LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
-
-	float pointThickness = 0.2f;
-	float lineThickness = 0.1f;
-	glm::vec4 color = GameRender::COLOR_BLUE;
-	for (int i = 0; i < voronoiDebug->cells.size(); i++)
-	{
-		Voronoi::Cell cell = voronoiDebug->cells[i];
-		GameRender::RenderPoint(gameRenderCommands, group, bitmap, color, cell.center.pos, 1);
-
-		for (int j = 0; j < cell.neighbors.size(); j++)
-		{
-			Voronoi::Vertex neighbor = cell.neighbors[j];
-			GameRender::PushLine(gameRenderCommands, group, bitmap, color, cell.center.pos, neighbor.pos, lineThickness);
-		}
-	}
-}
-*/
-
-
 
 
 void RenderSelectionBox(SimulationState* simState, GameRender::GameRenderState* gameRenderState)
@@ -1024,69 +939,73 @@ void RenderCDTriangulationDebug(
 		}
 	}
 
-	for (int i = 0; i < triangulationDebug->triangles.size(); i++)
+	if (editorState->triangulationDebugConfig.showTriangles)
 	{
-		CDT::DelaunayTriangle* triangle = &triangulationDebug->triangles[i];
-		glm::vec3 liftedVertex[3];
-
-		if (triangle->isObstacle)
+		for (int i = 0; i < triangulationDebug->triangles.size(); i++)
 		{
-			for (int j = 0; j < CDT::NUM_TRIANGLE_VERTEX; j++)
+			CDT::DelaunayTriangle* triangle = &triangulationDebug->triangles[i];
+			glm::vec3 liftedVertex[3];
+
+			if (triangle->isObstacle)
 			{
-				// lifting it slightly higher
-				liftedVertex[j] = triangle->vertices[j].pos; // +GameRender::DEBUG_RENDER_OFFSET;
-			}
-
-			GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, GameRender::HALF_TRANS_COLOR_RED, liftedVertex,thickness, false);
-		}
-		else
-		{
-			for (int j = 0; j < CDT::NUM_TRIANGLE_VERTEX; j++)
-			{
-				// lifting it slightly higher
-				liftedVertex[j] = triangle->vertices[j].pos; // +GameRender::DEBUG_RENDER_OFFSET;
-			}
-
-			GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, GameRender::HALF_TRANS_COLOR_WHITE, liftedVertex, thickness, false);
-		}
-
-		std::string s = std::to_string(triangle->id);
-		GameRender::DEBUGTextLine(s.c_str(), gameRenderState, triangle->GetCenter(), 0.2);
-
-
-		if (editorState->triangulationDebugConfig.showHalfWidthLines)
-		{
-			for (int j = 0; j < CDT::NUM_TRIANGLE_VERTEX; j++)
-			{
-				float thickness = 0.2;
-				if (triangle->halfWidthLines[j].isInside)
+				for (int j = 0; j < CDT::NUM_TRIANGLE_VERTEX; j++)
 				{
-					glm::vec3 p0 = triangle->halfWidthLines[j].p0;
-					glm::vec3 p1 = triangle->halfWidthLines[j].p1;
-					GameRender::RenderLine(
-						gameRenderCommands, group, gameAssets, GameRender::COLOR_YELLOW, p0, p1, thickness);
+					// lifting it slightly higher
+					liftedVertex[j] = triangle->vertices[j].pos; // +GameRender::DEBUG_RENDER_OFFSET;
+				}
+
+				GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, GameRender::HALF_TRANS_COLOR_RED, liftedVertex, thickness, false);
+			}
+			else
+			{
+				for (int j = 0; j < CDT::NUM_TRIANGLE_VERTEX; j++)
+				{
+					// lifting it slightly higher
+					liftedVertex[j] = triangle->vertices[j].pos; // +GameRender::DEBUG_RENDER_OFFSET;
+				}
+
+				GameRender::PushTriangleOutline(gameRenderCommands, group, bitmap, GameRender::HALF_TRANS_COLOR_WHITE, liftedVertex, thickness, false);
+			}
+
+			std::string s = std::to_string(triangle->id);
+			GameRender::DEBUGTextLine(s.c_str(), gameRenderState, triangle->GetCenter(), 0.2);
+
+
+			if (editorState->triangulationDebugConfig.showHalfWidthLines)
+			{
+				for (int j = 0; j < CDT::NUM_TRIANGLE_VERTEX; j++)
+				{
+					float thickness = 0.2;
+					if (triangle->halfWidthLines[j].isInside)
+					{
+						glm::vec3 p0 = triangle->halfWidthLines[j].p0;
+						glm::vec3 p1 = triangle->halfWidthLines[j].p1;
+						GameRender::RenderLine(
+							gameRenderCommands, group, gameAssets, GameRender::COLOR_YELLOW, p0, p1, thickness);
+					}
+				}
+			}
+
+
+			if (editorState->highlightTriangle)
+			{
+				if (triangulationDebug->highlightedTriangle != NULL && triangle->id == triangulationDebug->highlightedTriangle->id)
+				{
+					GameRender::PushTriangle(gameRenderCommands, group, bitmap, GameRender::COLOR_YELLOW, liftedVertex, false);
+
+					Triangulation::Circle circle = CDT::FindCircumCircle(*triangle);
+					GameRender::RenderCircle(
+						gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, circle.center, circle.radius, lineThickness);
+
+					float thickness = 3;
+					GameRender::RenderPoint(gameRenderCommands, group, gameAssets, GameRender::COLOR_GREEN, liftedVertex[0], thickness);
+					GameRender::RenderPoint(gameRenderCommands, group, gameAssets, GameRender::COLOR_BLUE, liftedVertex[1], thickness);
+					GameRender::RenderPoint(gameRenderCommands, group, gameAssets, GameRender::COLOR_ORANGE, liftedVertex[2], thickness);
 				}
 			}
 		}
-
-
-		if (editorState->highlightTriangle)
-		{
-			if (triangulationDebug->highlightedTriangle != NULL && triangle->id == triangulationDebug->highlightedTriangle->id)
-			{
-				GameRender::PushTriangle(gameRenderCommands, group, bitmap, GameRender::COLOR_YELLOW, liftedVertex, false);
-
-				Triangulation::Circle circle = CDT::FindCircumCircle(*triangle);
-				GameRender::RenderCircle(
-					gameRenderCommands, group, gameAssets, GameRender::COLOR_RED, circle.center, circle.radius, lineThickness);
-
-				float thickness = 3;
-				GameRender::RenderPoint(gameRenderCommands, group, gameAssets, GameRender::COLOR_GREEN, liftedVertex[0], thickness);
-				GameRender::RenderPoint(gameRenderCommands, group, gameAssets, GameRender::COLOR_BLUE, liftedVertex[1], thickness);
-				GameRender::RenderPoint(gameRenderCommands, group, gameAssets, GameRender::COLOR_ORANGE, liftedVertex[2], thickness);
-			}
-		}
 	}
+
 
 
 	/*
