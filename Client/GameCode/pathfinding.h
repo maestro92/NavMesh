@@ -46,14 +46,14 @@ namespace PathFinding
 		int rightIndex = 0;
 
 
+		// for smoothing paths
 		int lastAddedUniqueIndex;
 		bool lastAddedIsLeft;
-
-		/*
 		bool lastAddedIsSmoothed;
-		int lastAddedMinAngle;
-		int lastAddedMaxAngle;
-		*/
+
+		// side 2 for last added vertex
+		glm::vec3 lastAddedSide2;
+
 
 		Funnel(std::vector<NavMesh::Portal> portalsIn)
 		{
@@ -68,6 +68,11 @@ namespace PathFinding
 			apexIndex = 0;
 			leftIndex = 0;
 			rightIndex = 0;
+
+
+			lastAddedUniqueIndex = -1;
+			lastAddedIsLeft = false;
+			lastAddedIsSmoothed = false;
 		}
 
 		glm::vec3 GetApex()	
@@ -137,10 +142,11 @@ namespace PathFinding
 			rightIndex = apexIndex;
 		}
 
-		void RecordLastAddedVertex(bool isLeft, int uniqueIndex)
+		void RecordLastAddedVertex(bool isLeft, int uniqueIndex, bool isSmoothedIn)
 		{
 			lastAddedUniqueIndex = uniqueIndex;
 			lastAddedIsLeft = isLeft;
+			lastAddedIsSmoothed = isSmoothedIn;
 		}
 
 		bool CanAddThisIndex(bool isLeft, int uniqueIndex)
@@ -601,7 +607,45 @@ namespace PathFinding
 		std::vector<glm::vec3> waypoints;
 	};
 
+	void TryFixLastMaxVertex(
+		glm::vec3 newVertex,
+		std::vector<glm::vec3>& results,
+		Funnel& funnel,
+		bool isLeft)
+	{
+		if (funnel.lastAddedIsSmoothed)
+		{
+			
+			glm::vec3 lastMax = results[results.size() - 1];
+			
+			/*
+			glm::vec3 lastMid = results[results.size() - 2];
+			glm::vec3 lastMin = results[results.size() - 3];
 
+			glm::vec3 minToMid = lastMid - lastMin;
+			glm::vec3 midToMax = lastMax - lastMid;
+			*/
+
+			glm::vec3 maxToNew = newVertex - lastMax;
+
+			if (funnel.lastAddedIsLeft)
+			{
+				if (Math::TriArea_XYPlane(maxToNew, funnel.lastAddedSide2) >= 0)
+				{
+					results.pop_back();
+				}
+			}
+			else
+			{
+				if (Math::TriArea_XYPlane(funnel.lastAddedSide2, maxToNew) > 0)
+				{
+					results.pop_back();
+				}
+			}
+
+
+		}
+	}
 	
 	void AddSmoothedPoints(
 		std::vector<glm::vec3>& results,
@@ -617,6 +661,16 @@ namespace PathFinding
 		if (vertexIndex == 0 || vertexIndex == portals.size() - 1)
 		{
 			glm::vec3 vertex = isLeft ? funnel.GetLeftPoint() : funnel.GetRightPoint();
+
+			if (vertexIndex == portals.size() - 1)
+			{
+				TryFixLastMaxVertex(
+					vertex,
+					results,
+					funnel,
+					isLeft);
+			}
+
 			results.push_back(vertex);
 		}
 		else
@@ -652,9 +706,7 @@ namespace PathFinding
 
 			// we want to create a smooth path around the original portal point
 			glm::vec3 vertex = isLeft ? portals[vertexIndex].left : portals[vertexIndex].right;
-			glm::vec3 newVertex;
-
-
+	
 			float angle = Math::ComputeRotationAngle_XYPlane(-dir1, dir2);
 			if (!isLeft)
 			{
@@ -674,36 +726,52 @@ namespace PathFinding
 				float minAngle = normalVectorAngle + sign * allowedRotation;
 				glm::vec3 minVector = Math::AngleToVector(minAngle);
 
-				/*
+				
 				float maxAngle = normalVectorAngle - sign * allowedRotation;
 				glm::vec3 maxVector = Math::AngleToVector(maxAngle);
-				*/
-
-
+				
 
 
 				glm::vec3 minVertex = vertex + minVector * agentRadius;
 				glm::vec3 midVertex = vertex + averageNeighborEdgePerp * agentRadius;
+				glm::vec3 maxVertex = vertex + maxVector * agentRadius;
+
 
 				// if curPos is behind MinVertex, then we add MinVertex, otherwise we go straight to midVertex
 				//
 				glm::vec3 curPos = funnel.GetApex();
-				glm::vec3 vecToMin = minVertex - curPos;
+				glm::vec3 minToCur = curPos - minVertex;
 				glm::vec3 minToMid = midVertex - minVertex;
+				glm::vec3 midToMax = maxVertex - midVertex;
 
+
+				if (isLeft)
+				{
+					if (Math::TriArea_XYPlane(minToCur, -dir1) >= 0)
+					{
+						results.push_back(minVertex);
+					}
+				}
+				else
+				{
+					if (Math::TriArea_XYPlane(-dir1, minToCur) > 0)
+					{
+						results.push_back(minVertex);
+					}
+				}
+
+				/*
 				if (glm::dot(vecToMin, minToMid) > 0)
 				{
 					results.push_back(minVertex);
 				}
-				results.push_back(midVertex);
-
-
-				/*
-				newVertex = vertex + maxVector * agentRadius;
-				results.push_back(newVertex);
 				*/
+				results.push_back(midVertex);
+				results.push_back(maxVertex);
+				
 
-				funnel.RecordLastAddedVertex(isLeft, uniqueIndex);
+				funnel.RecordLastAddedVertex(isLeft, uniqueIndex, true);
+				funnel.lastAddedSide2 = dir2;
 
 				/*
 				newVector = Math::RotateVector(averageNeighborEdgePerp, allowedRotation);
@@ -715,11 +783,18 @@ namespace PathFinding
 			}
 
 			
-			newVertex = vertex + averageNeighborEdgePerp * agentRadius;
+			glm::vec3 newVertex = vertex + averageNeighborEdgePerp * agentRadius;
+
+			TryFixLastMaxVertex(
+				newVertex,
+				results,
+				funnel,
+				isLeft);
+
 			results.push_back(newVertex);
 
 
-			funnel.RecordLastAddedVertex(isLeft, uniqueIndex);
+			funnel.RecordLastAddedVertex(isLeft, uniqueIndex, false);
 		}
 		
 	}

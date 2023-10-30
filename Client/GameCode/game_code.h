@@ -411,13 +411,17 @@ void RenderAgentEntity(
 	
 	if (entity!= NULL && entity->isSelected)
 	{
+		const float pointThickness = 0.5;
+		const float lineThickness = 0.1;
+
 		for (int i = 1; i < entity->pathingState.waypoints.size(); i++)
 		{
 			glm::vec3 p0 = entity->pathingState.waypoints[i - 1];
 			glm::vec3 p1 = entity->pathingState.waypoints[i];
 
-			GameRender::RenderPoint(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_GREEN, p1, 0.3);
-			GameRender::PushDashedLine(gameRenderCommands, renderGroup, gameAssets, GameRender::COLOR_GREEN, p0, p1, 0.3);
+
+			GameRender::RenderPoint(gameRenderCommands, renderGroup, bitmap, GameRender::COLOR_GREEN, p1, pointThickness);
+			GameRender::PushDashedLine(gameRenderCommands, renderGroup, gameAssets, GameRender::COLOR_GREEN, p0, p1, lineThickness);
 		}
 	}
 	
@@ -846,67 +850,6 @@ void RenderPathingData(
 			GameRender::PushLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_BLUE, vec.v0, vec.v1, 0.2);
 		}
 	}
-
-
-
-	/*
-	for (int i = 0; i < world->dualGraph->nodes.size(); i++)
-	{
-		NavMesh::DualGraphNode* node = &world->dualGraph->nodes[i];
-
-		BitmapId bitmapID = GetFirstBitmapIdFrom(gameAssets, AssetFamilyType::Default);
-		LoadedBitmap* bitmap = GetBitmap(gameAssets, bitmapID);
-
-		// vertex
-		glm::vec3 offset = glm::vec3(0.5, 0.5, 0.5);
-		glm::vec3 min = node->center - offset;
-		glm::vec3 max = node->center + offset;
-		GameRender::PushCube(gameRenderCommands, &group, bitmap, GameRender::COLOR_GREEN, min, max, true);
-
-		for (int j = 0; j < node->neighbors.size(); j++)
-		{
-			int neighborId = node->neighbors[j].id;
-			NavMesh::DualGraphNode* neighbor = &world->dualGraph->nodes[neighborId];
-
-			// so we dont over draw. We only draw from lowerId to larger Id
-			if (neighborId > node->id)
-			{
-				GameRender::PushDashedLine(gameRenderCommands, &group, bitmap, GameRender::COLOR_GREEN, node->center, neighbor->center, 0.2);
-			}
-		}
-	}
-	*/
-
-
-
-//	for (int i = 0; i < debugState->portals.size(); i++)
-	{
-		/*
-		NavMesh::Edge edge = world->portals[i];
-
-		if (i == 3)
-		{
-			GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_YELLOW, edge.vertices[0], 1);
-			GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_GREEN, edge.vertices[1], 1);
-			GameRender::PushLine(gameRenderCommands, &group, gameAssets, GameRender::COLOR_TEAL, edge.vertices[0], edge.vertices[1], 0.5);
-		}
-		*/
-
-
-		/*
-		if (i == 5)
-		{
-			NavMesh::Edge edge = world->portals[i];
-
-			GameRender::PushLine(gameRenderCommands, &group, gameAssets, GameRender::COLOR_YELLOW, world->start, edge.vertices[0], 0.2);
-			GameRender::RenderPoint(gameRenderCommands, &gr0000000000000000oup, gameAssets, GameRender::COLOR_YELLOW, edge.vertices[0], 1);
-
-			GameRender::PushLine(gameRenderCommands, &group, gameAssets, GameRender::COLOR_TEAL, world->start, edge.vertices[1], 0.2);
-			GameRender::RenderPoint(gameRenderCommands, &group, gameAssets, GameRender::COLOR_TEAL, edge.vertices[1], 1);
-		}
-		*/
-	}
-
 }
 
 
