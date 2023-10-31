@@ -16,9 +16,7 @@ namespace NavMesh
 	struct DualGraphNode {
 		
 		CDT::DelaunayTriangle* triangle;
-
 		glm::vec3 center;
-		std::vector<int> neighbors;
 		
 		int GetId()
 		{

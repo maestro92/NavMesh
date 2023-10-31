@@ -227,10 +227,10 @@ namespace PathFinding
 
 	struct AStarSearchNode
 	{
-		int polygonNodeId;
+		int nodeId;	// same as triangleId
 
 		// this is to remeber the path
-		int fromPolygonNodeId;
+		int fromNodeId;
 		int costFromStartNode; // g(n)
 		int cost;		// f(n) = g(n) + h(n)
 		glm::vec3 pos;
@@ -239,12 +239,12 @@ namespace PathFinding
 
 	//	VisitEdgeEntry visitedEdges[3];
 
-		AStarSearchNode() { polygonNodeId = -1; }
+		AStarSearchNode() { nodeId = -1; }
 
-		AStarSearchNode(int polygonNodeIdIn, int fromPolygonNodeIdIn, int gCostIn, int fCostIn, glm::vec3 posIn, CDT::DelaunayTriangleEdge sourceEdgeIn)
+		AStarSearchNode(int nodeIdIn, int fromNodeIdIn, int gCostIn, int fCostIn, glm::vec3 posIn, CDT::DelaunayTriangleEdge sourceEdgeIn)
 		{
-			polygonNodeId = polygonNodeIdIn;
-			fromPolygonNodeId = fromPolygonNodeIdIn;
+			nodeId = nodeIdIn;
+			fromNodeId = fromNodeIdIn;
 			costFromStartNode = gCostIn;
 			cost = fCostIn;
 			sourceEdge = sourceEdgeIn;
@@ -390,8 +390,69 @@ namespace PathFinding
 		}
 		
 		*/
-
 	}
+
+	struct NodeVisitRecord
+	{
+		// all the AStarNodes we have created and visited.
+		// change this to an array
+		std::unordered_map<int, AStarSearchNode> visited;
+	
+		// for the dst nation node, we are allowed to visit from different neighbors
+		// image a giant triangle, with left, mid, right vertex.
+		// if we want to go from near left to near right, we may get blocked by the mid vertex due to agent's radius
+		// but if u do an AStar Serach from the neighbor, we may actually arrive at the near right dst
+		//
+		std::vector<int> visitedDstNeighbors;
+
+		int dstNodeId;
+
+		NodeVisitRecord(int dstNodeIdIn)
+		{
+			dstNodeId = dstNodeIdIn;
+		}
+
+		void AddVisitEntry(int nodeId, AStarSearchNode node)
+		{
+			// go through neighbors
+			visited[nodeId] = node;
+
+			if (nodeId == dstNodeId)
+			{
+				visitedDstNeighbors.push_back(node.fromNodeId);
+			}
+		}
+
+		AStarSearchNode GetNode(int nodeId)
+		{
+			return visited[nodeId];
+		}
+
+		bool NodeVisitCheck(int nodeId, int fromNodeId)
+		{
+			// the destination node can be visited multiple times from different edges
+			// if its the dstination node, we check if we have visit it from this neighbor
+			if (dstNodeId == nodeId)
+			{
+				for (int i = 0; i < visitedDstNeighbors.size(); i++)
+				{
+					if (visitedDstNeighbors[i] == fromNodeId)
+					{
+						return false;
+					}
+				}
+				return true;
+			}
+
+			// else we do regular checks
+			if (visited.find(nodeId) != visited.end())
+			{
+				return false;
+			}
+
+			return true;
+		}
+	};
 
 
 	AStarSearchResult AStarSearch(NavMesh::DualGraph* dualGraph,
@@ -417,8 +478,8 @@ namespace PathFinding
 		// from triangle 0, do a bfs with a distance heuristic until u reach triangle 1
 		std::priority_queue<AStarSearchNode, std::vector<AStarSearchNode>, AStarSearchNodeComparison> q;
 
-		// change this to an array
-		std::unordered_map<TriangleId, AStarSearchNode> visited;
+
+		NodeVisitRecord visitRecord(destNode->GetId());
 
 
 		CDT::DelaunayTriangleEdge edge = CDT::DelaunayTriangleEdge::GetInvalidEdge();
@@ -438,12 +499,12 @@ namespace PathFinding
 			AStarSearchNode curAStarNode = q.top();
 			q.pop();
 
-			int curPolygonId = curAStarNode.polygonNodeId;
-			NavMesh::DualGraphNode* curGraphNode = dualGraph->GetNode(curPolygonId);
+			int curId = curAStarNode.nodeId;
+			NavMesh::DualGraphNode* curGraphNode = dualGraph->GetNode(curId);
 
-			if (curPolygonId == 97)
+			if (curId == 97)
 			{
-				std::cout << ">>>>> visiting " << curPolygonId << std::endl;
+				std::cout << ">>>>> visiting " << curId << std::endl;
 				std::cout << "			" << curAStarNode.pos.x << " " << curAStarNode.pos.y << std::endl;
 			}
 
@@ -456,10 +517,10 @@ namespace PathFinding
 			}
 
 			// go through neighbors
-			visited[curAStarNode.polygonNodeId] = curAStarNode;
+			visitRecord.AddVisitEntry(curId, curAStarNode);
 
 			CDT::DelaunayTriangle* triangle = curGraphNode->triangle;
-			if (curAStarNode.polygonNodeId == destNode->GetId())
+			if (curAStarNode.nodeId == destNode->GetId())
 			{
 				if (CanGoThroughTriangle(curAStarNode.pos, end, triangle, agentDiameter))
 				{
@@ -467,10 +528,6 @@ namespace PathFinding
 					result.finalEnd = end;
 					reachedOriginalEnd = true;
 					break;
-				}
-				else
-				{
-					continue;
 				}
 			}
 
@@ -491,15 +548,12 @@ namespace PathFinding
 					continue;
 				}
 
-				NavMesh::DualGraphNode* neighbor = dualGraph->GetNode(neighborId);
-
-				// the destination node can be visited multiple times from different edges
-				if (neighbor->GetId() != destNode->GetId() &&
-					visited.find(neighbor->GetId()) != visited.end())
+				if (!visitRecord.NodeVisitCheck(neighborId, curId))
 				{
 					continue;
 				}
 
+				NavMesh::DualGraphNode* neighbor = dualGraph->GetNode(neighborId);
 				if (neighbor->triangle->isObstacle)
 				{
 					continue;
@@ -536,11 +590,10 @@ namespace PathFinding
 				std::cout << "			fCost " << fCost << std::endl;
 				*/
 
-				// AStarSearchNode(int polygonNodeIdIn, int fromPolygonNodeIdIn, int costIn, int costFromStartNodeIn, glm::vec3 posIn, CDT::DelaunayTriangleEdge sourceEdgeIn)
 
 				q.push(AStarSearchNode(
 					neighborId, 
-					curPolygonId, 
+					curId, 
 					gCost, 
 					fCost, newPos, edge));
 			}
@@ -552,36 +605,49 @@ namespace PathFinding
 		}
 
 
-		std::vector<int> polygonNodesPath;	
-		AStarSearchNode node2 = destinationNode;
+		std::vector<int> nodePath;	
+		AStarSearchNode tempNode = destinationNode;
 
-		if (node2.fromPolygonNodeId == -1)
+		if (tempNode.fromNodeId == -1)
 		{
-			// that means we traveling within the start/end node
+			// that means we traveling directly within the start/end node
 			return result;
 		}
 		else
 		{
-			int curId = node2.polygonNodeId;
+			int curId = tempNode.nodeId;
+			bool first = true;
 			while (curId != -1)
 			{
-				polygonNodesPath.push_back(curId);
 
-				debugState->aStarWaypoints.push_back(node2.pos);
 
-				node2 = visited[curId];
-				curId = node2.fromPolygonNodeId;
+				nodePath.push_back(curId);
+				std::cout << curId << std::endl;
+
+				// Fix: for cycle paths, this tempNode.Pos is not correct
+				debugState->aStarWaypoints.push_back(tempNode.pos);
+
+
+				// check for cycle path. Example, going from the left end to the right end of a triangle
+				if (curId == destNode->GetId() && first == false)
+				{
+					break;
+				}
+
+				tempNode = visitRecord.GetNode(curId);
+				curId = tempNode.fromNodeId;
+
+				first = false;
 			}
-
 
 			// reverse it
 			int i0 = 0;
-			int i1 = polygonNodesPath.size() - 1;
+			int i1 = nodePath.size() - 1;
 			while (i0 < i1)
 			{
-				int temp = polygonNodesPath[i0];
-				polygonNodesPath[i0] = polygonNodesPath[i1];
-				polygonNodesPath[i1] = temp;
+				int temp = nodePath[i0];
+				nodePath[i0] = nodePath[i1];
+				nodePath[i1] = temp;
 
 
 				glm::vec3 tempPos = debugState->aStarWaypoints[i0];
@@ -593,7 +659,7 @@ namespace PathFinding
 				i1--;
 			}
 
-			result.nodePath = polygonNodesPath;
+			result.nodePath = nodePath;
 
 			return result;
 		}
@@ -610,8 +676,7 @@ namespace PathFinding
 	void TryFixLastMaxVertex(
 		glm::vec3 newVertex,
 		std::vector<glm::vec3>& results,
-		Funnel& funnel,
-		bool isLeft)
+		Funnel& funnel)
 	{
 		if (funnel.lastAddedIsSmoothed)
 		{
@@ -656,6 +721,9 @@ namespace PathFinding
 		bool isLeft,
 		float agentRadius)
 	{
+		// cross product of two vectors that's 45 degrees apart sqrt(2) / 2
+		const float c_45DegCrossProduct = 0.707;
+
 		int vertexIndex = isLeft ? funnel.leftIndex : funnel.rightIndex;
 
 		if (vertexIndex == 0 || vertexIndex == portals.size() - 1)
@@ -667,8 +735,7 @@ namespace PathFinding
 				TryFixLastMaxVertex(
 					vertex,
 					results,
-					funnel,
-					isLeft);
+					funnel);
 			}
 
 			results.push_back(vertex);
@@ -731,6 +798,8 @@ namespace PathFinding
 				glm::vec3 maxVector = Math::AngleToVector(maxAngle);
 				
 
+				// The idea is that we have this projected trajectory from min--->max
+				// we find the one that's most aligned with our destination point, and enter from there
 
 				glm::vec3 minVertex = vertex + minVector * agentRadius;
 				glm::vec3 midVertex = vertex + averageNeighborEdgePerp * agentRadius;
@@ -740,21 +809,31 @@ namespace PathFinding
 				// if curPos is behind MinVertex, then we add MinVertex, otherwise we go straight to midVertex
 				//
 				glm::vec3 curPos = funnel.GetApex();
-				glm::vec3 minToCur = curPos - minVertex;
+				glm::vec3 minToCur = glm::normalize(curPos - minVertex);
+				
+				/*
 				glm::vec3 minToMid = midVertex - minVertex;
 				glm::vec3 midToMax = maxVertex - midVertex;
-
+				*/
 
 				if (isLeft)
 				{
-					if (Math::TriArea_XYPlane(minToCur, -dir1) >= 0)
+					// essentially making sure the two vectors are within an angle and aligned
+					// otherwise, just go straight to the midVertex, no need for a minVertex
+					float crossProduct = Math::TriArea_XYPlane(minToCur, -dir1);
+					float dotProduct = glm::dot(minToCur, -dir1);
+
+					if (0 <= crossProduct && crossProduct <= c_45DegCrossProduct && dotProduct > 0)
 					{
 						results.push_back(minVertex);
 					}
 				}
 				else
 				{
-					if (Math::TriArea_XYPlane(-dir1, minToCur) > 0)
+					float crossProduct = Math::TriArea_XYPlane(-dir1, minToCur);
+					float dotProduct = glm::dot(-dir1, minToCur);
+
+					if (0 <= crossProduct && crossProduct <= c_45DegCrossProduct && dotProduct > 0)
 					{
 						results.push_back(minVertex);
 					}
@@ -788,8 +867,7 @@ namespace PathFinding
 			TryFixLastMaxVertex(
 				newVertex,
 				results,
-				funnel,
-				isLeft);
+				funnel);
 
 			results.push_back(newVertex);
 
@@ -808,7 +886,7 @@ namespace PathFinding
 		glm::vec3 start, glm::vec3 end,
 		std::vector<glm::vec3> leftVertices,
 		std::vector<glm::vec3> rightVertices,
-		std::vector<EdgeIndex> indices,
+		std::vector<EdgeIndex> uniqueIndices,
 		float agentRadius)
 	{
 		std::vector<glm::vec3> results;
@@ -866,7 +944,7 @@ namespace PathFinding
 						funnel,
 						originalPortals,
 						leftVertices,
-						indices,
+						uniqueIndices,
 						true,
 						agentRadius);
 						
@@ -903,7 +981,7 @@ namespace PathFinding
 						funnel,
 						originalPortals,
 						rightVertices,
-						indices,
+						uniqueIndices,
 						false,
 						agentRadius);
 						
@@ -924,6 +1002,11 @@ namespace PathFinding
 		{
 			if (!Math::Equals(results[results.size() - 1], end))
 			{
+				TryFixLastMaxVertex(
+					end,
+					results,
+					funnel);
+
 				results.push_back(end);
 			}
 		}

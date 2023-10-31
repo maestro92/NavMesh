@@ -504,6 +504,15 @@
                     "z" : 0
                 }
             ]
+        },
+        {
+            "Id" : 36,
+            "Flag" : 0,
+            "x" : 56.322586059570313,
+            "y" : 57.029685974121094,
+            "agentRadius" : 5,
+            "facingDirectionX" : 1,
+            "facingDirectionY" : 0
         }
     ],
     "hasPathingStart" : false,

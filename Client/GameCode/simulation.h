@@ -322,7 +322,7 @@ namespace sim
 
 	void TransformTick(Entity* entity)
 	{
-		float c_maxSpeed = 2;
+		float c_maxSpeed = 3;
 
 		// clamp the max velocity
 		float speed = glm::length(entity->velocity);
