@@ -50,9 +50,11 @@ namespace PathFinding
 		int lastAddedUniqueIndex;
 		bool lastAddedIsLeft;
 		bool lastAddedIsSmoothed;
+		glm::vec3 lastAddedMidTangent;
+
 
 		// side 2 for last added vertex
-		glm::vec3 lastAddedSide2;
+		glm::vec3 lastAddedMidToMax;
 
 
 		Funnel(std::vector<NavMesh::Portal> portalsIn)
@@ -667,22 +669,36 @@ namespace PathFinding
 
 	}
 
+	// cross product of two vectors that's 45 degrees apart sqrt(2) / 2
+	const float c_45DegCrossProduct = 0.707;
 
 	struct FunnelResult
 	{
 		std::vector<glm::vec3> waypoints;
 	};
 
-	void TryFixLastMaxVertex(
+	void TryFixLastVertex(
 		glm::vec3 newVertex,
 		std::vector<glm::vec3>& results,
 		Funnel& funnel)
 	{
 		if (funnel.lastAddedIsSmoothed)
-		{
-			
-			glm::vec3 lastMax = results[results.size() - 1];
-			
+		{		
+			// first check if our mid is valid
+			glm::vec3 lastMid = results[results.size() - 2];
+			glm::vec3 prev = results[results.size() - 3];
+
+			glm::vec3 prevToMid = lastMid - prev;
+			glm::vec3 midToNew = newVertex - lastMid;
+
+			float dotProduct = glm::dot(midToNew, prevToMid);
+			if (dotProduct < 0)
+			{
+				results.pop_back();
+				results.pop_back();	// remove the max as well
+				return;
+			}
+
 			/*
 			glm::vec3 lastMid = results[results.size() - 2];
 			glm::vec3 lastMin = results[results.size() - 3];
@@ -690,25 +706,26 @@ namespace PathFinding
 			glm::vec3 minToMid = lastMid - lastMin;
 			glm::vec3 midToMax = lastMax - lastMid;
 			*/
+			// now we check if our last max is valid
+			// same thing with adding the minVertex, just opposite
+			glm::vec3 lastMax = results[results.size() - 1];
+			glm::vec3 maxToNew = glm::normalize(newVertex - lastMax);
 
-			glm::vec3 maxToNew = newVertex - lastMax;
 
-			if (funnel.lastAddedIsLeft)
+			glm::vec3 vec0 = funnel.lastAddedIsLeft ? funnel.lastAddedMidToMax : maxToNew;
+			glm::vec3 vec1 = funnel.lastAddedIsLeft ? maxToNew : funnel.lastAddedMidToMax;
+
+			float crossProduct = Math::TriArea_XYPlane(vec0, vec1);
+			dotProduct = glm::dot(vec0, vec1);
+
+			if (0 <= crossProduct && crossProduct <= c_45DegCrossProduct && dotProduct > 0)
 			{
-				if (Math::TriArea_XYPlane(maxToNew, funnel.lastAddedSide2) >= 0)
-				{
-					results.pop_back();
-				}
+				// valid max point
 			}
 			else
 			{
-				if (Math::TriArea_XYPlane(funnel.lastAddedSide2, maxToNew) > 0)
-				{
-					results.pop_back();
-				}
+				results.pop_back();
 			}
-
-
 		}
 	}
 	
@@ -721,8 +738,7 @@ namespace PathFinding
 		bool isLeft,
 		float agentRadius)
 	{
-		// cross product of two vectors that's 45 degrees apart sqrt(2) / 2
-		const float c_45DegCrossProduct = 0.707;
+
 
 		int vertexIndex = isLeft ? funnel.leftIndex : funnel.rightIndex;
 
@@ -732,7 +748,7 @@ namespace PathFinding
 
 			if (vertexIndex == portals.size() - 1)
 			{
-				TryFixLastMaxVertex(
+				TryFixLastVertex(
 					vertex,
 					results,
 					funnel);
@@ -749,6 +765,10 @@ namespace PathFinding
 			{
 				return;
 			}
+
+
+			// first check if we can just add the original point from the funnel
+
 
 
 			std::cout << "			adding uniqueIndex" << uniqueIndex << std::endl;
@@ -770,6 +790,8 @@ namespace PathFinding
 
 			glm::vec3 averageNeighborEdgePerp = glm::cross(averageNeighborEdge, supportingVector);
 			averageNeighborEdgePerp = glm::normalize(averageNeighborEdgePerp);
+
+			glm::vec3 tangent = glm::normalize(averageNeighborEdge);
 
 			// we want to create a smooth path around the original portal point
 			glm::vec3 vertex = isLeft ? portals[vertexIndex].left : portals[vertexIndex].right;
@@ -806,22 +828,22 @@ namespace PathFinding
 				glm::vec3 maxVertex = vertex + maxVector * agentRadius;
 
 
+				glm::vec3 midToMin = glm::normalize(minVertex - midVertex);
+				glm::vec3 midToMax = glm::normalize(maxVertex - midVertex);
+
+
 				// if curPos is behind MinVertex, then we add MinVertex, otherwise we go straight to midVertex
 				//
 				glm::vec3 curPos = funnel.GetApex();
 				glm::vec3 minToCur = glm::normalize(curPos - minVertex);
-				
-				/*
-				glm::vec3 minToMid = midVertex - minVertex;
-				glm::vec3 midToMax = maxVertex - midVertex;
-				*/
+
 
 				if (isLeft)
 				{
 					// essentially making sure the two vectors are within an angle and aligned
 					// otherwise, just go straight to the midVertex, no need for a minVertex
-					float crossProduct = Math::TriArea_XYPlane(minToCur, -dir1);
-					float dotProduct = glm::dot(minToCur, -dir1);
+					float crossProduct = Math::TriArea_XYPlane(minToCur, midToMin);
+					float dotProduct = glm::dot(minToCur, midToMin);
 
 					if (0 <= crossProduct && crossProduct <= c_45DegCrossProduct && dotProduct > 0)
 					{
@@ -830,8 +852,8 @@ namespace PathFinding
 				}
 				else
 				{
-					float crossProduct = Math::TriArea_XYPlane(-dir1, minToCur);
-					float dotProduct = glm::dot(-dir1, minToCur);
+					float crossProduct = Math::TriArea_XYPlane(midToMin, minToCur);
+					float dotProduct = glm::dot(midToMin, minToCur);
 
 					if (0 <= crossProduct && crossProduct <= c_45DegCrossProduct && dotProduct > 0)
 					{
@@ -850,7 +872,7 @@ namespace PathFinding
 				
 
 				funnel.RecordLastAddedVertex(isLeft, uniqueIndex, true);
-				funnel.lastAddedSide2 = dir2;
+				funnel.lastAddedMidToMax = midToMax;
 
 				/*
 				newVector = Math::RotateVector(averageNeighborEdgePerp, allowedRotation);
@@ -864,7 +886,7 @@ namespace PathFinding
 			
 			glm::vec3 newVertex = vertex + averageNeighborEdgePerp * agentRadius;
 
-			TryFixLastMaxVertex(
+			TryFixLastVertex(
 				newVertex,
 				results,
 				funnel);
@@ -1002,7 +1024,7 @@ namespace PathFinding
 		{
 			if (!Math::Equals(results[results.size() - 1], end))
 			{
-				TryFixLastMaxVertex(
+				TryFixLastVertex(
 					end,
 					results,
 					funnel);
