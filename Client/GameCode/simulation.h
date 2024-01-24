@@ -1,6 +1,5 @@
 #pragma once
 
-#include "simulation.h"
 #include "game_state.h"
 #include "world.h"
 #include "pathfinding.h"
@@ -11,17 +10,50 @@ namespace sim
 	const float c_nearWaypointRange = 0;
 	const float c_maxAngleChangePerTick = 10;
 
+
+
+
 	void SetDestinationTick(SimulationState* simState,
 		GameInputState* gameInputState,
 		World* world,
 		glm::vec3 groundIntersectionPoint)
 	{
 		
-		if (gameInputState->DidMouseRightButtonClickedDown())
+		if (gameInputState->DidMouseRightButtonClickedDown() && 
+			simState->data->selectedEntities.size() > 0)
 		{
-			for(int i=0; i<simState->data->selectedEntities.size(); i++)
+
+			GroupManager* groupManager = &simState->data->groupManager;
+
+			Group* group = groupManager->GetOrCreateNewGroup();
+	
+			std::cout << "new group " << group->id << std::endl;
+
+
+			for(int i=0; i < simState->data->selectedEntities.size(); i++)
 			{
-				Entity* entity = simState->data->selectedEntities[i];
+				Entity* entity = simState->data->selectedEntities[i];				
+
+				if (entity->groupHelper.IsInAGroup())
+				{
+					Group* curGroup = groupManager->GetGroup(entity->groupHelper.groupId);
+					assert(curGroup != NULL);
+
+
+					std::cout << "		currently in " << entity->groupHelper.groupId << std::endl;
+					std::cout << "		curGroup " << curGroup->entityIds.size() << std::endl;
+
+
+					curGroup->Remove(entity->id);
+					entity->groupHelper.groupId = EMPTY_GROUP_ID;
+
+				//	groupManager->TryRemove(curGroup);
+				}
+
+				entity->groupHelper.groupId = group->id;
+				group->Add(entity->id);
+				
+
 				entity->pathingState.destination = groundIntersectionPoint;
 
 				float diameter = entity->agentRadius * 2;

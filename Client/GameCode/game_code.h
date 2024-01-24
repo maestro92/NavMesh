@@ -1530,6 +1530,7 @@ void LoadMap(World* world, string fileName)
 		Entity* entity = &world->entities[i];
 		DeserializeEntity(entity, entityObj);
 		assert(world->numEntities == entity->id);
+		entity->Init();
 		world->numEntities++;
 	}
 

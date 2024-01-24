@@ -76,6 +76,24 @@ struct PathingState
 	}
 };
 
+const int EMPTY_GROUP_ID = -1;
+
+struct GroupHelper
+{
+
+	int groupId;
+
+	void Init()
+	{
+		groupId = EMPTY_GROUP_ID;
+	}
+
+	bool IsInAGroup()
+	{
+		return groupId != EMPTY_GROUP_ID;
+	}
+};
+
 
 struct Entity
 {
@@ -103,11 +121,16 @@ struct Entity
 	bool isPushed;
 	PathingState pathingState;
 
-
+	GroupHelper groupHelper;
 
 	// For AABB physics, in object space
 	glm::vec3 min;
 	glm::vec3 max;
+
+	void Init()
+	{
+		groupHelper.Init();
+	}
 };
 
 struct PlayerEntity
@@ -455,6 +478,8 @@ struct World
 		entity->flag = EntityFlag::AGENT;
 		entity->facingDirection = glm::vec3(1, 0, 0);
 		entity->targetFacingDirection = glm::vec3(1, 0, 0);
+
+		entity->Init();
 	}
 
 	void AddObstacle(glm::vec3 pos, std::vector<glm::vec3> vertices)
@@ -469,6 +494,8 @@ struct World
 		entity->flag = EntityFlag::OBSTACLE;
 		entity->facingDirection = glm::vec3(1, 0, 0);
 		entity->targetFacingDirection = glm::vec3(1, 0, 0);
+
+		entity->Init();
 	}
 
 	void RemoveEntity(Entity* entity)

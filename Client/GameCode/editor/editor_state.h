@@ -60,6 +60,16 @@ struct HighlightGridCell
 
 namespace Editor
 {
+	struct TabConfig
+	{
+		bool showPathingDebug;
+	};
+
+	struct GroupDebugConfig
+	{
+		bool showGroupInfo;
+	};
+
 	struct GridDisplayConfig
 	{
 		bool showGrid;
@@ -102,6 +112,9 @@ struct EditorState {
 
 	// get rid of this indirection
 	EditorStateData* coreData;
+
+	Editor::TabConfig tabConfig;
+
 	Editor::GridDisplayConfig gridConfig;
 
 	Editor::DebugConfig debugConfig;

@@ -460,8 +460,127 @@ namespace Editor
 
 			GameRender::RenderLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_BLUE, pos, end, thickness);
 		}
-
 	}
+
+
+	void RenderPathingDebugTab(
+		GameInputState* gameInputState,
+		GameRender::GameRenderState* gameRenderSetup,
+		glm::vec3 screenMousePos,
+		EditorState* editor)
+	{
+		RenderSystem::GameRenderCommands* gameRenderCommands = gameRenderSetup->gameRenderCommands;
+		RenderSystem::RenderGroup* group = gameRenderSetup->renderGroup;
+		GameAssets* gameAssets = gameRenderSetup->gameAssets;
+
+		editor->highlightedOption = NULL;
+
+		int btnWidth = 200;
+		int btnHeight = 20;
+
+		float halfWidth = gameRenderCommands->settings.dims.x / 2.0f;
+		float halfHeight = gameRenderCommands->settings.dims.y / 2.0f;
+
+
+		int startX = -halfWidth;
+		int startY = 0;
+		int indexX = 0, indexY = 0;
+		GridLayoutHelper gridLayoutHelper =
+		{
+			startX, startY,
+			indexX,	indexY,
+			btnWidth, btnHeight,
+			2
+		};
+
+		int curX = startX;
+		int curY = startY;
+
+
+		gridLayoutHelper.GetElementPosition(curX, curY);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Show AStar Waypoints", editor->pathingDebugConfig.showAStarWaypoints))
+		{
+			editor->pathingDebugConfig.showAStarWaypoints = !editor->pathingDebugConfig.showAStarWaypoints;
+		}
+		gridLayoutHelper.IncrementElementCount();
+
+
+		gridLayoutHelper.GetElementPosition(curX, curY);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Show Tunnel", editor->pathingDebugConfig.showTunnel))
+		{
+			editor->pathingDebugConfig.showTunnel = !editor->pathingDebugConfig.showTunnel;
+		}
+		gridLayoutHelper.IncrementElementCount();
+
+
+		gridLayoutHelper.GetElementPosition(curX, curY);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Show Portals", editor->pathingDebugConfig.showPortals))
+		{
+			editor->pathingDebugConfig.showPortals = !editor->pathingDebugConfig.showPortals;
+		}
+		gridLayoutHelper.IncrementElementCount();
+
+
+		gridLayoutHelper.GetElementPosition(curX, curY);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "show Modified Tunnel", editor->pathingDebugConfig.showModifiedTunnel))
+		{
+			editor->pathingDebugConfig.showModifiedTunnel = !editor->pathingDebugConfig.showModifiedTunnel;
+		}
+		gridLayoutHelper.IncrementElementCount();
+
+		gridLayoutHelper.GetElementPosition(curX, curY);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Show Modified Portals", editor->pathingDebugConfig.showModifiedPortals))
+		{
+			editor->pathingDebugConfig.showModifiedPortals = !editor->pathingDebugConfig.showModifiedPortals;
+		}
+		gridLayoutHelper.IncrementElementCount();
+
+		gridLayoutHelper.GetElementPosition(curX, curY);
+		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
+			curX, curY, btnWidth, btnHeight, "Show ANE Perps", editor->pathingDebugConfig.showAnePerps))
+		{
+			editor->pathingDebugConfig.showAnePerps = !editor->pathingDebugConfig.showAnePerps;
+		}
+		gridLayoutHelper.IncrementElementCount();
+
+
+
+		float thickness = 0.5;
+		curX = startX;
+		curY = startY;
+		float lineHeight = gridLayoutHelper.GetNumRow() * btnHeight;
+
+		for (int x = 0; x <= gridLayoutHelper.numCol; x++)
+		{
+			curX = startX + btnWidth * x;
+
+			glm::vec3 pos = glm::vec3(curX, curY, 0);
+			glm::vec3 end = pos;
+			end.y -= lineHeight;
+
+			GameRender::RenderLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_BLUE, pos, end, thickness);
+		}
+
+		curX = startX;
+		curY = startY;
+		float lineWidth = gridLayoutHelper.numCol * btnWidth;
+		for (int y = 0; y <= gridLayoutHelper.GetNumRow(); y++)
+		{
+			curY = startY - BTN_HEIGHT * y;
+
+			glm::vec3 pos = glm::vec3(curX, curY, 0);
+			glm::vec3 end = pos;
+			end.x += lineWidth;
+
+			GameRender::RenderLine(gameRenderCommands, group, gameAssets, GameRender::COLOR_BLUE, pos, end, thickness);
+		}
+	}
+
 
 	void TickAndRenderEditorMenu(GameMemory* gameMemory,
 		GameInputState* gameInputState,
@@ -583,54 +702,17 @@ namespace Editor
 
 		gridLayoutHelper.GetElementPosition(curX, curY);
 		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
-			curX, curY, btnWidth, btnHeight, "Show AStar Waypoints", editor->pathingDebugConfig.showAStarWaypoints))
+			curX, curY, btnWidth, btnHeight, "Debug Pathing Window", editor->tabConfig.showPathingDebug))
 		{
-			editor->pathingDebugConfig.showAStarWaypoints = !editor->pathingDebugConfig.showAStarWaypoints;
+			editor->tabConfig.showPathingDebug = !editor->tabConfig.showPathingDebug;
 		}
 		gridLayoutHelper.IncrementElementCount();
 
-
-		gridLayoutHelper.GetElementPosition(curX, curY);
-		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
-			curX, curY, btnWidth, btnHeight, "Show Tunnel", editor->pathingDebugConfig.showTunnel))
+		if (editor->tabConfig.showPathingDebug)
 		{
-			editor->pathingDebugConfig.showTunnel = !editor->pathingDebugConfig.showTunnel;
+			RenderPathingDebugTab(gameInputState, gameRenderSetup, screenMousePos, editor);
 		}
-		gridLayoutHelper.IncrementElementCount();
 
-
-		gridLayoutHelper.GetElementPosition(curX, curY);
-		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
-			curX, curY, btnWidth, btnHeight, "Show Portals", editor->pathingDebugConfig.showPortals))
-		{
-			editor->pathingDebugConfig.showPortals = !editor->pathingDebugConfig.showPortals;
-		}
-		gridLayoutHelper.IncrementElementCount();
-
-
-		gridLayoutHelper.GetElementPosition(curX, curY);
-		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
-			curX, curY, btnWidth, btnHeight, "show Modified Tunnel", editor->pathingDebugConfig.showModifiedTunnel))
-		{
-			editor->pathingDebugConfig.showModifiedTunnel = !editor->pathingDebugConfig.showModifiedTunnel;
-		}
-		gridLayoutHelper.IncrementElementCount();
-
-		gridLayoutHelper.GetElementPosition(curX, curY);
-		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
-			curX, curY, btnWidth, btnHeight, "Show Modified Portals", editor->pathingDebugConfig.showModifiedPortals))
-		{
-			editor->pathingDebugConfig.showModifiedPortals = !editor->pathingDebugConfig.showModifiedPortals;
-		}
-		gridLayoutHelper.IncrementElementCount();
-
-		gridLayoutHelper.GetElementPosition(curX, curY);
-		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
-			curX, curY, btnWidth, btnHeight, "Show ANE Perps", editor->pathingDebugConfig.showAnePerps))
-		{
-			editor->pathingDebugConfig.showAnePerps = !editor->pathingDebugConfig.showAnePerps;
-		}
-		gridLayoutHelper.IncrementElementCount();
 
 		gridLayoutHelper.GetElementPosition(curX, curY);
 		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
@@ -688,7 +770,7 @@ namespace Editor
 		}
 		gridLayoutHelper.IncrementElementCount();
 
-
+		/*
 		gridLayoutHelper.GetElementPosition(curX, curY);
 		if (RenderToggle(editor, gameInputState, gameRenderSetup, screenMousePos,
 			curX, curY, btnWidth, btnHeight, "Set Pathing Start", editor->choosingPathingStart))
@@ -726,7 +808,6 @@ namespace Editor
 		}
 		gridLayoutHelper.IncrementElementCount();
 
-
 		gridLayoutHelper.GetElementPosition(curX, curY);
 		if (RenderSpecialButton(editor, gameInputState, gameRenderSetup, screenMousePos,
 			curX, curY, btnWidth, btnHeight, "PATH!"))
@@ -734,6 +815,7 @@ namespace Editor
 			editor->coreData->editorEvents.push(EditorEvent::PATH);
 		}
 		gridLayoutHelper.IncrementElementCount();
+		*/
 
 
 		gridLayoutHelper.GetElementPosition(curX, curY);
